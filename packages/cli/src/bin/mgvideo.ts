@@ -37,6 +37,10 @@ import { VideoConcatEngine } from '../../../media/src/concat.js';
 import { LowerThirdGenerator } from '../../../media/src/lower_third.js';
 import { ChapterGenerator } from '../../../media/src/chapters.js';
 import { VideoLoopEngine } from '../../../media/src/loop.js';
+import { FreezeFrameEngine } from '../../../media/src/freeze.js';
+import { BlurBackgroundEngine } from '../../../media/src/blur_bg.js';
+import { runQualityGate } from '../commands/gate.js';
+
 
 
 
@@ -939,7 +943,75 @@ program
     }
   });
 
+// mgvideo freeze <video>
+program
+  .command('freeze <video>')
+  .description('Hold start or final frame of a video using tpad cloning')
+  .option('-p, --position <pos>', 'Hold position: start or end', 'end')
+  .option('-d, --duration <seconds>', 'Hold duration in seconds', '2.0')
+  .option('-o, --out <path>', 'Custom output video path')
+  .action((video, opts) => {
+    try {
+      const fullVideo = path.resolve(process.cwd(), video);
+      const res = FreezeFrameEngine.applyHoldFrame(fullVideo, {
+        position: opts.position,
+        holdDurationSeconds: parseFloat(opts.duration),
+        outputPath: opts.out ? path.resolve(process.cwd(), opts.out) : undefined
+      });
+      console.log(`\n❄️ Freeze Frame Applied!`);
+      console.log(`Position: ${res.position} (+${res.holdDurationSeconds}s)`);
+      console.log(`Duration: ${res.originalDurationSeconds.toFixed(1)}s -> ${res.totalDurationSeconds.toFixed(1)}s`);
+      console.log(`Output: ${res.outputPath}\n`);
+    } catch (err) {
+      console.error('Freeze command failed:', err);
+      process.exit(1);
+    }
+  });
+
+// mgvideo blur-bg <video>
+program
+  .command('blur-bg <video>')
+  .description('Place 9:16 vertical video onto 16:9 landscape canvas over an aesthetic blurred background')
+  .option('-o, --out <path>', 'Custom output video path')
+  .action((video, opts) => {
+    try {
+      const fullVideo = path.resolve(process.cwd(), video);
+      const res = BlurBackgroundEngine.adaptToLandscape(fullVideo, {
+        outputPath: opts.out ? path.resolve(process.cwd(), opts.out) : undefined
+      });
+      console.log(`\n🖼️ Blurred Backdrop Applied!`);
+      console.log(`Canvas: ${res.width}x${res.height} (16:9 Landscape)`);
+      console.log(`Output: ${res.outputPath}\n`);
+    } catch (err) {
+      console.error('Blur-bg command failed:', err);
+      process.exit(1);
+    }
+  });
+
+// mgvideo gate <project>
+program
+  .command('gate <project>')
+  .description('Run comprehensive automated pre-delivery quality gate and compliance audit')
+  .action(async (project) => {
+    try {
+      const res = await runQualityGate(project);
+      console.log(`\n🚦 Automated Quality Gate for "${project}":`);
+      console.log(`Status: ${res.passed ? 'PASSED (Ready for Air)' : 'FAILED'}`);
+      console.log('------------------------------------------------------------');
+      for (const ch of res.checks) {
+        const icon = ch.status === 'pass' ? '✅' : ch.status === 'warn' ? '⚠️' : '❌';
+        console.log(` ${icon} [${ch.name.padEnd(22)}] : ${ch.message}`);
+      }
+      console.log('------------------------------------------------------------\n');
+      if (!res.passed) process.exit(1);
+    } catch (err) {
+      console.error('Quality gate command failed:', err);
+      process.exit(1);
+    }
+  });
+
 program.parse(process.argv);
+
 
 
 

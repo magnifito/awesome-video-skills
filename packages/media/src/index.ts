@@ -35,6 +35,12 @@ export * from './chapters.js';
 export * from './sidechain.js';
 export * from './loop.js';
 export * from './sla.js';
+export * from './freeze.js';
+export * from './multitrack.js';
+export * from './silence.js';
+export * from './blur_bg.js';
+export * from './grid.js';
+
 
 
 

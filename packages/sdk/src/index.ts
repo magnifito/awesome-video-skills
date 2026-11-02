@@ -25,6 +25,12 @@ import { ChapterGenerator, type ChapterReport } from '../../media/src/chapters.j
 import { SidechainDuckingEngine, type SidechainOptions, type SidechainResult } from '../../media/src/sidechain.js';
 import { VideoLoopEngine, type LoopOptions, type LoopResult } from '../../media/src/loop.js';
 import { DeliverySlaTracker, type SlaEvaluation } from '../../media/src/sla.js';
+import { FreezeFrameEngine, type FreezeOptions, type FreezeResult } from '../../media/src/freeze.js';
+import { MultiTrackAudioMuxer, type AudioTrackInput, type MultiTrackOptions, type MultiTrackResult } from '../../media/src/multitrack.js';
+import { AudioSilenceRemover, type SilenceRemoveOptions, type SilenceRemoveResult } from '../../media/src/silence.js';
+import { BlurBackgroundEngine, type BlurBgOptions, type BlurBgResult } from '../../media/src/blur_bg.js';
+import { CompositionGridGenerator, type GridGuideOptions } from '../../media/src/grid.js';
+import { runQualityGate, type QualityGateResult } from '../../cli/src/commands/gate.js';
 import { runVerifyBundle, type BundleVerificationResult } from '../../cli/src/commands/verify_bundle.js';
 import { runDashboard, type DashboardStatus } from '../../cli/src/commands/dashboard.js';
 import { MotionCanvasAdapter, type MotionCanvasExportResult } from '../../../adapters/motion-canvas/index.js';
@@ -216,6 +222,40 @@ export class MagnifitoVideoEngine {
 
   sla(brief: any, startedAtIso: string, completedAtIso?: string, targetHours = 24): SlaEvaluation {
     return DeliverySlaTracker.evaluateSla(brief, startedAtIso, completedAtIso, targetHours);
+  }
+
+  freeze(videoPath: string, options: FreezeOptions = {}): FreezeResult {
+    const fullPath = path.isAbsolute(videoPath) ? videoPath : path.resolve(this.workspaceRoot, videoPath);
+    return FreezeFrameEngine.applyHoldFrame(fullPath, options);
+  }
+
+  multitrack(videoPath: string, audioTracks: AudioTrackInput[], options: MultiTrackOptions = {}): MultiTrackResult {
+    const fullVideo = path.isAbsolute(videoPath) ? videoPath : path.resolve(this.workspaceRoot, videoPath);
+    const resolvedTracks = audioTracks.map(t => ({
+      ...t,
+      filePath: path.isAbsolute(t.filePath) ? t.filePath : path.resolve(this.workspaceRoot, t.filePath)
+    }));
+    return MultiTrackAudioMuxer.muxTracks(fullVideo, resolvedTracks, options);
+  }
+
+  silence(audioPath: string, options: SilenceRemoveOptions = {}): SilenceRemoveResult {
+    const fullPath = path.isAbsolute(audioPath) ? audioPath : path.resolve(this.workspaceRoot, audioPath);
+    return AudioSilenceRemover.removeSilence(fullPath, options);
+  }
+
+  blurBg(verticalVideoPath: string, options: BlurBgOptions = {}): BlurBgResult {
+    const fullPath = path.isAbsolute(verticalVideoPath) ? verticalVideoPath : path.resolve(this.workspaceRoot, verticalVideoPath);
+    return BlurBackgroundEngine.adaptToLandscape(fullPath, options);
+  }
+
+  grid(videoPath: string, options: GridGuideOptions = {}): string {
+    const fullPath = path.isAbsolute(videoPath) ? videoPath : path.resolve(this.workspaceRoot, videoPath);
+    return CompositionGridGenerator.applyGrid(fullPath, options);
+  }
+
+  async gate(projectDir: string): Promise<QualityGateResult> {
+    const fullPath = path.isAbsolute(projectDir) ? projectDir : path.resolve(this.workspaceRoot, projectDir);
+    return runQualityGate(fullPath);
   }
 }
 

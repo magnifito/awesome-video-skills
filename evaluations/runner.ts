@@ -959,6 +959,132 @@ async function runAllEvaluations() {
     assert(Boolean(repo.license), `Upstream "${repo.id}" has audited license`);
   }
 
+  // Test 81: Freeze Frame Extension Engine
+  console.log('\n--- Test Suite 81: Freeze Frame Extension Engine ---');
+  const { FreezeFrameEngine } = await import('../packages/media/src/freeze.js');
+  const freezeClip = VideoConcatEngine.trimClip(initialVideoPath, { startSeconds: 0, durationSeconds: 2.0 });
+  const freezeRes = FreezeFrameEngine.applyHoldFrame(freezeClip, { position: 'end', holdDurationSeconds: 1.5 });
+  assert(nodeFs.existsSync(freezeRes.outputPath), 'Freeze frame output exists on disk');
+  assert(freezeRes.position === 'end', 'Freeze frame recorded end hold position');
+  assert(Math.abs(freezeRes.holdDurationSeconds - 1.5) < 0.1, 'Freeze frame holds exact duration');
+  assert(Math.abs(freezeRes.totalDurationSeconds - 3.5) < 0.2, 'Total duration extended by hold seconds');
+  nodeFs.rmSync(freezeClip, { force: true });
+  nodeFs.rmSync(freezeRes.outputPath, { force: true });
+
+  // Test 82: Multitrack Audio Muxing with Language Tags
+  console.log('\n--- Test Suite 82: Multitrack Audio Muxing with Language Tags ---');
+  const { MultiTrackAudioMuxer } = await import('../packages/media/src/multitrack.js');
+  const mtVideo = VideoConcatEngine.trimClip(initialVideoPath, { startSeconds: 0, durationSeconds: 2.0 });
+  const mtAudio1 = path.join(workspaceRoot, 'tmp-mt-bg.wav');
+  const mtAudio2 = path.join(workspaceRoot, 'tmp-mt-en.wav');
+  execSync(`ffmpeg -y -i "${initialVideoPath}" -vn -c:a pcm_s16le -t 2 "${mtAudio1}"`, { stdio: 'pipe' });
+  execSync(`ffmpeg -y -i "${initialVideoPath}" -vn -c:a pcm_s16le -t 2 "${mtAudio2}"`, { stdio: 'pipe' });
+  const mtRes = MultiTrackAudioMuxer.muxTracks(mtVideo, [
+    { filePath: mtAudio1, language: 'bul', title: 'Bulgarian Dialogue', isDefault: true },
+    { filePath: mtAudio2, language: 'eng', title: 'English Dialogue' }
+  ]);
+  assert(nodeFs.existsSync(mtRes.outputPath), 'Multitrack container video generated');
+  assert(mtRes.audioTracksCount === 2, 'Container holds 2 audio streams');
+  assert(mtRes.languages.includes('bul') && mtRes.languages.includes('eng'), 'Audio streams contain ISO 639-2 tags bul & eng');
+  nodeFs.rmSync(mtVideo, { force: true });
+  nodeFs.rmSync(mtAudio1, { force: true });
+  nodeFs.rmSync(mtAudio2, { force: true });
+  nodeFs.rmSync(mtRes.outputPath, { force: true });
+
+  // Test 83: Audio Silence Removal & Voice Gating
+  console.log('\n--- Test Suite 83: Audio Silence Removal & Voice Gating ---');
+  const { AudioSilenceRemover } = await import('../packages/media/src/silence.js');
+  const silenceIn = path.join(workspaceRoot, 'tmp-silence-in.wav');
+  execSync(`ffmpeg -y -f lavfi -i "sine=frequency=1000:duration=1" -f lavfi -i "anullsrc=r=48000:cl=mono:duration=2" -f lavfi -i "sine=frequency=1000:duration=1" -filter_complex "[0:a][1:a][2:a]concat=n=3:v=0:a=1[outa]" -map "[outa]" "${silenceIn}"`, { stdio: 'pipe' });
+  const silenceRes = AudioSilenceRemover.removeSilence(silenceIn, { thresholdDb: -30, minSilenceDurationSeconds: 0.3 });
+  assert(nodeFs.existsSync(silenceRes.outputPath), 'Desilenced audio file generated');
+  assert(silenceRes.trimmedDurationSeconds < silenceRes.originalDurationSeconds, 'Dead air successfully removed from audio timeline');
+  assert(silenceRes.timeSavedSeconds > 0.5, 'Silence remover saved > 0.5s of dead air');
+  nodeFs.rmSync(silenceIn, { force: true });
+  nodeFs.rmSync(silenceRes.outputPath, { force: true });
+
+  // Test 84: Vertical-to-Landscape Blurred Backdrop Generator
+  console.log('\n--- Test Suite 84: Vertical-to-Landscape Blurred Backdrop Generator ---');
+  const { BlurBackgroundEngine } = await import('../packages/media/src/blur_bg.js');
+  const vertClip = VideoConcatEngine.trimClip(initialVideoPath, { startSeconds: 0, durationSeconds: 1.5 });
+  const blurRes = BlurBackgroundEngine.adaptToLandscape(vertClip);
+  assert(nodeFs.existsSync(blurRes.outputPath), '16:9 blurred backdrop video generated');
+  assert(blurRes.width === 1920 && blurRes.height === 1080, 'Canvas adapts to 1920x1080 landscape');
+  nodeFs.rmSync(vertClip, { force: true });
+  nodeFs.rmSync(blurRes.outputPath, { force: true });
+
+  // Test 85: Composition Grid Guide Overlays
+  console.log('\n--- Test Suite 85: Composition Grid Guide Overlays ---');
+  const { CompositionGridGenerator } = await import('../packages/media/src/grid.js');
+  const gridSvg = CompositionGridGenerator.generateGridSvg(1920, 1080);
+  assert(gridSvg.includes('<svg') && gridSvg.includes('stroke-dasharray'), 'Grid SVG contains rule-of-thirds markings');
+  const gridVideo = VideoConcatEngine.trimClip(initialVideoPath, { startSeconds: 0, durationSeconds: 1.0 });
+  const gridOut = CompositionGridGenerator.applyGrid(gridVideo);
+  assert(nodeFs.existsSync(gridOut), 'Grid overlay video generated successfully');
+  nodeFs.rmSync(gridVideo, { force: true });
+  nodeFs.rmSync(gridOut, { force: true });
+
+  // Test 86: Automated Quality Gate Audit CLI
+  console.log('\n--- Test Suite 86: Automated Quality Gate Audit CLI ---');
+  const { runQualityGate } = await import('../packages/cli/src/commands/gate.js');
+  const gateRes = await runQualityGate(promoFixtureDir);
+  assert(gateRes.passed, 'Quality gate passes for compliant Bulgarian promo fixture');
+  assert(gateRes.checks.some(c => c.name === 'Brief Contract' && c.status === 'pass'), 'Quality gate verified brief contract');
+  assert(gateRes.checks.some(c => c.name === 'Zero Media Budget' && c.status === 'pass'), 'Quality gate verified zero external media budget');
+  assert(gateRes.checks.some(c => c.name === 'Cyrillic Clearance' && c.status === 'pass'), 'Quality gate verified Cyrillic font clearance');
+
+  // Test 87: Programmatic SDK Extended Coverage
+  console.log('\n--- Test Suite 87: Programmatic SDK Extended Coverage ---');
+  assert(typeof engine.freeze === 'function', 'SDK exposes freeze() method');
+  assert(typeof engine.multitrack === 'function', 'SDK exposes multitrack() method');
+  assert(typeof engine.silence === 'function', 'SDK exposes silence() method');
+  assert(typeof engine.blurBg === 'function', 'SDK exposes blurBg() method');
+  assert(typeof engine.grid === 'function', 'SDK exposes grid() method');
+  assert(typeof engine.gate === 'function', 'SDK exposes gate() method');
+  const sdkGate = await engine.gate(promoFixtureDir);
+  assert(sdkGate.passed, 'SDK gate() executes quality gate verification');
+
+  // Test 88: Zero-Spend Budget Policy Verification across All Workflows
+  console.log('\n--- Test Suite 88: Zero-Spend Budget Policy Verification across All Workflows ---');
+  const workflowsToAudit = [
+    'promo-bulgarian-15s',
+    'product-demo-saas',
+    'talking-head-edit',
+    'multilingual-explainer'
+  ];
+  for (const wf of workflowsToAudit) {
+    const brief = JSON.parse(nodeFs.readFileSync(path.join(workspaceRoot, 'fixtures', wf, 'brief.json'), 'utf8'));
+    const viol = PolicyChecker.checkExternalMediaBudget(brief, 10.00);
+    assert(viol.length === 1 && viol[0].code === 'MEDIA_BUDGET_ZERO_VIOLATION', `PolicyChecker strictly blocks non-zero media spend on ${wf}`);
+  }
+
+  // Test 89: Upstream Quarantine Coherence & Rollback Validation
+  console.log('\n--- Test Suite 89: Upstream Quarantine Coherence & Rollback Validation ---');
+  const approvedLockPath = path.join(workspaceRoot, 'registry', 'approved.lock.json');
+  const origApproved = nodeFs.readFileSync(approvedLockPath, 'utf8');
+  try {
+    const rollbackRes89 = await runUpstreamRollback(workspaceRoot, 'hyperframes', '0000000000000000000000000000000000000000');
+    assert(rollbackRes89.rolled_back_to === '0000000000000000000000000000000000000000', 'Upstream rollback safely updates baseline commit');
+  } finally {
+    nodeFs.writeFileSync(approvedLockPath, origApproved, 'utf8');
+  }
+
+  // Test 90: Production Master Deliverable Checksum Integrity Verification
+  console.log('\n--- Test Suite 90: Production Master Deliverable Checksum Integrity Verification ---');
+  const cryptoModule = await import('node:crypto');
+  const sumsPath = path.join(promoDeliveryDir, 'SHA256SUMS.txt');
+  assert(nodeFs.existsSync(sumsPath), 'SHA256SUMS.txt exists in delivery directory');
+  const sumsContent = nodeFs.readFileSync(sumsPath, 'utf8');
+  const manifestLines = sumsContent.trim().split('\n').filter(Boolean);
+  assert(manifestLines.length >= 3, 'Manifest contains multiple audited deliverable files');
+  for (const line of manifestLines) {
+    const [expectedHash, relPath] = line.trim().split(/\s+/);
+    const filePath = path.join(promoDeliveryDir, relPath);
+    assert(nodeFs.existsSync(filePath), `Audited file ${relPath} exists in deliverable package`);
+    const actualHash = cryptoModule.default.createHash('sha256').update(nodeFs.readFileSync(filePath)).digest('hex');
+    assert(actualHash === expectedHash, `Cryptographic checksum matches for ${relPath}`);
+  }
+
 
 
 

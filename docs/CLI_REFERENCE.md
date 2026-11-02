@@ -44,6 +44,9 @@ mgvideo <command> [options]
 | `lower-third` | `mgvideo lower-third <video>` | Burns broadcast-quality lower-third speaker title badges with custom brand accents. |
 | `chapters` | `mgvideo chapters <project>` | Generates YouTube chapters, WebVTT cue markers, and QuickTime chapter metadata. |
 | `loop` | `mgvideo loop <video>` | Creates seamless ping-pong loops (forward + reverse) for social reels and web hero banners. |
+| `freeze` | `mgvideo freeze <video>` | Holds start or final frame of video using native tpad clone filter and audio padding. |
+| `blur-bg` | `mgvideo blur-bg <video>` | Adapts 9:16 vertical video onto a 16:9 canvas with an aesthetic blurred backdrop. |
+| `gate` | `mgvideo gate <project>` | Runs automated pre-delivery compliance audit (contracts, Cyrillic clearance, $0 budget). |
 | `clean` | `mgvideo clean <project>` | Purges temporary render caches and older runs to preserve disk hygiene. |
 | `upstream` | `mgvideo upstream [check\|propose\|rollback]` | Manages external repository tracking, candidate review branches, and baseline rollbacks. |
 
@@ -116,3 +119,18 @@ mgvideo <command> [options]
 - `--all`: Purge all runs and storyboard frames.
 - `--cache-only`: Delete only `runs/cache/` without touching finished run directories.
 - `--keep-latest`: Retain the newest run and delete older runs (default: `true`).
+
+### `mgvideo freeze <video>`
+- `-p, --position <pos>`: Hold position: `start` or `end` (default: `end`).
+- `-d, --duration <seconds>`: Hold duration in seconds (default: `2.0`).
+- `-o, --out <path>`: Custom output video path.
+
+### `mgvideo blur-bg <video>`
+- `-o, --out <path>`: Custom output video path for the 16:9 canvas with blurred backdrop.
+
+### `mgvideo gate <project>`
+- Runs comprehensive automated compliance audit verifying:
+  - Schema validity of `brief.json` and contracts
+  - Zero external media budget enforcement (`media_budget_usd = 0.0`)
+  - Cyrillic font coverage clearance for Bulgarian copy
+  - Master media specs (resolution, duration, audio presence) via ffprobe
