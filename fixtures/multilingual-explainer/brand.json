@@ -1,0 +1,39 @@
+{
+  "schema_version": "1.0.0",
+  "brand_id": "cloud-stream-pro",
+  "name": "CloudStream Pro",
+  "logos": {
+    "primary": "assets/logo.svg"
+  },
+  "colors": {
+    "primary": "#3B82F6",
+    "secondary": "#1D4ED8",
+    "background": "#0B0F19",
+    "text_primary": "#FFFFFF",
+    "accent": "#10B981"
+  },
+  "fonts": [
+    {
+      "family": "-apple-system, BlinkMacSystemFont, Arial, sans-serif",
+      "weight": "700",
+      "rights_evidence": "System-OFL-Compatible",
+      "supports_cyrillic": true
+    }
+  ],
+  "type_scale": {
+    "h1": 56,
+    "h2": 38,
+    "body": 22,
+    "caption": 16
+  },
+  "motion_preferences": {
+    "tempo": "smooth",
+    "camera_style": "subtle_drift",
+    "border_radius": 16,
+    "glassmorphism": true
+  },
+  "prohibited_treatments": [
+    "unlicensed stock footage",
+    "exaggerated latency metrics"
+  ]
+}

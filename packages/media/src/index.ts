@@ -13,5 +13,9 @@ export * from './colorspace.js';
 export * from './asset_auditor.js';
 export * from './font_auditor.js';
 export * from './audio_catalog.js';
+export * from './localization.js';
+export * from './typography.js';
+export * from './archiver.js';
+export * from './notifications.js';
 
 

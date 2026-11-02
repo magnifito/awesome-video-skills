@@ -1,0 +1,23 @@
+{
+  "schema_version": "1.0.0",
+  "project_id": "multilingual-explainer",
+  "client_id": "cloud-stream-pro",
+  "workflow": "multilingual-explainer",
+  "objective": "Explaining real-time video processing architecture with synchronized Bulgarian and English localized delivery",
+  "audience": "Enterprise video engineers and technical decision makers",
+  "language": "en",
+  "duration_seconds": 15,
+  "formats": [
+    "16:9",
+    "9:16"
+  ],
+  "engine": "hyperframes",
+  "timing_authority": "speech",
+  "campaign_reference_time": "2026-11-02T12:00:00Z",
+  "budgets": {
+    "agent_budget_usd": 15,
+    "compute_budget_usd": 10,
+    "media_budget_usd": 0,
+    "max_retries": 3
+  }
+}

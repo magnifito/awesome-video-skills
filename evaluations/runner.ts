@@ -472,6 +472,75 @@ async function runAllEvaluations() {
   assert(saasRecipe?.recommended_duration_seconds[1] === 10.0, 'Recipe duration upper bound is 10.0s');
   assert(saasRecipe?.motion !== undefined, 'Recipe defines motion parameters');
 
+  // Test 41: Multilingual Explainer Workflow & Rendering
+  console.log('\n--- Test Suite 41: Multilingual Explainer Workflow ---');
+  const multilingualFixtureDir = path.join(workspaceRoot, 'fixtures', 'multilingual-explainer');
+  const multiRender = await runRender(multilingualFixtureDir, { format: '16:9', force: true });
+  assert(multiRender.status === 'success', 'Multilingual explainer render succeeds');
+  assert(multiRender.measurements.width === 1920 && multiRender.measurements.height === 1080, 'Multilingual explainer renders 16:9 landscape');
+  assert(Math.abs(multiRender.measurements.duration_seconds - 15.0) < 0.1, 'Multilingual explainer duration conforms to 15.0s timeline');
+  const multiValidate = await runValidate(multiRender.run_id, multilingualFixtureDir);
+  assert(multiValidate.passed === true, 'Multilingual explainer validation passes all claims and specs');
+
+  // Test 42: Localization Synchronizer & Speech Expansion
+  console.log('\n--- Test Suite 42: Localization Synchronizer & Pacing ---');
+  const { LocalizationSynchronizer } = await import('../packages/media/src/localization.js');
+  const enText = 'Sub-100ms ultra-low latency video streaming across 40 regions worldwide';
+  const bgText = 'Ултраниска латентност под 100ms за видеострийминг в 40 региона по целия свят';
+  const syncReport = LocalizationSynchronizer.synchronizeScenes(enText, bgText, 5.0, 'en', 'bg');
+  assert(syncReport.source_language === 'en' && syncReport.target_language === 'bg', 'Synchronizer records language pair');
+  assert(syncReport.expansion_ratio >= 1.0, 'Synchronizer calculates speech expansion ratio');
+  assert(syncReport.source_pacing.fits_within_target_duration === true, 'English copy comfortably fits 5s duration');
+
+  // Test 43: Dynamic Typography Fitter & Line Wrapping
+  console.log('\n--- Test Suite 43: Typography Layout & Text Fitting ---');
+  const { TypographyFitter } = await import('../packages/media/src/typography.js');
+  const longCopy = 'Enterprise 99.99% uptime SLA backed by distributed edge fallbacks and automated regional rerouting for zero downtime';
+  const fitResult = TypographyFitter.fitText(longCopy, {
+    cardWidth: 840,
+    cardHeight: 400,
+    baseFontSize: 48,
+    minFontSize: 24,
+    maxLines: 4
+  });
+  assert(fitResult.lines.length <= 4, 'Fitter wraps text within max line ceiling');
+  assert(fitResult.fontSize <= 48, 'Fitter adjusts font size dynamically to fit card bounds');
+  assert(fitResult.fits === true, 'Fitted text satisfies bounding container constraints');
+
+  // Test 44: Deliverable Archiver & SHA256SUMS Manifest
+  console.log('\n--- Test Suite 44: Deliverable Archiver & SHA256SUMS ---');
+  const { DeliverableArchiver } = await import('../packages/media/src/archiver.js');
+  const promoDeliveryDir = pkgRes.delivery_dir;
+  const sumsResult = DeliverableArchiver.generateChecksumManifest(promoDeliveryDir);
+  assert(nodeFs.existsSync(sumsResult.manifest_path), 'Archiver generates SHA256SUMS.txt');
+  assert(sumsResult.total_files > 0, 'Archiver records checksum entries for all deliverables');
+  const verifySums = DeliverableArchiver.verifyChecksumManifest(sumsResult.manifest_path);
+  assert(verifySums.valid === true, 'Deliverable checksum verification passes 100%');
+
+
+  // Test 45: Webhook & Event Notification Dispatcher
+  console.log('\n--- Test Suite 45: Notification & Webhook Dispatcher ---');
+  const { NotificationDispatcher } = await import('../packages/media/src/notifications.js');
+  const completedEvent = NotificationDispatcher.formatEvent('render.completed', 'multilingual-explainer', {
+    resolution: '1920x1080',
+    durationSeconds: 15.0
+  });
+  assert(completedEvent.event === 'render.completed', 'Dispatcher records event type');
+  assert(completedEvent.color_hex === '#10B981', 'Completed event assigns green status badge');
+  const failedEvent = NotificationDispatcher.formatEvent('validation.failed', 'multilingual-explainer', {
+    error: 'Claims discrepancy'
+  });
+  assert(failedEvent.color_hex === '#EF4444', 'Failed validation event assigns red warning badge');
+
+  // Test 46: Performance & Scalability Benchmark
+  console.log('\n--- Test Suite 46: Performance & Scalability Benchmark ---');
+  const { BenchmarkRunner } = await import('./benchmark.js');
+  const benchMetrics = BenchmarkRunner.run();
+  assert(benchMetrics.timeline_ops_per_sec > 10000, 'Timeline math achieves high-throughput > 10k ops/sec');
+  assert(benchMetrics.typography_fits_per_sec > 1000, 'Typography layout engine processes > 1k fits/sec');
+  assert(benchMetrics.localization_analyses_per_sec > 1000, 'Localization synchronizer processes > 1k analyses/sec');
+
+
 
 
 

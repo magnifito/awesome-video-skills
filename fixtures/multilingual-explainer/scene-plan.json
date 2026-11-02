@@ -1,0 +1,74 @@
+{
+  "schema_version": "1.0.0",
+  "plan_revision": "rev-1",
+  "renderer": "hyperframes",
+  "timing_authority": "speech",
+  "scenes": [
+    {
+      "scene_id": "scene-1-latency",
+      "factual_purpose": "Explain global edge network latency advantage",
+      "duration_seconds": 5.0,
+      "duration_frames": 150,
+      "copy_text": "Sub-100ms ultra-low latency video streaming across 40 regions worldwide",
+      "claims_refs": [
+        "claim-latency-sub100ms"
+      ],
+      "asset_refs": [
+        "cloudstream-logo"
+      ],
+      "visual_recipe": "isometric-feature-grid",
+      "audio_events": [
+        {
+          "type": "music_cue",
+          "event_name": "tech_beat",
+          "start_frame": 0,
+          "volume": 0.8
+        }
+      ]
+    },
+    {
+      "scene_id": "scene-2-av1",
+      "factual_purpose": "Demonstrate AV1 compression bandwidth efficiency",
+      "duration_seconds": 5.0,
+      "duration_frames": 150,
+      "copy_text": "Real-time AV1 hardware encoding with 40% bandwidth reduction",
+      "claims_refs": [
+        "claim-codec-av1"
+      ],
+      "asset_refs": [
+        "cloudstream-logo"
+      ],
+      "visual_recipe": "model-comparison",
+      "audio_events": [
+        {
+          "type": "sfx",
+          "event_name": "data_stream",
+          "start_frame": 10,
+          "volume": 0.5
+        }
+      ]
+    },
+    {
+      "scene_id": "scene-3-sla",
+      "factual_purpose": "Highlight 99.99% enterprise uptime commitment",
+      "duration_seconds": 5.0,
+      "duration_frames": 150,
+      "copy_text": "Enterprise 99.99% uptime SLA backed by distributed edge fallbacks",
+      "claims_refs": [
+        "claim-uptime-sla"
+      ],
+      "asset_refs": [
+        "cloudstream-logo"
+      ],
+      "visual_recipe": "milestone-reveal",
+      "audio_events": [
+        {
+          "type": "music_cue",
+          "event_name": "outro_chord",
+          "start_frame": 100,
+          "volume": 0.9
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "schema_version": "1.0.0",
+  "assets": [
+    {
+      "asset_id": "cloudstream-logo",
+      "content_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "local_path": "brief.json",
+      "source": "brand-guidelines",
+      "rights_evidence": "Client trademark registration #928374",
+      "consent_obtained": true,
+      "permitted": {
+        "client": "cloud-stream-pro",
+        "channels": ["all"],
+        "territories": ["worldwide"]
+      },
+      "attribution_required": false,
+      "status": "approved"
+    }
+  ]
+}

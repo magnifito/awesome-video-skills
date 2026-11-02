@@ -12,6 +12,7 @@ import type {
 import { runValidate } from './validate.js';
 import { CostTracker, CostBreakdown } from '../../../media/src/cost.js';
 import { SubtitleGenerator } from '../../../media/src/subtitles.js';
+import { DeliverableArchiver } from '../../../media/src/archiver.js';
 
 export interface PackageOutput {
   delivery_dir: string;
@@ -155,6 +156,10 @@ export async function runPackage(
     package_hash: packageHash
   }, null, 2), 'utf-8');
   deliveredFiles.push('delivery-manifest.json');
+
+  // Cryptographic checksums manifest for all deliverables
+  DeliverableArchiver.generateChecksumManifest(deliveryDir);
+  deliveredFiles.push('SHA256SUMS.txt');
 
   return {
     delivery_dir: deliveryDir,

@@ -1,0 +1,30 @@
+{
+  "schema_version": "1.0.0",
+  "revision": "rev-1",
+  "claims": [
+    {
+      "claim_id": "claim-latency-sub100ms",
+      "approved_wording": "Sub-100ms ultra-low latency video streaming across 40 regions worldwide",
+      "evidence_source": "Production latency telemetry across global edge nodes Q3 2026",
+      "owner": "Network Engineering",
+      "locale": "en",
+      "tags": ["performance", "latency"]
+    },
+    {
+      "claim_id": "claim-codec-av1",
+      "approved_wording": "Real-time AV1 hardware encoding with 40% bandwidth reduction",
+      "evidence_source": "Benchmarked against standard H.264 profiles at 1080p60",
+      "owner": "Video Infrastructure",
+      "locale": "en",
+      "tags": ["codec", "av1"]
+    },
+    {
+      "claim_id": "claim-uptime-sla",
+      "approved_wording": "Enterprise 99.99% uptime SLA backed by distributed edge fallbacks",
+      "evidence_source": "Enterprise customer SLA terms & conditions v3",
+      "owner": "Cloud Operations",
+      "locale": "en",
+      "tags": ["sla", "reliability"]
+    }
+  ]
+}
