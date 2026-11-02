@@ -39,6 +39,14 @@ import { MaskEngine, type MaskBox, type MaskOptions, type MaskResult } from '../
 import { AudioChannelMapper, type ChannelMapOptions, type ChannelMapResult } from '../../media/src/channel_map.js';
 import { BitrateOptimizer, type BitrateOptimizeOptions, type BitrateOptimizeResult } from '../../media/src/bitrate.js';
 import { MerkleManifest, type MerkleTreeResult } from '../../media/src/merkle.js';
+import { AudioResampler, type ResampleOptions, type ResampleResult } from '../../media/src/resampler.js';
+import { VideoReverseEngine, type ReverseOptions, type ReverseResult } from '../../media/src/reverse.js';
+import { MatteEngine, type MatteOptions, type MatteResult } from '../../media/src/matte.js';
+import { SfxSynthesizer, type SfxType, type SfxOptions, type SfxResult } from '../../media/src/sfx.js';
+import { MetadataSanitizer, type SanitizeOptions, type SanitizeResult } from '../../media/src/sanitizer.js';
+import { ChromaKeyEngine, type ChromaKeyOptions, type ChromaKeyResult } from '../../media/src/chromakey.js';
+import { TitleBurner, type TitleOptions, type TitleResult } from '../../media/src/title_burner.js';
+import { NoiseGateEngine, type NoiseGateOptions, type NoiseGateResult } from '../../media/src/noise_gate.js';
 import { runVerifyBundle, type BundleVerificationResult } from '../../cli/src/commands/verify_bundle.js';
 import { runDashboard, type DashboardStatus } from '../../cli/src/commands/dashboard.js';
 import { MotionCanvasAdapter, type MotionCanvasExportResult } from '../../../adapters/motion-canvas/index.js';
@@ -304,6 +312,45 @@ export class MagnifitoVideoEngine {
   merkle(dirPath: string): MerkleTreeResult {
     const fullPath = path.isAbsolute(dirPath) ? dirPath : path.resolve(this.workspaceRoot, dirPath);
     return MerkleManifest.computeTree(fullPath);
+  }
+
+  resample(audioPath: string, options: ResampleOptions = {}): ResampleResult {
+    const fullPath = path.isAbsolute(audioPath) ? audioPath : path.resolve(this.workspaceRoot, audioPath);
+    return AudioResampler.resample(fullPath, options);
+  }
+
+  reverse(videoPath: string, options: ReverseOptions = {}): ReverseResult {
+    const fullPath = path.isAbsolute(videoPath) ? videoPath : path.resolve(this.workspaceRoot, videoPath);
+    return VideoReverseEngine.reverse(fullPath, options);
+  }
+
+  matte(videoPath: string, options: MatteOptions = {}): MatteResult {
+    const fullPath = path.isAbsolute(videoPath) ? videoPath : path.resolve(this.workspaceRoot, videoPath);
+    return MatteEngine.applyMatte(fullPath, options);
+  }
+
+  sfx(type: SfxType, options: SfxOptions = {}): SfxResult {
+    return SfxSynthesizer.synthesize(type, options);
+  }
+
+  sanitize(mediaPath: string, options: SanitizeOptions = {}): SanitizeResult {
+    const fullPath = path.isAbsolute(mediaPath) ? mediaPath : path.resolve(this.workspaceRoot, mediaPath);
+    return MetadataSanitizer.sanitize(fullPath, options);
+  }
+
+  chromakey(videoPath: string, options: ChromaKeyOptions = {}): ChromaKeyResult {
+    const fullPath = path.isAbsolute(videoPath) ? videoPath : path.resolve(this.workspaceRoot, videoPath);
+    return ChromaKeyEngine.composite(fullPath, options);
+  }
+
+  title(videoPath: string, options: TitleOptions): TitleResult {
+    const fullPath = path.isAbsolute(videoPath) ? videoPath : path.resolve(this.workspaceRoot, videoPath);
+    return TitleBurner.burnTitle(fullPath, options);
+  }
+
+  noiseGate(audioPath: string, options: NoiseGateOptions = {}): NoiseGateResult {
+    const fullPath = path.isAbsolute(audioPath) ? audioPath : path.resolve(this.workspaceRoot, audioPath);
+    return NoiseGateEngine.applyGate(fullPath, options);
   }
 }
 

@@ -48,6 +48,14 @@ import { MaskEngine } from '../../../media/src/mask.js';
 import { AudioChannelMapper } from '../../../media/src/channel_map.js';
 import { BitrateOptimizer } from '../../../media/src/bitrate.js';
 import { MerkleManifest } from '../../../media/src/merkle.js';
+import { AudioResampler } from '../../../media/src/resampler.js';
+import { VideoReverseEngine } from '../../../media/src/reverse.js';
+import { MatteEngine } from '../../../media/src/matte.js';
+import { SfxSynthesizer, type SfxType } from '../../../media/src/sfx.js';
+import { MetadataSanitizer } from '../../../media/src/sanitizer.js';
+import { ChromaKeyEngine } from '../../../media/src/chromakey.js';
+import { TitleBurner } from '../../../media/src/title_burner.js';
+import { NoiseGateEngine } from '../../../media/src/noise_gate.js';
 
 
 
@@ -1201,6 +1209,192 @@ program
       console.log(`Leaves: ${res.leafCount} audited files across ${res.treeLevels} tree levels\n`);
     } catch (err) {
       console.error('Merkle command failed:', err);
+      process.exit(1);
+    }
+  });
+
+// mgvideo resample <audio>
+program
+  .command('resample <audio>')
+  .description('Resample audio to broadcast standards (48000 Hz) or custom rate')
+  .option('-r, --rate <hz>', 'Target sample rate in Hz', '48000')
+  .option('-o, --out <path>', 'Custom output audio path')
+  .action((audio, opts) => {
+    try {
+      const fullAudio = path.resolve(process.cwd(), audio);
+      const res = AudioResampler.resample(fullAudio, {
+        sampleRate: parseInt(opts.rate, 10),
+        outputPath: opts.out ? path.resolve(process.cwd(), opts.out) : undefined
+      });
+      console.log(`\n🔊 Audio Resampled!`);
+      console.log(`Sample Rate: ${res.originalSampleRate}Hz -> ${res.targetSampleRate}Hz`);
+      console.log(`Output: ${res.outputPath}\n`);
+    } catch (err) {
+      console.error('Resample command failed:', err);
+      process.exit(1);
+    }
+  });
+
+// mgvideo reverse <video>
+program
+  .command('reverse <video>')
+  .description('Reverse video and audio playback for rewind transitions or boomerang loops')
+  .option('-o, --out <path>', 'Custom output video path')
+  .action((video, opts) => {
+    try {
+      const fullVideo = path.resolve(process.cwd(), video);
+      const res = VideoReverseEngine.reverse(fullVideo, {
+        outputPath: opts.out ? path.resolve(process.cwd(), opts.out) : undefined
+      });
+      console.log(`\n⏪ Playback Reversed!`);
+      console.log(`Duration: ${res.durationSeconds.toFixed(1)}s (Audio reversed: ${res.reversedAudio})`);
+      console.log(`Output: ${res.outputPath}\n`);
+    } catch (err) {
+      console.error('Reverse command failed:', err);
+      process.exit(1);
+    }
+  });
+
+// mgvideo matte <video>
+program
+  .command('matte <video>')
+  .description('Overlay cinematic letterbox or pillarbox matte bars (2.39:1, 1.85:1, 4:3)')
+  .option('-p, --preset <preset>', 'Matte preset (2.39:1, 1.85:1, 4:3, custom)', '2.39:1')
+  .option('-b, --bars <pixels>', 'Custom bar height in pixels')
+  .option('-c, --color <color>', 'Bar color', 'black')
+  .option('-o, --out <path>', 'Custom output video path')
+  .action((video, opts) => {
+    try {
+      const fullVideo = path.resolve(process.cwd(), video);
+      const res = MatteEngine.applyMatte(fullVideo, {
+        preset: opts.preset,
+        barHeightPixels: opts.bars ? parseInt(opts.bars, 10) : undefined,
+        barColor: opts.color,
+        outputPath: opts.out ? path.resolve(process.cwd(), opts.out) : undefined
+      });
+      console.log(`\n🎬 Cinematic Matte Applied!`);
+      console.log(`Preset: ${res.preset} (Bar size: ${res.barHeight}px)`);
+      console.log(`Output: ${res.outputPath}\n`);
+    } catch (err) {
+      console.error('Matte command failed:', err);
+      process.exit(1);
+    }
+  });
+
+// mgvideo sfx <type>
+program
+  .command('sfx <type>')
+  .description('Procedurally synthesize transition sound effects without external audio assets (whoosh, thud, pop, chime)')
+  .option('-d, --duration <seconds>', 'Sound duration in seconds')
+  .option('-o, --out <path>', 'Custom output audio path')
+  .action((type, opts) => {
+    try {
+      const res = SfxSynthesizer.synthesize(type as SfxType, {
+        durationSeconds: opts.duration ? parseFloat(opts.duration) : undefined,
+        outputPath: opts.out ? path.resolve(process.cwd(), opts.out) : undefined
+      });
+      console.log(`\n🎶 SFX Synthesized!`);
+      console.log(`Type: ${res.type} (${res.durationSeconds.toFixed(2)}s @ ${res.sampleRate}Hz)`);
+      console.log(`Output: ${res.outputPath}\n`);
+    } catch (err) {
+      console.error('SFX command failed:', err);
+      process.exit(1);
+    }
+  });
+
+// mgvideo sanitize <media>
+program
+  .command('sanitize <media>')
+  .description('Strip sensitive camera metadata, geolocation, author tags, and local paths')
+  .option('-o, --out <path>', 'Custom output media path')
+  .action((media, opts) => {
+    try {
+      const fullMedia = path.resolve(process.cwd(), media);
+      const res = MetadataSanitizer.sanitize(fullMedia, {
+        outputPath: opts.out ? path.resolve(process.cwd(), opts.out) : undefined
+      });
+      console.log(`\n🧹 Metadata Sanitized!`);
+      console.log(`Status: Metadata stripped & chapters cleared`);
+      console.log(`Output: ${res.outputPath}\n`);
+    } catch (err) {
+      console.error('Sanitize command failed:', err);
+      process.exit(1);
+    }
+  });
+
+// mgvideo chromakey <video>
+program
+  .command('chromakey <video>')
+  .description('Key out green or blue screen background and composite over background plate')
+  .option('-k, --key <color>', 'Chroma key color (default: 0x00FF00)', '0x00FF00')
+  .option('-s, --similarity <value>', 'Color similarity threshold (0.01 to 1.0)', '0.25')
+  .option('-b, --bg <path>', 'Optional background image or video path')
+  .option('-o, --out <path>', 'Custom output video path')
+  .action((video, opts) => {
+    try {
+      const fullVideo = path.resolve(process.cwd(), video);
+      const res = ChromaKeyEngine.composite(fullVideo, {
+        keyColor: opts.key,
+        similarity: parseFloat(opts.similarity),
+        backgroundPath: opts.bg ? path.resolve(process.cwd(), opts.bg) : undefined,
+        outputPath: opts.out ? path.resolve(process.cwd(), opts.out) : undefined
+      });
+      console.log(`\n🟩 Chroma Key Composited!`);
+      console.log(`Key Color: ${res.keyColor} (Similarity: ${res.similarity})`);
+      console.log(`Output: ${res.outputPath}\n`);
+    } catch (err) {
+      console.error('Chromakey command failed:', err);
+      process.exit(1);
+    }
+  });
+
+// mgvideo title <video>
+program
+  .command('title <video>')
+  .description('Burn high-resolution typographic title card into video frames')
+  .requiredOption('-t, --title <text>', 'Main title text')
+  .option('-s, --subtitle <text>', 'Optional subtitle text')
+  .option('-p, --position <pos>', 'Position: top, center, bottom', 'center')
+  .option('-o, --out <path>', 'Custom output video path')
+  .action((video, opts) => {
+    try {
+      const fullVideo = path.resolve(process.cwd(), video);
+      const res = TitleBurner.burnTitle(fullVideo, {
+        titleText: opts.title,
+        subtitleText: opts.subtitle,
+        position: opts.position,
+        outputPath: opts.out ? path.resolve(process.cwd(), opts.out) : undefined
+      });
+      console.log(`\n🔤 Title Card Burned!`);
+      console.log(`Title: "${res.titleText}" Position: ${res.position}`);
+      console.log(`Output: ${res.outputPath}\n`);
+    } catch (err) {
+      console.error('Title burn command failed:', err);
+      process.exit(1);
+    }
+  });
+
+// mgvideo noise-gate <audio>
+program
+  .command('noise-gate <audio>')
+  .description('Mute background noise floor and ambient hum during speech pauses')
+  .option('-t, --threshold <db>', 'Threshold in dB (e.g. -40)', '-40')
+  .option('-r, --ratio <ratio>', 'Expansion ratio', '4.0')
+  .option('-o, --out <path>', 'Custom output audio path')
+  .action((audio, opts) => {
+    try {
+      const fullAudio = path.resolve(process.cwd(), audio);
+      const res = NoiseGateEngine.applyGate(fullAudio, {
+        thresholdDb: parseFloat(opts.threshold),
+        ratio: parseFloat(opts.ratio),
+        outputPath: opts.out ? path.resolve(process.cwd(), opts.out) : undefined
+      });
+      console.log(`\n🚪 Noise Gate Applied!`);
+      console.log(`Threshold: ${res.thresholdDb}dB Ratio: ${res.ratio}:1`);
+      console.log(`Filter: ${res.filterApplied}`);
+      console.log(`Output: ${res.outputPath}\n`);
+    } catch (err) {
+      console.error('Noise gate command failed:', err);
       process.exit(1);
     }
   });

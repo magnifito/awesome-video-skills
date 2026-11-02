@@ -55,6 +55,14 @@ mgvideo <command> [options]
 | `channel-map` | `mgvideo channel-map <audio>` | Remaps audio channels (mono-to-stereo, stereo-to-mono, left-only-to-stereo). |
 | `optimize` | `mgvideo optimize <video>` | Constrains video bitrate to meet file size limits (Discord 25MB, WhatsApp 16MB). |
 | `merkle` | `mgvideo merkle <dir>` | Computes hierarchical cryptographic Merkle tree root hash of deliverable package. |
+| `resample` | `mgvideo resample <audio>` | Resamples audio to broadcast standard (48 kHz) or custom sample rate. |
+| `reverse` | `mgvideo reverse <video>` | Reverses video and audio playback for rewind transitions or boomerang loops. |
+| `matte` | `mgvideo matte <video>` | Overlays cinematic letterbox or pillarbox matte bars (2.39:1, 1.85:1, 4:3). |
+| `sfx` | `mgvideo sfx <type>` | Procedurally synthesizes transition sound effects (whoosh, thud, pop, chime). |
+| `sanitize` | `mgvideo sanitize <media>` | Strips sensitive camera metadata, geolocation, author tags, and local paths. |
+| `chromakey` | `mgvideo chromakey <video>` | Keys out green or blue screen background and composites over background plate. |
+| `title` | `mgvideo title <video>` | Burns high-resolution typographic title card into video frames. |
+| `noise-gate` | `mgvideo noise-gate <audio>` | Mutes background noise floor and room hum during speech pauses via agate. |
 | `clean` | `mgvideo clean <project>` | Purges temporary render caches and older runs to preserve disk hygiene. |
 | `upstream` | `mgvideo upstream [check\|propose\|rollback]` | Manages external repository tracking, candidate review branches, and baseline rollbacks. |
 
@@ -171,3 +179,36 @@ mgvideo <command> [options]
 
 ### `mgvideo merkle <dir>`
 - Computes SHA256 hashes of all leaves and builds a binary Merkle tree root hash for client handoff integrity.
+
+### `mgvideo resample <audio>`
+- `-r, --rate <hz>`: Target sample rate in Hz (default: `48000`).
+- `-o, --out <path>`: Custom output audio path.
+
+### `mgvideo reverse <video>`
+- `-o, --out <path>`: Custom output video path.
+
+### `mgvideo matte <video>`
+- `-p, --preset <preset>`: Matte preset (`2.39:1`, `1.85:1`, `4:3`, `custom`). Defaults to `2.39:1`.
+- `-b, --bars <pixels>`: Custom matte bar thickness in pixels.
+- `-c, --color <color>`: Bar color (default: `black`).
+
+### `mgvideo sfx <type>`
+- Procedural sound effect synthesizer (`whoosh`, `thud`, `pop`, `chime`).
+- `-d, --duration <seconds>`: Custom duration.
+
+### `mgvideo sanitize <media>`
+- `-o, --out <path>`: Custom output media path with all metadata and chapter headers stripped.
+
+### `mgvideo chromakey <video>`
+- `-k, --key <color>`: Key color (default: `0x00FF00`).
+- `-s, --similarity <val>`: Color distance threshold (default: `0.25`).
+- `-b, --bg <path>`: Background image or video plate path.
+
+### `mgvideo title <video>`
+- `-t, --title <text>`: Required title text.
+- `-s, --subtitle <text>`: Optional secondary subtitle text.
+- `-p, --position <pos>`: `top`, `center`, `bottom` (default: `center`).
+
+### `mgvideo noise-gate <audio>`
+- `-t, --threshold <db>`: Noise gate threshold in dB (default: `-40`).
+- `-r, --ratio <ratio>`: Expansion ratio (default: `4.0`).

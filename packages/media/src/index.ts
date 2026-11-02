@@ -48,6 +48,14 @@ export * from './mask.js';
 export * from './channel_map.js';
 export * from './bitrate.js';
 export * from './merkle.js';
+export * from './resampler.js';
+export * from './reverse.js';
+export * from './matte.js';
+export * from './sfx.js';
+export * from './sanitizer.js';
+export * from './chromakey.js';
+export * from './title_burner.js';
+export * from './noise_gate.js';
 
 
 

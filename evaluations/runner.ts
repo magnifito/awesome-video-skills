@@ -1208,6 +1208,123 @@ async function runAllEvaluations() {
   assert(zeroViol.length === 1 && zeroViol[0].code === 'MEDIA_BUDGET_ZERO_VIOLATION', 'Zero media budget strictly guarded');
   console.log('🎉 CENTURY MILESTONE: All 100 test suites and core invariants verified!\n');
 
+  // Test 101: Audio Resampler & Sample Rate Converter
+  console.log('\n--- Test Suite 101: Audio Resampler & Sample Rate Converter ---');
+  const { AudioResampler } = await import('../packages/media/src/resampler.js');
+  const tmpResampleIn = path.join(workspaceRoot, 'tmp-resample-in.wav');
+  execSync(`ffmpeg -y -i "${initialVideoPath}" -vn -c:a pcm_s16le -t 2 -ar 44100 "${tmpResampleIn}"`, { stdio: 'pipe' });
+  const resampleRes = AudioResampler.resample(tmpResampleIn, { sampleRate: 48000 });
+  assert(nodeFs.existsSync(resampleRes.outputPath), 'Resampled audio file exists');
+  assert(resampleRes.targetSampleRate === 48000, 'Audio resampled to broadcast standard 48000 Hz');
+  nodeFs.rmSync(tmpResampleIn, { force: true });
+  nodeFs.rmSync(resampleRes.outputPath, { force: true });
+
+  // Test 102: Video Reverse / Backward Playback Engine
+  console.log('\n--- Test Suite 102: Video Reverse / Backward Playback Engine ---');
+  const { VideoReverseEngine } = await import('../packages/media/src/reverse.js');
+  const revClip = VideoConcatEngine.trimClip(initialVideoPath, { startSeconds: 0, durationSeconds: 1.5 });
+  const revRes = VideoReverseEngine.reverse(revClip);
+  assert(nodeFs.existsSync(revRes.outputPath), 'Reversed video exists on disk');
+  assert(revRes.reversedAudio === true, 'Audio stream reversed in synchrony');
+  nodeFs.rmSync(revClip, { force: true });
+  nodeFs.rmSync(revRes.outputPath, { force: true });
+
+  // Test 103: Cinematic Letterbox & Pillarbox Matte Generator
+  console.log('\n--- Test Suite 103: Cinematic Letterbox & Pillarbox Matte Generator ---');
+  const { MatteEngine } = await import('../packages/media/src/matte.js');
+  const matteClip = VideoConcatEngine.trimClip(initialVideoPath, { startSeconds: 0, durationSeconds: 1.5 });
+  const scopeMatte = MatteEngine.applyMatte(matteClip, { preset: '2.39:1' });
+  assert(nodeFs.existsSync(scopeMatte.outputPath), '2.39:1 letterbox video generated');
+  assert(scopeMatte.barHeight > 0, 'Letterbox bars calculated for scope aspect');
+  const pillarMatte = MatteEngine.applyMatte(matteClip, { preset: '4:3' });
+  assert(nodeFs.existsSync(pillarMatte.outputPath), '4:3 pillarbox video generated');
+  nodeFs.rmSync(matteClip, { force: true });
+  nodeFs.rmSync(scopeMatte.outputPath, { force: true });
+  nodeFs.rmSync(pillarMatte.outputPath, { force: true });
+
+  // Test 104: Procedural Transition Sound Effects Synthesizer
+  console.log('\n--- Test Suite 104: Procedural Transition Sound Effects Synthesizer ---');
+  const { SfxSynthesizer } = await import('../packages/media/src/sfx.js');
+  const whooshSfx = SfxSynthesizer.synthesize('whoosh');
+  assert(nodeFs.existsSync(whooshSfx.outputPath), 'Synthesized whoosh audio exists');
+  assert(whooshSfx.type === 'whoosh', 'SFX type recorded as whoosh');
+  const thudSfx = SfxSynthesizer.synthesize('thud');
+  assert(nodeFs.existsSync(thudSfx.outputPath), 'Synthesized sub-bass thud exists');
+  nodeFs.rmSync(whooshSfx.outputPath, { force: true });
+  nodeFs.rmSync(thudSfx.outputPath, { force: true });
+
+  // Test 105: Media Metadata Stripper & Sanitizer
+  console.log('\n--- Test Suite 105: Media Metadata Stripper & Sanitizer ---');
+  const { MetadataSanitizer } = await import('../packages/media/src/sanitizer.js');
+  const sanClip = VideoConcatEngine.trimClip(initialVideoPath, { startSeconds: 0, durationSeconds: 1.0 });
+  const sanRes = MetadataSanitizer.sanitize(sanClip);
+  assert(nodeFs.existsSync(sanRes.outputPath), 'Sanitized media file generated');
+  assert(sanRes.strippedMetadata === true, 'Metadata tracks stripped');
+  assert(sanRes.strippedChapters === true, 'Chapter markers cleared');
+  nodeFs.rmSync(sanClip, { force: true });
+  nodeFs.rmSync(sanRes.outputPath, { force: true });
+
+  // Test 106: Video Chroma Key Compositor
+  console.log('\n--- Test Suite 106: Video Chroma Key Compositor ---');
+  const { ChromaKeyEngine } = await import('../packages/media/src/chromakey.js');
+  const tmpGreen = path.join(workspaceRoot, 'tmp-green-screen.mp4');
+  execSync(`ffmpeg -y -f lavfi -i "color=c=0x00FF00:s=320x240:d=1" -c:v libx264 -pix_fmt yuv420p "${tmpGreen}"`, { stdio: 'pipe' });
+  const chromaRes = ChromaKeyEngine.composite(tmpGreen, { keyColor: '0x00FF00', similarity: 0.3 });
+  assert(nodeFs.existsSync(chromaRes.outputPath), 'Chroma-keyed composite video generated');
+  assert(chromaRes.keyColor === '0x00FF00', 'Key color verified');
+  nodeFs.rmSync(tmpGreen, { force: true });
+  nodeFs.rmSync(chromaRes.outputPath, { force: true });
+
+  // Test 107: Text-to-Video Burn-In Title Engine
+  console.log('\n--- Test Suite 107: Text-to-Video Burn-In Title Engine ---');
+  const { TitleBurner } = await import('../packages/media/src/title_burner.js');
+  const titleClip = VideoConcatEngine.trimClip(initialVideoPath, { startSeconds: 0, durationSeconds: 1.0 });
+  const titleRes = TitleBurner.burnTitle(titleClip, {
+    titleText: 'Magnifito Super Video',
+    subtitleText: 'Enterprise Production Grade',
+    position: 'center'
+  });
+  assert(nodeFs.existsSync(titleRes.outputPath), 'Title card burned video generated');
+  assert(titleRes.titleText === 'Magnifito Super Video', 'Title copy verified');
+  assert(titleRes.position === 'center', 'Title centered');
+  nodeFs.rmSync(titleClip, { force: true });
+  nodeFs.rmSync(titleRes.outputPath, { force: true });
+
+  // Test 108: Audio Noise Gate & Expander
+  console.log('\n--- Test Suite 108: Audio Noise Gate & Expander ---');
+  const { NoiseGateEngine } = await import('../packages/media/src/noise_gate.js');
+  const tmpGateIn = path.join(workspaceRoot, 'tmp-gate-in.wav');
+  execSync(`ffmpeg -y -i "${initialVideoPath}" -vn -c:a pcm_s16le -t 2 "${tmpGateIn}"`, { stdio: 'pipe' });
+  const noiseGateRes = NoiseGateEngine.applyGate(tmpGateIn, { thresholdDb: -40, ratio: 4.0 });
+  assert(nodeFs.existsSync(noiseGateRes.outputPath), 'Noise gated audio generated');
+  assert(noiseGateRes.thresholdDb === -40, 'Threshold verified at -40dB');
+  assert(noiseGateRes.filterApplied.includes('agate'), 'FFmpeg agate filter applied');
+  nodeFs.rmSync(tmpGateIn, { force: true });
+  nodeFs.rmSync(noiseGateRes.outputPath, { force: true });
+
+  // Test 109: Programmatic SDK Extended Methods (Cycle 87-96)
+  console.log('\n--- Test Suite 109: Programmatic SDK Extended Methods (Cycle 87-96) ---');
+  assert(typeof engine.resample === 'function', 'SDK exposes resample() method');
+  assert(typeof engine.reverse === 'function', 'SDK exposes reverse() method');
+  assert(typeof engine.matte === 'function', 'SDK exposes matte() method');
+  assert(typeof engine.sfx === 'function', 'SDK exposes sfx() method');
+  assert(typeof engine.sanitize === 'function', 'SDK exposes sanitize() method');
+  assert(typeof engine.chromakey === 'function', 'SDK exposes chromakey() method');
+  assert(typeof engine.title === 'function', 'SDK exposes title() method');
+  assert(typeof engine.noiseGate === 'function', 'SDK exposes noiseGate() method');
+  const sdkSfx = engine.sfx('chime');
+  assert(nodeFs.existsSync(sdkSfx.outputPath), 'SDK sfx() synthesizes chime cue');
+  nodeFs.rmSync(sdkSfx.outputPath, { force: true });
+
+  // Test 110: Grand Enterprise Sovereign Production Verification
+  console.log('\n--- Test Suite 110: Grand Enterprise Sovereign Production Verification ---');
+  const enterpriseDoctor = await runDoctor();
+  assert(enterpriseDoctor.passed, 'Enterprise environment doctor passes all host tool assertions');
+  const catalogAudit = await runUpstreamCheck(workspaceRoot);
+  assert(catalogAudit.total_tracked === 12, '12 upstreams maintained in quarantine catalog');
+  assert(catalogAudit.repositories.every(r => r.observed_commit.length === 40), 'All 12 repositories pinned by 40-character commit hashes');
+  console.log('🏆 GRAND ENTERPRISE PLATFORM: 110 Test Suites Verified with Zero Failures!\n');
+
 
 
 
