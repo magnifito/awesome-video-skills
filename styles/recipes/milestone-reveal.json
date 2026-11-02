@@ -1,0 +1,15 @@
+{
+  "id": "milestone-reveal",
+  "name": "Milestone & Metric Reveal Recipe",
+  "description": "Counter animation ticking up to a major milestone or performance figure with radial glow",
+  "recommended_duration_seconds": [4.0, 7.0],
+  "motion": {
+    "counter_easing": "decelerate",
+    "particle_burst_at_percent": 80,
+    "glow_color": "#38bdf8"
+  },
+  "layout": {
+    "metric_size_px": 96,
+    "label_placement": "below_metric"
+  }
+}

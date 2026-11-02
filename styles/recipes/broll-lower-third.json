@@ -1,0 +1,15 @@
+{
+  "id": "broll-lower-third",
+  "name": "B-Roll Lower Third Recipe",
+  "description": "Subtle, non-intrusive lower third name and affiliation badge outside speaker face region",
+  "recommended_duration_seconds": [3.0, 5.0],
+  "motion": {
+    "slide_in_direction": "left_to_right",
+    "accent_line_draw_ms": 300
+  },
+  "layout": {
+    "margin_bottom_px": 80,
+    "margin_left_px": 80,
+    "transparent_background": true
+  }
+}

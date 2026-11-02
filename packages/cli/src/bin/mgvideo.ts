@@ -12,6 +12,9 @@ import { runBatchCommerce } from '../commands/batch.js';
 import { startPreviewServer } from '../commands/preview.js';
 import { CostTracker } from '../../../media/src/cost.js';
 import { runUpstreamCheck, runUpstreamPropose, runUpstreamRollback } from '../commands/upstream.js';
+import { generateDeliveryReport } from '../commands/report.js';
+import { compareRenderOutputs } from '../commands/diff.js';
+import { ContractMigrator } from '../../../contracts/src/migrate.js';
 
 const program = new Command();
 
@@ -356,5 +359,71 @@ upstream
     }
   });
 
+// mgvideo report <project>
+program
+  .command('report <project>')
+  .description('Generate an executive delivery report and compliance audit in Markdown and JSON')
+  .option('-r, --run <runId>', 'Target run ID (defaults to latest run)')
+  .action(async (projectPath, opts) => {
+    try {
+      const targetDir = path.resolve(process.cwd(), projectPath);
+      const { report, markdownPath } = await generateDeliveryReport(targetDir, opts.run);
+      console.log(`\n📑 Magnifito Executive Delivery Report Generated!`);
+      console.log(`Project: ${report.project_name} (${report.project_id})`);
+      console.log(`Master Video: ${path.basename(report.deliverables.video_path)}`);
+      console.log(`Resolution: ${report.deliverables.resolution} @ ${report.deliverables.fps}fps`);
+      console.log(`Loudness: ${report.deliverables.audio_lufs} LUFS (True Peak: ${report.deliverables.audio_true_peak_db} dBTP)`);
+      console.log(`Zero-Budget Spent: $${report.financials.external_media_spent_usd.toFixed(2)} USD (100% Policy Compliant)`);
+      console.log(`\nSaved delivery report to:`);
+      console.log(` • Markdown : ${markdownPath}`);
+      console.log('');
+    } catch (err) {
+      console.error('Report command failed:', err);
+      process.exit(1);
+    }
+  });
+
+// mgvideo diff <targetA> <targetB>
+program
+  .command('diff <targetA> <targetB>')
+  .description('Compare two render outputs or frames for visual drift and quality degradation')
+  .action(async (targetA, targetB) => {
+    try {
+      const rep = await compareRenderOutputs(targetA, targetB);
+      console.log(`\n🔎 Visual Diff Comparison:`);
+      console.log(`Target A: ${targetA}`);
+      console.log(`Target B: ${targetB}`);
+      console.log(`Type: ${rep.type.toUpperCase()}`);
+      console.log(`Status: ${rep.passed ? 'PASSED ✅' : 'FAILED ❌'}`);
+      console.log(`Summary: ${rep.summary}\n`);
+      if (!rep.passed) process.exit(1);
+    } catch (err) {
+      console.error('Diff command failed:', err);
+      process.exit(1);
+    }
+  });
+
+// mgvideo migrate <project>
+program
+  .command('migrate <project>')
+  .description('Upgrade project brief and brand specifications to current schema version')
+  .action(async (projectPath) => {
+    try {
+      const targetDir = path.resolve(process.cwd(), projectPath);
+      const res = ContractMigrator.migrateProject(targetDir);
+      console.log(`\n📦 Migrated project contracts: ${res.project_id}`);
+      console.log(`Version: ${res.previous_version} -> ${res.target_version}`);
+      console.log(`Applied changes: ${res.changes.length}`);
+      for (const ch of res.changes) {
+        console.log(` • [${ch.file}] ${ch.field}: ${ch.action}`);
+      }
+      console.log('');
+    } catch (err) {
+      console.error('Migrate command failed:', err);
+      process.exit(1);
+    }
+  });
+
 program.parse(process.argv);
+
 

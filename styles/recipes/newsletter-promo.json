@@ -1,0 +1,14 @@
+{
+  "id": "newsletter-promo",
+  "name": "Newsletter & Publication Promo Recipe",
+  "description": "Clean editorial card previewing publication headlines with animated subscriber badge",
+  "recommended_duration_seconds": [4.0, 6.0],
+  "motion": {
+    "card_slide_up_ms": 450,
+    "subscribe_button_pulse": true
+  },
+  "layout": {
+    "editorial_serif": true,
+    "author_avatar_placement": "top_left"
+  }
+}

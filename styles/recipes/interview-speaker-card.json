@@ -1,0 +1,14 @@
+{
+  "id": "interview-speaker-card",
+  "name": "Interview Speaker Introduction Card Recipe",
+  "description": "Full-frame introduction establishing speaker identity, credentials, and episode topic",
+  "recommended_duration_seconds": [3.0, 4.5],
+  "motion": {
+    "fade_in_ms": 300,
+    "photo_zoom_drift": 0.04
+  },
+  "layout": {
+    "split_portrait": true,
+    "credentials_alignment": "left"
+  }
+}

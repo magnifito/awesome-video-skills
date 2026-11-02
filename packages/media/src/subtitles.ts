@@ -121,3 +121,4 @@ export class SubtitleGenerator {
     return { srtPath, vttPath };
   }
 }
+

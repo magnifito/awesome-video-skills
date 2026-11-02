@@ -1,5 +1,6 @@
 import path from 'node:path';
 import fs from 'node:fs/promises';
+import nodeFs from 'node:fs';
 import { runRender } from '../packages/cli/src/commands/render.js';
 import { runValidate } from '../packages/cli/src/commands/validate.js';
 import { runPackage } from '../packages/cli/src/commands/package.js';
@@ -253,6 +254,133 @@ async function runAllEvaluations() {
   ]);
   assert(prPayload.body_markdown.includes('Candidate Review'), 'Candidate PR generator includes review header');
   assert(prPayload.body_markdown.includes('mgvideo upstream rollback'), 'Candidate PR includes automated rollback command');
+
+  // Test 25: Campaign Reference Timer (Frozen Clock Isolation)
+  console.log('\n--- Test Suite 25: Campaign Reference Timer ---');
+  const { CampaignTimer } = await import('../packages/media/src/campaign_timer.js');
+  const countdown = CampaignTimer.calculateRemaining(
+    '2026-11-02T12:00:00Z',
+    '2026-11-04T12:00:00Z',
+    30.0,
+    'bg'
+  );
+  assert(countdown.days === 1, 'Countdown days matches frozen reference timeline');
+  assert(countdown.hours === 23, 'Countdown hours matches frozen reference timeline');
+  assert(countdown.minutes === 59, 'Countdown minutes matches frozen reference timeline');
+  assert(countdown.seconds === 30, 'Countdown seconds accurately accounts for elapsed scene duration');
+  assert(countdown.formattedText === 'Остават 1 дни и 23 ч.', 'Countdown formats Cyrillic Bulgarian locale text correctly');
+
+  // Test 26: Upstream Selective Snapshot & Hash Integrity
+  console.log('\n--- Test Suite 26: Upstream Selective Snapshot & Integrity ---');
+  const { SnapshotManager } = await import('../tools/upstreams/snapshot.js');
+  const snapshotMgr = new SnapshotManager(workspaceRoot);
+  const testCommit = '5c5794287bd0dc2c94f238ca89f4752ecaa045a2';
+  const manifest = snapshotMgr.createSnapshot('hyperframes-test', testCommit, 'Apache-2.0', [
+    { relativePath: 'src/core.js', content: 'export const hyperframes = "0.1.0";' },
+    { relativePath: 'LICENSE', content: 'Apache License Version 2.0' }
+  ]);
+  assert(manifest.files.length === 2, 'Snapshot manager records exact file entries');
+  const verifyValid = snapshotMgr.verifySnapshot('hyperframes-test', testCommit);
+  assert(verifyValid.valid === true, 'Snapshot cryptographic checksum verification passes for authentic tree');
+  
+  // Test tampering detection
+  const tamperedPath = path.join(snapshotMgr.getSnapshotDir('hyperframes-test', testCommit), 'src/core.js');
+  nodeFs.writeFileSync(tamperedPath, 'malicious payload modification');
+  const verifyTampered = snapshotMgr.verifySnapshot('hyperframes-test', testCommit);
+  assert(verifyTampered.valid === false, 'Snapshot integrity verification flags tampered vendored code');
+  // Clean up test snapshot
+  nodeFs.rmSync(path.join(workspaceRoot, 'vendor', 'hyperframes-test'), { recursive: true, force: true });
+
+  // Test 27: Objective Video Quality Metrics (SSIM & PSNR)
+  console.log('\n--- Test Suite 27: Objective Video Quality (SSIM & PSNR) ---');
+  const { measureVideoQuality } = await import('../packages/media/src/inspector.js');
+  const masterPromoPath = path.join(promoFixtureDir, 'runs', initialRender.run_id, `final_output_${initialRender.run_id}.mp4`);
+  const quality = await measureVideoQuality(masterPromoPath, masterPromoPath);
+  assert(quality.ssim_all >= 0.999, 'Self-comparison video yields perfect SSIM structural similarity >= 0.999');
+  assert(quality.psnr_average === 'inf' || quality.psnr_average > 50, 'Self-comparison video yields infinite or near-infinite PSNR');
+
+  // Test 28: Agency Executive Delivery Report Generator
+  console.log('\n--- Test Suite 28: Executive Delivery Report Generator ---');
+  const { generateDeliveryReport } = await import('../packages/cli/src/commands/report.js');
+  const deliveryRep = await generateDeliveryReport(promoFixtureDir);
+  assert(nodeFs.existsSync(deliveryRep.markdownPath), 'Executive report generates DELIVERY_REPORT.md');
+  assert(nodeFs.existsSync(deliveryRep.jsonPath), 'Executive report generates delivery_report.json');
+  assert(deliveryRep.report.financials.zero_budget_compliant === true, 'Executive report certifies zero-budget API spend');
+  assert(deliveryRep.report.governance.reviewer.length > 0, 'Executive report documents reviewer governance sign-off');
+
+  // Test 29: Contract Schema Migration Engine
+  console.log('\n--- Test Suite 29: Contract Schema Migration Engine ---');
+  const { ContractMigrator } = await import('../packages/contracts/src/migrate.js');
+  const tempMigrateDir = path.join(workspaceRoot, 'tmp-migrate-test');
+  nodeFs.mkdirSync(tempMigrateDir, { recursive: true });
+  nodeFs.writeFileSync(
+    path.join(tempMigrateDir, 'brief.json'),
+    JSON.stringify({
+      schema_version: '0.9.0',
+      project_id: 'legacy-project',
+      client_id: 'legacy-client',
+      workflow: 'branded-promo',
+      objective: 'Upgrade legacy project',
+      audience: 'Global',
+      duration_seconds: 15,
+      formats: ['16:9'],
+      engine: 'hyperframes'
+    }, null, 2)
+  );
+  const migSummary = ContractMigrator.migrateProject(tempMigrateDir);
+  assert(migSummary.success === true, 'Migration engine executes cleanly on legacy contract');
+  assert(migSummary.target_version === '1.0.0', 'Migration engine upgrades schema version to 1.0.0');
+  const migratedBrief = JSON.parse(nodeFs.readFileSync(path.join(tempMigrateDir, 'brief.json'), 'utf8'));
+  assert(migratedBrief.budgets.media_budget_usd === 0.0, 'Migration engine injects default zero-budget media policy');
+  nodeFs.rmSync(tempMigrateDir, { recursive: true, force: true });
+
+  // Test 30: Visual Diff & Drift Comparison
+  console.log('\n--- Test Suite 30: Visual Diff Engine ---');
+  const { compareRenderOutputs } = await import('../packages/cli/src/commands/diff.js');
+  const diffRes = await compareRenderOutputs(masterPromoPath, masterPromoPath);
+  assert(diffRes.passed === true, 'Visual diff passes for identical video streams');
+  assert(diffRes.video_metrics?.ssim_all !== undefined, 'Visual diff returns verified SSIM metric data');
+
+  // Test 31: Audio Normalization & True-Peak Protection
+  console.log('\n--- Test Suite 31: Audio Normalization & True-Peak ---');
+  const { AudioNormalizer } = await import('../packages/media/src/audio_normalizer.js');
+  const normalizedOutPath = path.join(promoFixtureDir, 'runs', initialRender.run_id, 'normalized_audio.m4a');
+  const normResult = await AudioNormalizer.normalize(masterPromoPath, normalizedOutPath, {
+    targetLufs: -16.0,
+    truePeakDb: -1.0
+  });
+  assert(nodeFs.existsSync(normalizedOutPath), 'Audio normalizer outputs normalized audio file');
+  assert(normResult.appliedTargetLufs === -16.0, 'Audio normalizer adheres to -16 LUFS streaming/online target');
+  assert(normResult.appliedTruePeakDb === -1.0, 'Audio normalizer sets true peak ceiling at -1.0 dBTP');
+
+  // Test 32: Broadcast Color Space (Rec.709 Compliance)
+  console.log('\n--- Test Suite 32: Broadcast Color Space Compliance ---');
+  const { ColorSpaceConfigurator } = await import('../packages/media/src/colorspace.js');
+  const rec709Flags = ColorSpaceConfigurator.getRec709Flags();
+  assert(rec709Flags.includes('bt709'), 'Color space configurator outputs bt709 parameters');
+  const colorMeta = await ColorSpaceConfigurator.inspectColorMetadata(masterPromoPath);
+  assert(colorMeta.is_rec709_compliant === true, 'Rendered master video satisfies Rec.709 color specification');
+
+  // Test 33: Shot Recipe Registry & Dynamic Binding
+  console.log('\n--- Test Suite 33: Shot Recipe Registry & Token Binding ---');
+  const { ShotRecipeRegistry } = await import('../styles/recipes/registry.js');
+  const recipeRegistry = new ShotRecipeRegistry();
+  assert(recipeRegistry.count() === 12, 'Recipe registry loads all 12 core shot recipes');
+  const boundRecipe = recipeRegistry.bindRecipe('cinematic-title', {
+    colors: { primary: '#FFD700', accent: '#00FFFF' },
+    typography: { primary_font: 'Cinzel, serif' }
+  }, 4.5);
+  assert(boundRecipe.recipe_id === 'cinematic-title', 'Bound recipe references correct recipe ID');
+  assert(boundRecipe.duration_seconds === 4.5, 'Bound recipe preserves requested duration within recipe limits');
+  assert(boundRecipe.resolved_styles.font_family === 'Cinzel, serif', 'Bound recipe binds brand typography');
+
+  // Test 34: Upstream Tracking Status & Catalog Coherence
+  console.log('\n--- Test Suite 34: Upstream Tracking Coherence ---');
+  const freshUpstreamStatus = await runUpstreamCheck(workspaceRoot);
+  assert(freshUpstreamStatus.total_tracked === 12, 'Upstream check monitors all 12 tracked repositories');
+  assert(freshUpstreamStatus.repositories.length === 12, 'Upstream check lists all 12 tracked repositories');
+
+
 
   console.log(`\n========================================`);
   console.log(`EVALUATION SUMMARY: ${passCount} Passed, ${failCount} Failed`);

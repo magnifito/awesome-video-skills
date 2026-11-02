@@ -1,0 +1,14 @@
+{
+  "id": "broll-stat-callout",
+  "name": "B-Roll Statistical Callout Recipe",
+  "description": "Speech-timed data callout bubble appearing next to talking-head subject with pointer arrow",
+  "recommended_duration_seconds": [3.0, 4.5],
+  "motion": {
+    "pop_in_easing": "spring_snappy",
+    "callout_arrow_pulse": true
+  },
+  "layout": {
+    "position": "upper_right",
+    "max_width_px": 360
+  }
+}

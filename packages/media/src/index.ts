@@ -7,4 +7,8 @@ export * from './layout.js';
 export * from './audio_mixer.js';
 export * from './visual_diff.js';
 export * from './lexicon.js';
+export * from './campaign_timer.js';
+export * from './audio_normalizer.js';
+export * from './colorspace.js';
+
 

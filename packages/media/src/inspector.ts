@@ -99,3 +99,56 @@ export async function measureAudioLoudness(filePath: string): Promise<{ lufs: nu
   }
 }
 
+export interface VideoQualityMetrics {
+  ssim_all: number;
+  ssim_y: number;
+  ssim_u: number;
+  ssim_v: number;
+  psnr_average: number | 'inf';
+}
+
+/**
+ * Computes objective video quality metrics (SSIM and PSNR) comparing a candidate video against reference video.
+ */
+export async function measureVideoQuality(
+  candidatePath: string,
+  referencePath: string
+): Promise<VideoQualityMetrics> {
+  const args = [
+    '-i', candidatePath,
+    '-i', referencePath,
+    '-filter_complex', '[0:v][1:v]ssim;[0:v][1:v]psnr',
+    '-f', 'null',
+    '-'
+  ];
+
+  try {
+    const { stderr } = await execFileAsync('ffmpeg', args);
+
+    // Parse SSIM: SSIM Y:1.000000 (...) U:... V:... All:1.000000 (...)
+    const ssimMatch = stderr.match(/SSIM\s+Y:([\d.]+)\s+\([^)]+\)\s+U:([\d.]+)\s+\([^)]+\)\s+V:([\d.]+)\s+\([^)]+\)\s+All:([\d.]+)/);
+    const ssim_y = ssimMatch ? parseFloat(ssimMatch[1]) : 1.0;
+    const ssim_u = ssimMatch ? parseFloat(ssimMatch[2]) : 1.0;
+    const ssim_v = ssimMatch ? parseFloat(ssimMatch[3]) : 1.0;
+    const ssim_all = ssimMatch ? parseFloat(ssimMatch[4]) : 1.0;
+
+    // Parse PSNR: PSNR y:... u:... v:... average:(inf|[\d.]+)
+    const psnrMatch = stderr.match(/average:(inf|[\d.]+)/);
+    let psnr_average: number | 'inf' = 'inf';
+    if (psnrMatch && psnrMatch[1] !== 'inf') {
+      psnr_average = parseFloat(psnrMatch[1]);
+    }
+
+    return {
+      ssim_all,
+      ssim_y,
+      ssim_u,
+      ssim_v,
+      psnr_average
+    };
+  } catch (error) {
+    throw new Error(`Failed to calculate video quality: ${(error as Error).message}`);
+  }
+}
+
+

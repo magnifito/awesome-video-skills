@@ -1,0 +1,15 @@
+{
+  "id": "isometric-feature-grid",
+  "name": "Isometric Feature Grid Recipe",
+  "description": "3D-angled isometric tiles revealing technical architecture components sequentially",
+  "recommended_duration_seconds": [5.0, 9.0],
+  "motion": {
+    "rotation_deg_x": 45,
+    "rotation_deg_z": -30,
+    "tile_pop_interval_ms": 150
+  },
+  "layout": {
+    "grid_dimensions": "3x2",
+    "camera_fov": 45
+  }
+}

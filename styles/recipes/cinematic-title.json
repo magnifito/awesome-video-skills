@@ -1,0 +1,17 @@
+{
+  "id": "cinematic-title",
+  "name": "Cinematic Title Recipe",
+  "description": "Dramatic title card with atmospheric glow, lens flares, and slow majestic scale drift",
+  "recommended_duration_seconds": [3.5, 6.0],
+  "motion": {
+    "camera_move": "subtle_drift",
+    "scale_start": 0.95,
+    "scale_end": 1.05,
+    "glow_intensity": 0.8
+  },
+  "layout": {
+    "alignment": "center",
+    "letter_spacing_em": 0.15,
+    "text_transform": "uppercase"
+  }
+}

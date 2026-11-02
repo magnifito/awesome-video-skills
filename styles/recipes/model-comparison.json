@@ -1,0 +1,14 @@
+{
+  "id": "model-comparison",
+  "name": "Side-by-Side Model Comparison Recipe",
+  "description": "Dual-column layout comparing traditional workflow vs automated modern solution",
+  "recommended_duration_seconds": [5.0, 8.0],
+  "motion": {
+    "split_wipe_duration_ms": 600,
+    "winner_column_highlight_delay_ms": 1200
+  },
+  "layout": {
+    "column_ratio": "50/50",
+    "badge_vs_placement": "center_divider"
+  }
+}
