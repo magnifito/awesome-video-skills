@@ -24,5 +24,10 @@ export * from './color_presets.js';
 export * from './waveform.js';
 export * from './stems.js';
 export * from './bundle.js';
+export * from './transitions.js';
+export * from './proxy.js';
+export * from './watermark.js';
+export * from './speed.js';
+export * from './safezone_overlay.js';
 
 

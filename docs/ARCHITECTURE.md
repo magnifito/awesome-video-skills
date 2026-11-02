@@ -76,6 +76,9 @@ flowchart TD
   - Fallback seekable browser timeline adapter for standalone canvas animations.
 - **Remotion Isolated Profile**:
   - Pinned adapter profile for containerized React render workloads.
+- **Motion Canvas 2D Vector Adapter**:
+  - Compiles declarative `ScenePlan` into type-safe Motion Canvas TypeScript 2D scenes (`makeScene2D`) without executing untrusted external code; flags GPL-3.0 exporter warnings.
+
 
 ---
 

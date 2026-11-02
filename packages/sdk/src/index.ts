@@ -14,6 +14,15 @@ import { AudioWaveformVisualizer, type WaveformResult, type WaveformOptions } fr
 import { SubtitleEmbedder, type SubtitleTrackConfig, type EmbedSubtitlesResult } from '../../media/src/subtitles_embedder.js';
 import { StemExporter, type StemTrackInput, type StemExportReport } from '../../media/src/stems.js';
 import { ProductionBundleExporter, type BundleOptions, type BundleSummary } from '../../media/src/bundle.js';
+import { TransitionEngine, type TransitionOptions, type TransitionResult } from '../../media/src/transitions.js';
+import { ProxyGenerator, type ProxyOptions, type ProxyResult } from '../../media/src/proxy.js';
+import { SecurityWatermarker, type WatermarkOptions, type WatermarkResult } from '../../media/src/watermark.js';
+import { VideoSpeedEngine, type SpeedOptions, type SpeedResult } from '../../media/src/speed.js';
+import { SafeZoneOverlayGenerator, type SafeZoneOverlayOptions } from '../../media/src/safezone_overlay.js';
+import { runVerifyBundle, type BundleVerificationResult } from '../../cli/src/commands/verify_bundle.js';
+import { runDashboard, type DashboardStatus } from '../../cli/src/commands/dashboard.js';
+import { MotionCanvasAdapter, type MotionCanvasExportResult } from '../../../adapters/motion-canvas/index.js';
+import type { ProjectContext } from '../../../adapters/interface.js';
 import { ContractMigrator, type MigrationSummary } from '../../contracts/src/migrate.js';
 import { AssetAuditor, type AssetManifestAuditReport } from '../../media/src/asset_auditor.js';
 import { FontAuditor, type FontAuditResult } from '../../media/src/font_auditor.js';
@@ -127,6 +136,46 @@ export class MagnifitoVideoEngine {
   bundle(deliveryDir: string, options: BundleOptions = {}): BundleSummary {
     const fullOut = path.isAbsolute(deliveryDir) ? deliveryDir : path.resolve(this.workspaceRoot, deliveryDir);
     return ProductionBundleExporter.createBundle(fullOut, options);
+  }
+
+  transition(clipPaths: string[], options: TransitionOptions = {}): TransitionResult {
+    const resolvedClips = clipPaths.map(c => path.isAbsolute(c) ? c : path.resolve(this.workspaceRoot, c));
+    return TransitionEngine.composeTransitions(resolvedClips, options);
+  }
+
+  proxy(videoPath: string, options: ProxyOptions = {}): ProxyResult {
+    const fullPath = path.isAbsolute(videoPath) ? videoPath : path.resolve(this.workspaceRoot, videoPath);
+    return ProxyGenerator.generateProxy(fullPath, options);
+  }
+
+  watermark(videoPath: string, options: WatermarkOptions = {}): WatermarkResult {
+    const fullPath = path.isAbsolute(videoPath) ? videoPath : path.resolve(this.workspaceRoot, videoPath);
+    return SecurityWatermarker.applyWatermark(fullPath, options);
+  }
+
+  speed(videoPath: string, factor: number, options: SpeedOptions = {}): SpeedResult {
+    const fullPath = path.isAbsolute(videoPath) ? videoPath : path.resolve(this.workspaceRoot, videoPath);
+    return VideoSpeedEngine.changeSpeed(fullPath, factor, options);
+  }
+
+  safeZoneOverlay(videoPath: string, options: SafeZoneOverlayOptions = {}): string {
+    const fullPath = path.isAbsolute(videoPath) ? videoPath : path.resolve(this.workspaceRoot, videoPath);
+    return SafeZoneOverlayGenerator.applySafeZoneGuide(fullPath, options);
+  }
+
+  async verifyBundle(bundlePath: string): Promise<BundleVerificationResult> {
+    const fullPath = path.isAbsolute(bundlePath) ? bundlePath : path.resolve(this.workspaceRoot, bundlePath);
+    return runVerifyBundle(fullPath);
+  }
+
+  async dashboard(): Promise<DashboardStatus> {
+    return runDashboard(this.workspaceRoot);
+  }
+
+  exportMotionCanvas(context: ProjectContext, outputDir: string): MotionCanvasExportResult {
+    const fullOut = path.isAbsolute(outputDir) ? outputDir : path.resolve(this.workspaceRoot, outputDir);
+    const adapter = new MotionCanvasAdapter();
+    return adapter.exportProject(context, fullOut);
   }
 }
 

@@ -34,12 +34,40 @@ mgvideo <command> [options]
 | `waveform` | `mgvideo waveform <media>` | Generates high-resolution audio waveform visualizer PNG for voiceover and podcasts. |
 | `notify` | `mgvideo notify <project>` | Dispatches webhook event payloads for automated CI/CD and production monitoring. |
 | `bundle` | `mgvideo bundle <deliveryDir>` | Compresses deliverables, review records, notices, and checksums into an immutable .tar.gz archive. |
+| `verify-bundle` | `mgvideo verify-bundle <bundle>` | Cryptographically validates SHA256 checksums and review signatures inside a production tarball. |
+| `dashboard` | `mgvideo dashboard` | Displays an executive production status dashboard with binary health, workflows, and budgets. |
+| `proxy` | `mgvideo proxy <video>` | Transcodes heavy video assets into lightweight 540p/720p proxies for low-latency editing. |
+| `watermark` | `mgvideo watermark <video>` | Burns semi-transparent security banners or embargo notices into client review videos. |
+| `speed` | `mgvideo speed <video>` | Adjusts playback speed (0.5x to 8.0x) with pitch-preserved audio synchrony. |
+| `safezone` | `mgvideo safezone <video>` | Overlays mobile platform safe margin bounding rectangles onto video for QA analysis. |
 | `clean` | `mgvideo clean <project>` | Purges temporary render caches and older runs to preserve disk hygiene. |
 | `upstream` | `mgvideo upstream [check\|propose\|rollback]` | Manages external repository tracking, candidate review branches, and baseline rollbacks. |
 
 ---
 
 ## Detailed Command Options
+
+### `mgvideo dashboard`
+- Renders an executive ASCII overview of system health, quarantined upstreams, workflows status, and zero-spend compliance.
+
+### `mgvideo verify-bundle <bundle.tar.gz>`
+- Verifies every unpacked deliverable against `SHA256SUMS.txt`.
+- Audits `review-record.json` approvals.
+
+### `mgvideo proxy <video>`
+- `-r, --res <resolution>`: Proxy resolution (`540p`, `720p`, `360p`). Defaults to `540p`.
+- `-o, --out <path>`: Custom output proxy video path.
+
+### `mgvideo watermark <video>`
+- `-t, --text <text>`: Watermark banner text (default: `CONFIDENTIAL - REVIEW ONLY`).
+- `-r, --reviewer <name>`: Reviewer identity tag.
+- `-p, --position <pos>`: `top_right`, `center`, `bottom_right`. Defaults to `top_right`.
+
+### `mgvideo speed <video>`
+- `-f, --factor <factor>`: Speed multiplier (`1.25`, `1.5`, `2.0`, `0.75`). Required.
+
+### `mgvideo safezone <video>`
+- Generates vertical 9:16 safe area QA overlays depicting TikTok, Reels, and Shorts interaction margins.
 
 ### `mgvideo render <project>`
 - `-f, --format <format>`: Aspect ratio (`9:16`, `16:9`, `1:1`). Defaults to `9:16`.

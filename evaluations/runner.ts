@@ -724,6 +724,127 @@ async function runAllEvaluations() {
   assert(sumsText.includes('_final.mp4'), 'SHA256SUMS tracks master final mp4 deliverable');
   assert(sumsText.includes('review-record.json'), 'SHA256SUMS tracks review-record.json');
 
+  // Test 61: Motion Canvas Adapter & Scene Exporter
+  console.log('\n--- Test Suite 61: Motion Canvas Adapter & Scene Exporter ---');
+  const { MotionCanvasAdapter } = await import('../adapters/motion-canvas/index.js');
+  const mcAdapter = new MotionCanvasAdapter();
+  const mcTmpDir = path.join(workspaceRoot, 'tmp-mc-export');
+  const mcContext = {
+    projectDir: promoFixtureDir,
+    brief: JSON.parse(nodeFs.readFileSync(path.join(promoFixtureDir, 'brief.json'), 'utf8')),
+    brand: JSON.parse(nodeFs.readFileSync(path.join(promoFixtureDir, 'brand.json'), 'utf8')),
+    claims: JSON.parse(nodeFs.readFileSync(path.join(promoFixtureDir, 'claims.json'), 'utf8')),
+    assets: JSON.parse(nodeFs.readFileSync(path.join(promoFixtureDir, 'assets.json'), 'utf8')),
+    scenePlan: JSON.parse(nodeFs.readFileSync(path.join(promoFixtureDir, 'scene-plan.json'), 'utf8'))
+  };
+  const mcExport = mcAdapter.exportProject(mcContext, mcTmpDir);
+  assert(nodeFs.existsSync(mcExport.projectTsPath), 'Motion Canvas project.ts generated');
+  assert(mcExport.scenesCount === 3, 'Motion Canvas generated 3 scene files');
+  assert(mcExport.quarantineWarnings.some(w => w.includes('GPL-3.0')), 'Motion Canvas adapter flags GPL-3.0 notice');
+  nodeFs.rmSync(mcTmpDir, { recursive: true, force: true });
+
+  // Test 62: Video Transition Engine (xfade)
+  console.log('\n--- Test Suite 62: Video Transition Engine (xfade) ---');
+  const { TransitionEngine } = await import('../packages/media/src/transitions.js');
+  const clipA = path.join(workspaceRoot, 'tmp-clip-a.mp4');
+  const clipB = path.join(workspaceRoot, 'tmp-clip-b.mp4');
+  execSync(`ffmpeg -y -i "${initialVideoPath}" -t 2 -c copy "${clipA}"`, { stdio: 'pipe' });
+  execSync(`ffmpeg -y -i "${initialVideoPath}" -ss 3 -t 2 -c copy "${clipB}"`, { stdio: 'pipe' });
+  const transRes = TransitionEngine.composeTransitions([clipA, clipB], {
+    transition: 'fade',
+    durationSeconds: 0.5
+  });
+  assert(nodeFs.existsSync(transRes.outputPath), 'Transitioned video exists on disk');
+  assert(transRes.transition === 'fade', 'Transition engine records fade effect');
+  assert(transRes.clipsCount === 2, 'Stitched 2 video clips');
+  nodeFs.rmSync(clipA, { force: true });
+  nodeFs.rmSync(clipB, { force: true });
+  nodeFs.rmSync(transRes.outputPath, { force: true });
+
+  // Test 63: Asset Transcoding & Proxy Workflow
+  console.log('\n--- Test Suite 63: Asset Transcoding & Proxy Workflow ---');
+  const { ProxyGenerator } = await import('../packages/media/src/proxy.js');
+  const proxyRes = ProxyGenerator.generateProxy(demoVideoPath, { resolution: '540p' });
+  assert(nodeFs.existsSync(proxyRes.proxyPath), '540p proxy file exists on disk');
+  assert(proxyRes.resolution === '540p', 'Proxy records 540p resolution');
+  assert(proxyRes.compressionRatio > 0, 'Proxy compression ratio is calculated');
+  nodeFs.rmSync(proxyRes.proxyPath, { force: true });
+
+  // Test 64: Security Watermarking & Embargo Burn-In
+  console.log('\n--- Test Suite 64: Security Watermarking & Embargo Burn-In ---');
+  const { SecurityWatermarker } = await import('../packages/media/src/watermark.js');
+  const wmRes = SecurityWatermarker.applyWatermark(demoVideoPath, {
+    text: 'CONFIDENTIAL EMBARGO',
+    reviewer: 'Technical Lead',
+    position: 'top_right'
+  });
+  assert(nodeFs.existsSync(wmRes.outputPath), 'Watermarked video exists on disk');
+  assert(wmRes.text.includes('CONFIDENTIAL EMBARGO'), 'Watermark burns confidential banner');
+  nodeFs.rmSync(wmRes.outputPath, { force: true });
+
+  // Test 65: Video Speed Remapping
+  console.log('\n--- Test Suite 65: Video Speed Remapping ---');
+  const { VideoSpeedEngine } = await import('../packages/media/src/speed.js');
+  const speedRes = VideoSpeedEngine.changeSpeed(demoVideoPath, 1.5);
+  assert(nodeFs.existsSync(speedRes.outputPath), 'Speed-adjusted video exists on disk');
+  assert(speedRes.speedFactor === 1.5, 'Speed engine records 1.5x multiplier');
+  assert(speedRes.newDurationSeconds < speedRes.originalDurationSeconds, 'New duration is reduced proportionally');
+  nodeFs.rmSync(speedRes.outputPath, { force: true });
+
+  // Test 66: Safe Zone Visual Overlay Generator
+  console.log('\n--- Test Suite 66: Safe Zone Visual Overlay Generator ---');
+  const { SafeZoneOverlayGenerator } = await import('../packages/media/src/safezone_overlay.js');
+  const svgOverlay = SafeZoneOverlayGenerator.generateSvgOverlay();
+  assert(svgOverlay.includes('1080'), 'Safe zone SVG specifies 1080 width');
+  assert(svgOverlay.includes('1920'), 'Safe zone SVG specifies 1920 height');
+  assert(svgOverlay.includes('SAFE CONTENT AREA'), 'Safe zone SVG demarcates safe content bounds');
+
+  // Test 67: Production Bundle Verification CLI
+  console.log('\n--- Test Suite 67: Production Bundle Verification CLI ---');
+  const { runVerifyBundle } = await import('../packages/cli/src/commands/verify_bundle.js');
+  const testBundleRes = ProductionBundleExporter.createBundle(promoDeliveryDir);
+  const verifyRes = await runVerifyBundle(testBundleRes.bundlePath);
+  assert(verifyRes.valid === true, 'Bundle verification passes 100% integrity');
+  assert(verifyRes.hasSignedReview === true, 'Bundle verification detects approved review record');
+  assert(verifyRes.verifiedFilesCount > 0, 'Bundle verification validated all manifest files');
+  nodeFs.rmSync(testBundleRes.bundlePath, { force: true });
+  nodeFs.rmSync(testBundleRes.manifestPath, { force: true });
+
+  // Test 68: Production Dashboard TUI
+  console.log('\n--- Test Suite 68: Production Dashboard TUI ---');
+  const { runDashboard } = await import('../packages/cli/src/commands/dashboard.js');
+  const dashStatus = await runDashboard(workspaceRoot);
+  assert(dashStatus.doctorPassed === true, 'Dashboard confirms doctor checks passed');
+  assert(dashStatus.trackedReposCount === 12, 'Dashboard tracks 12 quarantined upstreams');
+  assert(dashStatus.workflows.length === 5, 'Dashboard monitors 5 canonical workflows');
+  assert(dashStatus.mediaBudgetZeroEnforced === true, 'Dashboard enforces zero-spend policy');
+
+  // Test 69: Programmatic SDK Extended Methods
+  console.log('\n--- Test Suite 69: Programmatic SDK Extended Methods ---');
+  const sdkDash = await engine.dashboard();
+  assert(sdkDash.doctorPassed === true, 'SDK dashboard reports healthy worker');
+  const sdkProxy = engine.proxy(demoVideoPath, { resolution: '360p' });
+  assert(nodeFs.existsSync(sdkProxy.proxyPath), 'SDK proxy produces 360p file');
+  nodeFs.rmSync(sdkProxy.proxyPath, { force: true });
+
+  // Test 70: End-to-End Five Workflow Matrix Verification
+  console.log('\n--- Test Suite 70: End-to-End Five Workflow Matrix Verification ---');
+  const singleProjectIds = [
+    'promo-bulgarian-15s',
+    'product-demo-saas',
+    'talking-head-edit',
+    'multilingual-explainer'
+  ];
+  for (const id of singleProjectIds) {
+    const fDir = path.join(workspaceRoot, 'fixtures', id);
+    const brief = JSON.parse(nodeFs.readFileSync(path.join(fDir, 'brief.json'), 'utf8'));
+    assert(brief.budgets.media_budget_usd === 0, `Workflow "${id}" strictly satisfies zero media budget ($0.00)`);
+  }
+  const batchCatalog = JSON.parse(nodeFs.readFileSync(path.join(workspaceRoot, 'fixtures', 'commerce-batch', 'catalog.json'), 'utf8'));
+  assert(batchCatalog.items.length === 3, 'Commerce batch tracks 3 items');
+  assert(batchCatalog.items.some((i: any) => i.status === 'skipped_out_of_stock'), 'Commerce batch tracks out-of-stock SKU');
+
+
 
 
 
