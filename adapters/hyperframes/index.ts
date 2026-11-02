@@ -174,12 +174,19 @@ export class HyperFramesAdapter implements VideoRendererAdapter {
   /**
    * Generates SVG for an individual scene card to render frames without external font latency.
    */
-  generateSceneSvg(scene: ProjectContext['scenePlan']['scenes'][0], brand: ProjectContext['brand'], width: number, height: number): string {
+  generateSceneSvg(
+    scene: ProjectContext['scenePlan']['scenes'][0],
+    brand: ProjectContext['brand'],
+    width: number,
+    height: number,
+    transparent = false
+  ): string {
     const fontSize = Math.round(width > 1200 ? 54 : 40);
     const subSize = Math.round(fontSize * 0.45);
-    const cardWidth = Math.round(width * 0.82);
-    const cardHeight = Math.round(height * 0.45);
-    const cardX = Math.round((width - cardWidth) / 2);
+    const isVertical = height > width;
+    const cardWidth = Math.round(width * (isVertical ? 0.78 : 0.82));
+    const cardHeight = Math.round(height * (isVertical ? 0.42 : 0.45));
+    const cardX = Math.round(width * (isVertical ? 0.08 : (1 - 0.82) / 2));
     const cardY = Math.round((height - cardHeight) / 2);
 
     // Break lines for text
@@ -205,13 +212,13 @@ export class HyperFramesAdapter implements VideoRendererAdapter {
       <stop offset="100%" stop-color="#020617"/>
     </linearGradient>
     <linearGradient id="cardGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#1e293b" stop-opacity="0.95"/>
-      <stop offset="100%" stop-color="#0f172a" stop-opacity="0.95"/>
+      <stop offset="0%" stop-color="#1e293b" stop-opacity="${transparent ? '0.85' : '0.95'}"/>
+      <stop offset="100%" stop-color="#0f172a" stop-opacity="${transparent ? '0.85' : '0.95'}"/>
     </linearGradient>
   </defs>
 
   <!-- Background -->
-  <rect width="100%" height="100%" fill="url(#bgGrad)"/>
+  ${transparent ? '' : '<rect width="100%" height="100%" fill="url(#bgGrad)"/>'}
 
   <!-- Card Backdrop -->
   <rect x="${cardX}" y="${cardY}" width="${cardWidth}" height="${cardHeight}" rx="24" ry="24"
@@ -304,14 +311,19 @@ export class HyperFramesAdapter implements VideoRendererAdapter {
     const segmentPaths: string[] = [];
     const tempFiles: string[] = [];
 
+    const isTransparent = settings.transparent || settings.format === 'mov_prores';
+    const isProRes = settings.format === 'mov_prores';
+    const isWebM = settings.format === 'webm';
+    const fileExt = isProRes ? 'mov' : isWebM ? 'webm' : 'mp4';
+
     for (let i = 0; i < context.scenePlan.scenes.length; i++) {
       const scene = context.scenePlan.scenes[i];
       logs.push(`[HyperFrames] Rendering scene ${i + 1}/${context.scenePlan.scenes.length}: ${scene.scene_id} (${scene.duration_seconds}s)`);
 
-      const svgContent = this.generateSceneSvg(scene, context.brand, settings.width, settings.height);
+      const svgContent = this.generateSceneSvg(scene, context.brand, settings.width, settings.height, isTransparent);
       const svgPath = path.join(outputDir, `scene_${i}.svg`);
       const pngPath = path.join(outputDir, `scene_${i}.png`);
-      const segPath = path.join(outputDir, `segment_${i}.mp4`);
+      const segPath = path.join(outputDir, `segment_${i}.${fileExt}`);
 
       await fs.writeFile(svgPath, svgContent, 'utf-8');
       tempFiles.push(svgPath);
@@ -329,21 +341,53 @@ export class HyperFramesAdapter implements VideoRendererAdapter {
       }
       tempFiles.push(pngPath);
 
-      // Encode segment using ffmpeg
-      const segArgs = [
-        '-y',
-        '-loop', '1',
-        '-i', pngPath,
-        '-f', 'lavfi',
-        '-i', `anullsrc=r=${settings.audio_sample_rate}:cl=stereo`,
-        '-t', scene.duration_seconds.toString(),
-        '-vf', `scale=${settings.width}:${settings.height},format=yuv420p`,
-        '-c:v', 'libx264',
-        '-r', settings.fps.toString(),
-        '-c:a', 'aac',
-        '-b:a', '192k',
-        segPath
-      ];
+      // Encode segment using ffmpeg based on target format and alpha capability
+      let segArgs: string[];
+      if (isProRes) {
+        segArgs = [
+          '-y',
+          '-loop', '1',
+          '-i', pngPath,
+          '-f', 'lavfi',
+          '-i', `anullsrc=r=${settings.audio_sample_rate}:cl=stereo`,
+          '-t', scene.duration_seconds.toString(),
+          '-c:v', 'prores_ks',
+          '-profile:v', '4', // ProRes 4444
+          '-pix_fmt', 'yuva444p10le',
+          '-r', settings.fps.toString(),
+          '-c:a', 'pcm_s16le',
+          segPath
+        ];
+      } else if (isWebM && isTransparent) {
+        segArgs = [
+          '-y',
+          '-loop', '1',
+          '-i', pngPath,
+          '-f', 'lavfi',
+          '-i', `anullsrc=r=${settings.audio_sample_rate}:cl=stereo`,
+          '-t', scene.duration_seconds.toString(),
+          '-c:v', 'libvpx-vp9',
+          '-pix_fmt', 'yuva420p',
+          '-r', settings.fps.toString(),
+          '-c:a', 'libopus',
+          segPath
+        ];
+      } else {
+        segArgs = [
+          '-y',
+          '-loop', '1',
+          '-i', pngPath,
+          '-f', 'lavfi',
+          '-i', `anullsrc=r=${settings.audio_sample_rate}:cl=stereo`,
+          '-t', scene.duration_seconds.toString(),
+          '-vf', `scale=${settings.width}:${settings.height},format=yuv420p`,
+          '-c:v', 'libx264',
+          '-r', settings.fps.toString(),
+          '-c:a', 'aac',
+          '-b:a', '192k',
+          segPath
+        ];
+      }
 
       await execFileAsync('ffmpeg', segArgs);
       segmentPaths.push(segPath);
@@ -356,7 +400,7 @@ export class HyperFramesAdapter implements VideoRendererAdapter {
     await fs.writeFile(concatListPath, concatContent, 'utf-8');
     tempFiles.push(concatListPath);
 
-    const finalOutputPath = path.join(outputDir, `final_output_${runId}.${settings.format}`);
+    const finalOutputPath = path.join(outputDir, `final_output_${runId}.${fileExt}`);
 
     const concatArgs = [
       '-y',

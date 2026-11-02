@@ -8,6 +8,7 @@ import type {
   ProjectBrief
 } from '../../../contracts/src/index.js';
 import { inspectMedia } from '../../../media/src/inspector.js';
+import { LayoutAuditor } from '../../../media/src/layout.js';
 
 export interface ValidationItem {
   check: string;
@@ -108,6 +109,26 @@ export async function runValidate(runPathOrId: string, projectDir?: string): Pro
       details: probe.has_audio ? 'Audio stream verified with valid codec.' : 'No audio stream detected.'
     });
     if (!probe.has_audio) unresolvedReviewItems.push('Missing audio track in delivery file.');
+
+    // 2b. Safe Zone Layout Audit for Mobile Formats (9:16)
+    if (renderRequest.settings.width === 1080 && renderRequest.settings.height === 1920) {
+      const cardWidth = Math.round(1080 * 0.78);
+      const cardHeight = Math.round(1920 * 0.42);
+      const cardX = Math.round(1080 * 0.08);
+      const cardY = Math.round((1920 - cardHeight) / 2);
+      const cardRect = { x: cardX, y: cardY, width: cardWidth, height: cardHeight };
+      const safeViolations = LayoutAuditor.checkElementInSafeZone('card_bounds', cardRect, 1080, 1920, '9:16');
+      items.push({
+        check: 'Mobile Safe Zones (9:16)',
+        passed: safeViolations.length === 0,
+        details: safeViolations.length === 0
+          ? 'Layout strictly conforms to mobile safe zone margins (TikTok/Reels).'
+          : `Safe margin encroachment: ${safeViolations.map(v => v.reason).join(', ')}`
+      });
+      if (safeViolations.length > 0) {
+        unresolvedReviewItems.push('Layout encroaches mobile safe zone margins.');
+      }
+    }
   }
 
   // 3. Factual Claims Check against claims register

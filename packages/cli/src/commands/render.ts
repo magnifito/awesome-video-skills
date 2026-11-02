@@ -26,6 +26,8 @@ import { runPlan } from './plan.js';
 
 export async function runRender(projectDir: string, options?: {
   format?: '16:9' | '9:16' | '1:1';
+  codec?: 'mp4' | 'webm' | 'mov_prores';
+  transparent?: boolean;
   force?: boolean;
 }): Promise<RenderResult> {
   const briefPath = path.join(projectDir, 'brief.json');
@@ -74,8 +76,8 @@ export async function runRender(projectDir: string, options?: {
     width,
     height,
     fps: 30,
-    format: 'mp4',
-    transparent: false,
+    format: options?.codec || (options?.transparent ? 'mov_prores' : 'mp4'),
+    transparent: Boolean(options?.transparent || options?.codec === 'mov_prores'),
     audio_sample_rate: 48000,
     audio_channels: 2,
     target_loudness_lufs: -16.0,

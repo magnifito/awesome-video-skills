@@ -11,6 +11,7 @@ import type {
 } from '../../../contracts/src/index.js';
 import { runValidate } from './validate.js';
 import { CostTracker, CostBreakdown } from '../../../media/src/cost.js';
+import { SubtitleGenerator } from '../../../media/src/subtitles.js';
 
 export interface PackageOutput {
   delivery_dir: string;
@@ -72,6 +73,16 @@ export async function runPackage(
   await fs.copyFile(brandPath, path.join(deliveryDir, 'brand.json'));
   await fs.copyFile(claimsPath, path.join(deliveryDir, 'claims.json'));
   deliveredFiles.push('brief.json', 'brand.json', 'claims.json');
+
+  // Export subtitles (.srt and .vtt)
+  try {
+    const scenePlanPath = path.join(projDir, 'scene-plan.json');
+    const scenePlanData = JSON.parse(await fs.readFile(scenePlanPath, 'utf-8'));
+    const cues = SubtitleGenerator.cuesFromScenePlan(scenePlanData);
+    const subBaseName = `${brief.project_id}_${brief.language}_captions`;
+    const { srtPath, vttPath } = await SubtitleGenerator.exportSubtitles(deliveryDir, subBaseName, cues);
+    deliveredFiles.push(path.basename(srtPath), path.basename(vttPath));
+  } catch {}
 
   // Build notices and attribution
   const notices = [

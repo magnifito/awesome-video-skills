@@ -36,3 +36,4 @@ jobs:
           test -f dist/packaged-skills/claude/skills-manifest.json
           test -f dist/packaged-skills/codex/skills-manifest.json
           echo "Packaging allowlist verified for Antigravity, Claude, and Codex."
+

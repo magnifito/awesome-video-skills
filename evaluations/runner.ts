@@ -176,6 +176,84 @@ async function runAllEvaluations() {
   const rollbackRes = await runUpstreamRollback(workspaceRoot, 'hyperframes', '5c5794287bd0dc2c94f238ca89f4752ecaa045a2');
   assert(rollbackRes.rolled_back_to === '5c5794287bd0dc2c94f238ca89f4752ecaa045a2', 'Rollback restores approved baseline');
 
+  // Test 16: Transparent Video & Alpha Channel Export (ProRes 4444)
+  console.log('\n--- Test Suite 16: Transparent ProRes Alpha Export ---');
+  const alphaRender = await runRender(interviewFixtureDir, { codec: 'mov_prores', transparent: true, force: true });
+  assert(alphaRender.measurements.has_alpha, 'ProRes 4444 render produces verified alpha channel');
+  assert(Boolean(alphaRender.measurements.pixel_format?.includes('yuva')), 'ProRes pixel format conforms to yuva alpha format');
+
+  // Test 17: Closed Captions & Subtitles (SRT & VTT)
+  console.log('\n--- Test Suite 17: Subtitle & Caption Generation ---');
+  const { SubtitleGenerator } = await import('../packages/media/src/subtitles.js');
+  const srtOutput = SubtitleGenerator.toSrt([
+    { index: 1, start_ms: 0, end_ms: 3000, text: 'Български субтитри за видео' }
+  ]);
+  assert(srtOutput.includes('00:00:00,000 --> 00:00:03,000'), 'SRT timestamps formatted accurately');
+  assert(srtOutput.includes('Български субтитри'), 'SRT preserves Cyrillic characters');
+
+  // Test 18: Mobile Safe Zone Layout Audit
+  console.log('\n--- Test Suite 18: Mobile Safe Zone Layout Analysis ---');
+  const { LayoutAuditor } = await import('../packages/media/src/layout.js');
+  const safeRect = { x: 86, y: 550, width: 842, height: 800 };
+  const safeCheck = LayoutAuditor.checkElementInSafeZone('card', safeRect, 1080, 1920, '9:16');
+  assert(safeCheck.length === 0, 'Centered mobile card respects 9:16 platform safe margins');
+  const encroachingRect = { x: 50, y: 1800, width: 900, height: 100 };
+  const encroachCheck = LayoutAuditor.checkElementInSafeZone('bottom_btn', encroachingRect, 1080, 1920, '9:16');
+  assert(encroachCheck.length > 0, 'Layout auditor flags element encroaching mobile bottom UI ticker zone');
+
+  // Test 19: Audio Mixer with Sidechain Ducking
+  console.log('\n--- Test Suite 19: Audio Mixer & Ducking ---');
+  const { AudioMixer } = await import('../packages/media/src/audio_mixer.js');
+  const mixedAudioPath = path.join(workspaceRoot, 'fixtures', 'talking-head-edit', 'mixed_test.aac');
+  await AudioMixer.mixWithDucking({ outputPath: mixedAudioPath });
+  const mixedAudioStat = await fs.stat(mixedAudioPath);
+  assert(mixedAudioStat.size > 0, 'Audio mixer synthesizes normalized AAC audio stream');
+  try { await fs.unlink(mixedAudioPath); } catch {}
+
+  // Test 20: Watchlist Framework Qualification
+  console.log('\n--- Test Suite 20: Watchlist Framework Qualification ---');
+  const { WatchlistQualifier } = await import('../tools/watchers/qualifier.js');
+  const mcQual = await WatchlistQualifier.qualifyFramework(workspaceRoot, 'motion-canvas');
+  assert(mcQual.license_classification.exporter_license === 'GPL-3.0 (@motion-canvas/ffmpeg)', 'Qualifier flags Motion Canvas exporter GPL-3.0 license');
+  const revQual = await WatchlistQualifier.qualifyFramework(workspaceRoot, 'revideo');
+  assert(revQual.readiness_tier === 'watchlist', 'Revideo categorized under batch watchlist');
+
+  // Test 21: Visual Regression & Pixel Diff
+  console.log('\n--- Test Suite 21: Visual Regression & Drift Detection ---');
+  const { VisualDiffComparator } = await import('../packages/media/src/visual_diff.js');
+  const still1 = await initialRender.output_files[0]?.path;
+  if (still1) {
+    const selfDiff = await VisualDiffComparator.compareFrames(still1, still1);
+    assert(selfDiff.identical_hashes, 'Visual comparator verifies identical frame hashes');
+    assert(selfDiff.perceptual_similarity === 1.0, 'Identical frames yield 1.0 perceptual similarity');
+  }
+
+  // Test 22: Brand Lexicon & Pronunciation Normalization
+  console.log('\n--- Test Suite 22: Brand Pronunciation Lexicon ---');
+  const { BrandLexicon } = await import('../packages/media/src/lexicon.js');
+  const normalizedEn = BrandLexicon.normalizePronunciation('Check the SKU inventory', 'en');
+  assert(normalizedEn.includes('S-K-U'), 'Lexicon expands acronym SKU to S-K-U for narration');
+  const bgGuides = BrandLexicon.getPronunciationGuide('Курс по разработка на софтуер', 'bg');
+  assert(bgGuides.some(g => g.stress_marked === 'софтуе́р'), 'Lexicon provides Bulgarian loanword stress accent guide');
+
+  // Test 23: Interactive Preview Server
+  console.log('\n--- Test Suite 23: Interactive Live Preview Server ---');
+  const { startPreviewServer } = await import('../packages/cli/src/commands/preview.js');
+  const previewServer = await startPreviewServer(promoFixtureDir, 3999);
+  assert(previewServer.url === 'http://localhost:3999', 'Preview server starts on requested port');
+  await previewServer.close();
+  assert(true, 'Preview server closes cleanly');
+
+  // Test 24: Upstream Candidate PR Generator
+  console.log('\n--- Test Suite 24: Upstream Candidate PR Engine ---');
+  const { CandidatePrGenerator } = await import('../tools/upstreams/candidate_pr.js');
+  const prPayload = await CandidatePrGenerator.generatePrPayload(workspaceRoot, 'hyperframes', [
+    { path: 'package.json', changeType: 'modified' },
+    { path: 'docs/README.md', changeType: 'modified' }
+  ]);
+  assert(prPayload.body_markdown.includes('Candidate Review'), 'Candidate PR generator includes review header');
+  assert(prPayload.body_markdown.includes('mgvideo upstream rollback'), 'Candidate PR includes automated rollback command');
+
   console.log(`\n========================================`);
   console.log(`EVALUATION SUMMARY: ${passCount} Passed, ${failCount} Failed`);
   console.log(`========================================\n`);

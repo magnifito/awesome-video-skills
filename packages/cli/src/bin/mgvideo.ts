@@ -9,6 +9,7 @@ import { runRender } from '../commands/render.js';
 import { runValidate } from '../commands/validate.js';
 import { runPackage } from '../commands/package.js';
 import { runBatchCommerce } from '../commands/batch.js';
+import { startPreviewServer } from '../commands/preview.js';
 import { CostTracker } from '../../../media/src/cost.js';
 import { runUpstreamCheck, runUpstreamPropose, runUpstreamRollback } from '../commands/upstream.js';
 
@@ -122,11 +123,32 @@ program
     }
   });
 
+// mgvideo preview <project>
+program
+  .command('preview <project>')
+  .description('Start interactive local HTTP preview server with live timeline scrubber')
+  .option('-p, --port <number>', 'HTTP server port', '3456')
+  .action(async (projectPath, opts) => {
+    try {
+      const targetDir = path.resolve(process.cwd(), projectPath);
+      const port = parseInt(opts.port, 10);
+      const instance = await startPreviewServer(targetDir, port);
+      console.log(`\n🚀 Magnifito Studio Live Preview running at: ${instance.url}`);
+      console.log(`Project: ${projectPath}`);
+      console.log('Press Ctrl+C to stop.\n');
+    } catch (err) {
+      console.error('Preview server failed:', err);
+      process.exit(1);
+    }
+  });
+
 // mgvideo render <project>
 program
   .command('render <project>')
   .description('Execute a frozen render request and write a separately identified run result')
   .option('-f, --format <format>', 'Aspect ratio format (9:16, 16:9, 1:1)', '9:16')
+  .option('-c, --codec <codec>', 'Output container codec (mp4, webm, mov_prores)', 'mp4')
+  .option('--transparent', 'Render with transparent background and alpha channel', false)
   .option('--force', 'Bypass cache and force re-rendering', false)
   .action(async (projectPath, opts) => {
     try {
@@ -134,6 +156,8 @@ program
       console.log(`\n🎬 Starting render for ${projectPath}...`);
       const result = await runRender(targetDir, {
         format: opts.format,
+        codec: opts.codec,
+        transparent: opts.transparent,
         force: opts.force
       });
       console.log(`\nRender status: ${result.status.toUpperCase()}`);
@@ -247,13 +271,18 @@ program
 program
   .command('batch <catalog>')
   .description('Render a multi-SKU commerce batch with retry manifests and per-product status')
+  .option('-c, --concurrency <number>', 'Concurrent worker rendering limit', '2')
   .option('--force', 'Force re-render of cached SKUs', false)
   .action(async (catalogPath, opts) => {
     try {
       console.log(`\n🛍️ Processing Commerce Batch: ${catalogPath}...`);
-      const rep = await runBatchCommerce(catalogPath, { force: opts.force });
+      const rep = await runBatchCommerce(catalogPath, {
+        force: opts.force,
+        concurrency: parseInt(opts.concurrency, 10)
+      });
       console.log(`\nBatch: ${rep.batch_id}`);
-      console.log(`Total: ${rep.total_items} | Rendered: ${rep.rendered} | Cached: ${rep.cached} | Skipped: ${rep.skipped} | Failed: ${rep.failed}\n`);
+      console.log(`Total: ${rep.total_items} | Rendered: ${rep.rendered} | Cached: ${rep.cached} | Skipped: ${rep.skipped} | Failed: ${rep.failed}`);
+      console.log(`Elapsed: ${rep.performance.total_elapsed_seconds}s | Throughput: ${rep.performance.throughput_items_per_minute} items/min (Concurrency: ${rep.performance.concurrency})\n`);
       for (const it of rep.items) {
         const icon = it.status === 'rendered' || it.status === 'cached' ? '✅' : it.status === 'skipped_out_of_stock' ? '⏭️' : '❌';
         console.log(` ${icon} [${it.sku}] ${it.status.toUpperCase()} - "${it.title.slice(0, 40)}..."`);

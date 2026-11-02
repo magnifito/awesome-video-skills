@@ -296,6 +296,7 @@ export const MeasurementsSchema = z.object({
   fps: z.number().positive(),
   has_audio: z.boolean(),
   has_alpha: z.boolean().default(false),
+  pixel_format: z.string().optional(),
   video_codec: z.string().optional(),
   audio_codec: z.string().optional(),
   measured_loudness_lufs: z.number().optional(),

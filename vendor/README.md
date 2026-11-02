@@ -8,3 +8,4 @@ This directory stores unmodified approved source snapshots outside agent discove
 - Vendored source code is treated as data, never auto-executed during discovery or packaging.
 - Agent skill installers and recursive scanners MUST NOT discover files within this directory.
 - Attribution notices and original copyright headers are preserved verbatim.
+
