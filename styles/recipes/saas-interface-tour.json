@@ -1,0 +1,15 @@
+{
+  "id": "saas-interface-tour",
+  "name": "SaaS Interface Tour Recipe",
+  "description": "Smooth panning and zooming on actual software screens with simulated cursor clicks",
+  "recommended_duration_seconds": [5.0, 10.0],
+  "motion": {
+    "pan_easing": "standard",
+    "cursor_click_squash": 0.92,
+    "highlight_border_glow": true
+  },
+  "layout": {
+    "viewport_crop": "130%",
+    "callout_position": "bottom_right"
+  }
+}

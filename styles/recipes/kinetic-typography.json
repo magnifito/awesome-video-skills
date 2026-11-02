@@ -1,0 +1,15 @@
+{
+  "id": "kinetic-typography",
+  "name": "Kinetic Typography Recipe",
+  "description": "Dynamic, staggered word-by-word reveal for bold messaging and hooks",
+  "recommended_duration_seconds": [3.0, 5.0],
+  "motion": {
+    "enter_easing": "spring_snappy",
+    "stagger_delay_ms": 60,
+    "scale_overshoot": 1.05
+  },
+  "layout": {
+    "text_alignment": "center",
+    "max_characters_per_line": 26
+  }
+}

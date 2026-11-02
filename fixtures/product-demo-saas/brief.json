@@ -1,0 +1,19 @@
+{
+  "schema_version": "1.0.0",
+  "project_id": "product-demo-saas",
+  "client_id": "catalogspark-inc",
+  "workflow": "product-demo",
+  "objective": "Demonstrate automated catalog sync and multi-channel export in CatalogSpark",
+  "audience": "Ecommerce operations managers and catalog teams",
+  "language": "en",
+  "duration_seconds": 15,
+  "formats": ["16:9"],
+  "engine": "hyperframes",
+  "timing_authority": "speech",
+  "budgets": {
+    "agent_budget_usd": 20.0,
+    "compute_budget_usd": 10.0,
+    "media_budget_usd": 0.0,
+    "max_retries": 3
+  }
+}

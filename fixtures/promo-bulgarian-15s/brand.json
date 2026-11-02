@@ -1,0 +1,39 @@
+{
+  "schema_version": "1.0.0",
+  "brand_id": "sofia-code-academy",
+  "name": "Sofia Code Academy",
+  "logos": {
+    "primary": "assets/logo.svg"
+  },
+  "colors": {
+    "primary": "#38bdf8",
+    "secondary": "#0284c7",
+    "background": "#0f172a",
+    "text_primary": "#f8fafc",
+    "accent": "#f59e0b"
+  },
+  "fonts": [
+    {
+      "family": "-apple-system, BlinkMacSystemFont, Arial, sans-serif",
+      "weight": "700",
+      "rights_evidence": "System-OFL-Compatible",
+      "supports_cyrillic": true
+    }
+  ],
+  "type_scale": {
+    "h1": 56,
+    "h2": 38,
+    "body": 22,
+    "caption": 16
+  },
+  "motion_preferences": {
+    "tempo": "punchy",
+    "camera_style": "subtle_drift",
+    "border_radius": 16,
+    "glassmorphism": true
+  },
+  "prohibited_treatments": [
+    "неверни обещания за заплати",
+    "агресивни мигащи неонови анимации"
+  ]
+}

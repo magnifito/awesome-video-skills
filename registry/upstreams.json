@@ -1,0 +1,275 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "version": "1.0.0",
+  "audit_date": "2026-11-01T00:00:00Z",
+  "description": "Magnifito audited upstream repositories with observed and approved commits",
+  "repositories": [
+    {
+      "id": "barty-motion-graphics",
+      "name": "Barty Bart Motion Graphics",
+      "owner": "Barty-Bart",
+      "repo": "motion-graphics",
+      "github_repo_id": 924856102,
+      "tracking_branch": "main",
+      "observed_commit": "3d83d987d658601d8a1269eb691622bdcd427335",
+      "approved_commit": null,
+      "license": "MIT",
+      "component_licenses": {
+        "fonts/Geist": "OFL-1.1",
+        "icons/Lucide": "ISC",
+        "audio/bundled": "CC0-1.0",
+        "audio/runtime_mixkit": "Restricted-NonRedistributable"
+      },
+      "skills_count": 6,
+      "main_contribution": "Explainers and speech timed graphics",
+      "magnifito_decision": "Reuse bounded tools; replace setup and reconcile audio rules",
+      "source_paths": [
+        "skills/b-roll",
+        "skills/explainer",
+        "tools/sound",
+        "tools/segmentation"
+      ],
+      "review_status": "observed"
+    },
+    {
+      "id": "charlie-motion-graphics-skills",
+      "name": "Charlie Motion Graphics Skills",
+      "owner": "charlie947",
+      "repo": "motion-graphics-skills",
+      "github_repo_id": 892341054,
+      "tracking_branch": "main",
+      "observed_commit": "229022ebca76972e119e36ada23a1648d51665ab",
+      "approved_commit": null,
+      "license": "MIT",
+      "component_licenses": {},
+      "skills_count": 15,
+      "main_contribution": "Brand intake and creative recipes",
+      "magnifito_decision": "Adapt selected instructions into brand and storyboard skills",
+      "source_paths": [
+        "skills/brand-intake",
+        "skills/launch-video",
+        "skills/motion-effects",
+        "skills/cinematic-titles"
+      ],
+      "review_status": "observed"
+    },
+    {
+      "id": "hyperframes",
+      "name": "HyperFrames",
+      "owner": "heygen-com",
+      "repo": "hyperframes",
+      "github_repo_id": 874512963,
+      "tracking_branch": "main",
+      "observed_commit": "5c5794287bd0dc2c94f238ca89f4752ecaa045a2",
+      "approved_commit": null,
+      "license": "Apache-2.0",
+      "component_licenses": {
+        "audio/historical": "Separate-Attribution-Required"
+      },
+      "skills_count": 7,
+      "main_contribution": "HTML video engine and authoring skills",
+      "magnifito_decision": "Primary renderer candidate; curate skills and service policy",
+      "source_paths": [
+        "packages/cli",
+        "packages/renderer",
+        "skills/render",
+        "skills/composition"
+      ],
+      "review_status": "observed"
+    },
+    {
+      "id": "video-shotcraft",
+      "name": "Video Shotcraft",
+      "owner": "Vincentwei1021",
+      "repo": "video-shotcraft",
+      "github_repo_id": 913405781,
+      "tracking_branch": "main",
+      "observed_commit": "1266a3ec4831289c4d893d42dd5102723658039a",
+      "approved_commit": null,
+      "license": "MIT",
+      "component_licenses": {},
+      "skills_count": 1,
+      "main_contribution": "124 shot recipes and product film workflow",
+      "magnifito_decision": "Start with 10 to 15 recipes; review source and asset rights",
+      "source_paths": [
+        "skills/shotcraft",
+        "recipes/shots"
+      ],
+      "review_status": "observed"
+    },
+    {
+      "id": "herk-edit-kit",
+      "name": "Herk Edit Kit",
+      "owner": "nateherkai",
+      "repo": "herk-edit-kit",
+      "github_repo_id": 884712095,
+      "tracking_branch": "main",
+      "observed_commit": "10511e5af86fc47756ea89803b397422e2d89284",
+      "approved_commit": null,
+      "license": "MIT",
+      "component_licenses": {
+        "pipeline_resources": "Retained-Permission-Notice"
+      },
+      "skills_count": 15,
+      "main_contribution": "Footage editing and transcript retiming",
+      "magnifito_decision": "Reuse helpers; implement missing QA and curate draft cards",
+      "source_paths": [
+        "skills/cut-helper",
+        "skills/transcript-sync",
+        "tools/timeline"
+      ],
+      "review_status": "observed"
+    },
+    {
+      "id": "noam-saas-product-demo",
+      "name": "Noam SaaS product demo",
+      "owner": "noamdorr",
+      "repo": "saas-product-demo-video",
+      "github_repo_id": 851940321,
+      "tracking_branch": "main",
+      "observed_commit": "74f4f7150810b1bb5bf9160c4a2742c5dce69b62",
+      "approved_commit": null,
+      "license": "MIT",
+      "component_licenses": {},
+      "skills_count": 1,
+      "main_contribution": "Music led software demos and revisions",
+      "magnifito_decision": "Adopt production discipline; isolate optional Remotion scaffold",
+      "source_paths": [
+        "skills/saas-demo",
+        "templates/remotion-saas"
+      ],
+      "review_status": "observed"
+    },
+    {
+      "id": "remotion-skills",
+      "name": "Official Remotion skills",
+      "owner": "remotion-dev",
+      "repo": "skills",
+      "github_repo_id": 789234510,
+      "tracking_branch": "main",
+      "observed_commit": "30d4553ecd46fbc5212fd0ff006ae43af522158b",
+      "approved_commit": null,
+      "license": "Remotion-Company-License",
+      "component_licenses": {
+        "engine": "Remotion-Commercial-License-Terms"
+      },
+      "skills_count": 12,
+      "main_contribution": "Official React video guidance",
+      "magnifito_decision": "Reference and documented installation; resolve copying rights",
+      "source_paths": [
+        "skills/best-practices",
+        "skills/compositions",
+        "skills/audio-sync"
+      ],
+      "review_status": "observed"
+    },
+    {
+      "id": "iart-b-roll",
+      "name": "Iart B Roll Skills",
+      "owner": "iart-ai",
+      "repo": "b-roll-skills",
+      "github_repo_id": 932014782,
+      "tracking_branch": "main",
+      "observed_commit": "a51e34b0a8def533759373733bde1869c21075fb",
+      "approved_commit": null,
+      "license": "MIT",
+      "component_licenses": {},
+      "skills_count": 1,
+      "main_contribution": "Speech timed canvas overlays",
+      "magnifito_decision": "Evaluate after edit lock; fix provider and render failure behavior",
+      "source_paths": [
+        "skills/talking-head-b-roll",
+        "renderers/canvas-overlay"
+      ],
+      "review_status": "observed"
+    },
+    {
+      "id": "iart-ecommerce-video",
+      "name": "Iart Ecommerce Video Skills",
+      "owner": "iart-ai",
+      "repo": "ecommerce-video-skills",
+      "github_repo_id": 938491023,
+      "tracking_branch": "main",
+      "observed_commit": "2bd0dd19c9b2df5230f5d8f7453861b9681e49b4",
+      "approved_commit": null,
+      "license": "MIT",
+      "component_licenses": {},
+      "skills_count": 3,
+      "main_contribution": "Retail offers and batch video recipes",
+      "magnifito_decision": "Reimplement tested components from reviewed recipes",
+      "source_paths": [
+        "skills/batch-commerce",
+        "recipes/retail-cards"
+      ],
+      "review_status": "observed"
+    },
+    {
+      "id": "noam-html-product-video",
+      "name": "Noam HTML product video",
+      "owner": "noamdorr",
+      "repo": "claude-motion-saas-video",
+      "github_repo_id": 901284561,
+      "tracking_branch": "main",
+      "observed_commit": "dfbe716495abfad263b2b8c783c21b3940b8e225",
+      "approved_commit": null,
+      "license": "MIT",
+      "component_licenses": {
+        "example_media": "Reference-Only-NonCommercial"
+      },
+      "skills_count": 4,
+      "main_contribution": "Lightweight HTML product video",
+      "magnifito_decision": "Experimental adapter and brief and revision reference",
+      "source_paths": [
+        "skills/lucky",
+        "skills/grill",
+        "skills/build",
+        "skills/edit"
+      ],
+      "review_status": "observed"
+    },
+    {
+      "id": "revideo",
+      "name": "Revideo",
+      "owner": "midrender",
+      "repo": "revideo",
+      "github_repo_id": 745129034,
+      "tracking_branch": "main",
+      "observed_commit": "b5de67a009a55aa2768a1e178b0446b2479a0b4e",
+      "approved_commit": null,
+      "license": "MIT",
+      "component_licenses": {},
+      "skills_count": 0,
+      "main_contribution": "Headless TypeScript video framework",
+      "magnifito_decision": "Watchlist until a concrete project justifies another engine",
+      "source_paths": [
+        "packages/core",
+        "packages/renderer",
+        "packages/ffmpeg"
+      ],
+      "review_status": "observed"
+    },
+    {
+      "id": "motion-canvas",
+      "name": "Motion Canvas",
+      "owner": "motion-canvas",
+      "repo": "motion-canvas",
+      "github_repo_id": 612093845,
+      "tracking_branch": "main",
+      "observed_commit": "7b91435c301d530351dcf5ebb91dd139c002e405",
+      "approved_commit": null,
+      "license": "MIT",
+      "component_licenses": {
+        "packages/ffmpeg": "GPL-3.0"
+      },
+      "skills_count": 0,
+      "main_contribution": "Vector explainers and precise sequencing",
+      "magnifito_decision": "Specialist watchlist; review exporter component license",
+      "source_paths": [
+        "packages/core",
+        "packages/2d",
+        "packages/ffmpeg"
+      ],
+      "review_status": "observed"
+    }
+  ]
+}

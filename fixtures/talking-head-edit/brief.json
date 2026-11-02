@@ -1,0 +1,19 @@
+{
+  "schema_version": "1.0.0",
+  "project_id": "talking-head-edit",
+  "client_id": "founder-interview-series",
+  "workflow": "talking-head-edit",
+  "objective": "Edit 60-second interview clip down to 15 seconds with transcript-aligned overlays",
+  "audience": "Tech founders and investors",
+  "language": "en",
+  "duration_seconds": 15,
+  "formats": ["16:9"],
+  "engine": "hyperframes",
+  "timing_authority": "speech",
+  "budgets": {
+    "agent_budget_usd": 15.0,
+    "compute_budget_usd": 5.0,
+    "media_budget_usd": 0.0,
+    "max_retries": 2
+  }
+}

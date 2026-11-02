@@ -1,0 +1,20 @@
+# Node dependencies
+node_modules/
+package-lock.json
+
+# Build outputs
+dist/
+
+# Render run caches and output files (keep fixtures clean)
+runs/
+fixtures/**/runs/
+delivery/
+fixtures/**/delivery/
+
+# Temporary files
+*.tmp
+*.log
+.DS_Store
+
+# Scratchpad
+docs/magnifito-super-video-blueprint.txt

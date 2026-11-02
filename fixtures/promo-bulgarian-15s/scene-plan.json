@@ -1,0 +1,68 @@
+{
+  "schema_version": "1.0.0",
+  "plan_revision": "rev-bg-1",
+  "renderer": "hyperframes",
+  "timing_authority": "speech",
+  "scenes": [
+    {
+      "scene_id": "scene-01-hook",
+      "factual_purpose": "Запознаване с академията и привличане на вниманието",
+      "duration_seconds": 4.0,
+      "duration_frames": 120,
+      "copy_text": "Искате ли да станете професионален програмист?",
+      "claims_refs": [],
+      "asset_refs": ["logo-sca"],
+      "visual_recipe": "kinetic-typography",
+      "audio_events": [
+        {
+          "type": "music_cue",
+          "event_name": "tech_beat_intro",
+          "start_frame": 0,
+          "volume": 0.8
+        }
+      ]
+    },
+    {
+      "scene_id": "scene-02-advantage",
+      "factual_purpose": "Основно одобрено предимство за практическото обучение",
+      "duration_seconds": 6.0,
+      "duration_frames": 180,
+      "copy_text": "Интензивно практическо обучение по разработка на софтуер",
+      "claims_refs": ["claim-bg-syllabus"],
+      "asset_refs": [],
+      "visual_recipe": "product-reveal",
+      "audio_events": [
+        {
+          "type": "voiceover",
+          "event_name": "vo_syllabus_bg",
+          "start_frame": 10,
+          "volume": 1.0
+        }
+      ]
+    },
+    {
+      "scene_id": "scene-03-cta",
+      "factual_purpose": "Призив за действие към безплатен демо урок",
+      "duration_seconds": 5.0,
+      "duration_frames": 150,
+      "copy_text": "Запишете се за безплатен демо урок",
+      "claims_refs": ["claim-bg-offer"],
+      "asset_refs": ["logo-sca"],
+      "visual_recipe": "retail-card",
+      "audio_events": [
+        {
+          "type": "voiceover",
+          "event_name": "vo_cta_bg",
+          "start_frame": 5,
+          "volume": 1.0
+        },
+        {
+          "type": "sfx",
+          "event_name": "notification_chime",
+          "start_frame": 30,
+          "volume": 0.9
+        }
+      ]
+    }
+  ]
+}

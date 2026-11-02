@@ -1,0 +1,15 @@
+{
+  "id": "product-reveal",
+  "name": "Product Reveal Recipe",
+  "description": "Dramatic hero product reveal with subtle drifting camera motion and specular highlights",
+  "recommended_duration_seconds": [4.0, 7.0],
+  "motion": {
+    "camera_move": "subtle_drift",
+    "zoom_rate": 0.03,
+    "glow_pulse_duration_ms": 2000
+  },
+  "layout": {
+    "focal_point": "center",
+    "badge_placement": "top_left"
+  }
+}

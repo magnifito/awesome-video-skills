@@ -1,0 +1,41 @@
+{
+  "schema_version": "1.0.0",
+  "plan_revision": "rev-demo-1",
+  "renderer": "hyperframes",
+  "timing_authority": "speech",
+  "scenes": [
+    {
+      "scene_id": "scene-01-intro",
+      "factual_purpose": "Demonstrate manual catalog bottleneck",
+      "duration_seconds": 4.0,
+      "duration_frames": 120,
+      "copy_text": "Tired of manual inventory errors across sales channels?",
+      "claims_refs": [],
+      "asset_refs": ["catalogspark-logo"],
+      "visual_recipe": "kinetic-typography",
+      "audio_events": []
+    },
+    {
+      "scene_id": "scene-02-feature-demo",
+      "factual_purpose": "Demonstrate automated live sync",
+      "duration_seconds": 6.0,
+      "duration_frames": 180,
+      "copy_text": "Sync 50,000 product SKUs across marketplaces in under 60 seconds",
+      "claims_refs": ["claim-saas-sync"],
+      "asset_refs": [],
+      "visual_recipe": "saas-interface-tour",
+      "audio_events": []
+    },
+    {
+      "scene_id": "scene-03-cta",
+      "factual_purpose": "Call to action for trial",
+      "duration_seconds": 5.0,
+      "duration_frames": 150,
+      "copy_text": "Start your 14-day free trial at CatalogSpark.com",
+      "claims_refs": ["claim-saas-cta"],
+      "asset_refs": ["catalogspark-logo"],
+      "visual_recipe": "retail-card",
+      "audio_events": []
+    }
+  ]
+}

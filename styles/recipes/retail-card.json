@@ -1,0 +1,14 @@
+{
+  "id": "retail-card",
+  "name": "Retail & Offer Card Recipe",
+  "description": "Bold commercial card layout for pricing, discount badges, and CTA trial links",
+  "recommended_duration_seconds": [3.0, 5.0],
+  "motion": {
+    "badge_pop_delay_ms": 150,
+    "shimmer_sweep_ms": 1200
+  },
+  "layout": {
+    "card_padding_px": 40,
+    "cta_button_prominence": "high"
+  }
+}

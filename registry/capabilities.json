@@ -1,0 +1,168 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "version": "1.0.0",
+  "description": "Source-to-capability mapping and canonical Magnifito skill identifiers",
+  "canonical_skills": [
+    {
+      "id": "magnifito-video",
+      "name": "Magnifito Video Router & Coordinator",
+      "entry_file": "skills/magnifito-video/SKILL.md",
+      "responsibility": "Classify the job and coordinate the stages",
+      "role": "router",
+      "sources": ["Original Magnifito orchestration"]
+    },
+    {
+      "id": "magnifito-brand",
+      "name": "Magnifito Brand & Motion Intake",
+      "entry_file": "skills/magnifito-brand/SKILL.md",
+      "responsibility": "Build and validate brand and motion profiles",
+      "role": "specialist",
+      "sources": [
+        "charlie-motion-graphics-skills/skills/brand-intake",
+        "hyperframes/design-guidance"
+      ]
+    },
+    {
+      "id": "magnifito-storyboard",
+      "name": "Magnifito Storyboard & Scene Planner",
+      "entry_file": "skills/magnifito-storyboard/SKILL.md",
+      "responsibility": "Turn a brief and factual claims into scenes",
+      "role": "specialist",
+      "sources": [
+        "charlie-motion-graphics-skills/skills/launch-video",
+        "noam-saas-product-demo/intake",
+        "herk-edit-kit/storytelling",
+        "video-shotcraft/shot-planning"
+      ]
+    },
+    {
+      "id": "magnifito-promo",
+      "name": "Magnifito Promotional & Explainer Videos",
+      "entry_file": "skills/magnifito-promo/SKILL.md",
+      "responsibility": "Short launch films, offers, and motion explainers",
+      "role": "specialist",
+      "sources": [
+        "barty-motion-graphics/skills/explainer",
+        "charlie-motion-graphics-skills/skills/motion-effects",
+        "video-shotcraft/recipes",
+        "iart-ecommerce-video/retail-cards"
+      ]
+    },
+    {
+      "id": "magnifito-product-demo",
+      "name": "Magnifito Software & Product Demonstrations",
+      "entry_file": "skills/magnifito-product-demo/SKILL.md",
+      "responsibility": "Demonstrate real software or product features",
+      "role": "specialist",
+      "sources": [
+        "video-shotcraft/product-workflow",
+        "noam-saas-product-demo/saas-demo",
+        "iart-ecommerce-video/screenshots-recipe"
+      ]
+    },
+    {
+      "id": "magnifito-edit",
+      "name": "Magnifito Footage Editing & Dual-Timeline Cuts",
+      "entry_file": "skills/magnifito-edit/SKILL.md",
+      "responsibility": "Cut and retime existing footage",
+      "role": "specialist",
+      "sources": [
+        "herk-edit-kit/skills/cut-helper",
+        "herk-edit-kit/skills/transcript-sync"
+      ]
+    },
+    {
+      "id": "magnifito-broll",
+      "name": "Magnifito B-Roll & Speech-Timed Graphics",
+      "entry_file": "skills/magnifito-broll/SKILL.md",
+      "responsibility": "Add speech-timed graphics and transparent layers",
+      "role": "specialist",
+      "sources": [
+        "barty-motion-graphics/skills/b-roll",
+        "iart-b-roll/skills/talking-head-b-roll"
+      ]
+    },
+    {
+      "id": "magnifito-audio",
+      "name": "Magnifito Audio Alignment & Loudness Mixing",
+      "entry_file": "skills/magnifito-audio/SKILL.md",
+      "responsibility": "Transcription, narration, music, effects, and mix",
+      "role": "specialist",
+      "sources": [
+        "barty-motion-graphics/tools/sound",
+        "herk-edit-kit/tools/timeline"
+      ]
+    },
+    {
+      "id": "magnifito-variants",
+      "name": "Magnifito Localization, Ratios & Commerce Batches",
+      "entry_file": "skills/magnifito-variants/SKILL.md",
+      "responsibility": "Locale, aspect ratio, hook, and product variants",
+      "role": "specialist",
+      "sources": [
+        "iart-ecommerce-video/skills/batch-commerce",
+        "Original batch and Cyrillic/Bulgarian localization logic"
+      ]
+    },
+    {
+      "id": "magnifito-deliver",
+      "name": "Magnifito Validation, Packaging & Approval Record",
+      "entry_file": "skills/magnifito-deliver/SKILL.md",
+      "responsibility": "Render, inspect, package, and record approval",
+      "role": "specialist",
+      "sources": [
+        "hyperframes/packages/renderer",
+        "Original ffprobe and package validation tools"
+      ]
+    }
+  ],
+  "adapters": [
+    {
+      "id": "hyperframes",
+      "name": "HyperFrames Engine Adapter",
+      "tier": "primary",
+      "status": "active",
+      "supported_formats": ["mp4", "webm", "prores_mov", "png_sequence"],
+      "transparency_supported": true,
+      "audio_muxing": true,
+      "preview_supported": true,
+      "execution_model": "headless-chrome-html-seekable"
+    },
+    {
+      "id": "html",
+      "name": "Standard Seekable HTML Adapter",
+      "tier": "experimental",
+      "status": "active",
+      "supported_formats": ["mp4"],
+      "transparency_supported": false,
+      "audio_muxing": true,
+      "preview_supported": true,
+      "execution_model": "window-seek-playwright-ffmpeg"
+    },
+    {
+      "id": "remotion",
+      "name": "Isolated Remotion Adapter Profile",
+      "tier": "alternative",
+      "status": "profile_only",
+      "supported_formats": ["mp4", "webm"],
+      "transparency_supported": true,
+      "audio_muxing": true,
+      "preview_supported": true,
+      "execution_model": "react-isolated-worker"
+    },
+    {
+      "id": "revideo",
+      "name": "Revideo Headless TS Framework",
+      "tier": "watchlist",
+      "status": "monitored",
+      "execution_model": "typescript-generator"
+    },
+    {
+      "id": "motion-canvas",
+      "name": "Motion Canvas Vector Animation",
+      "tier": "watchlist",
+      "status": "monitored",
+      "execution_model": "typescript-canvas-generator"
+    }
+  ]
+}

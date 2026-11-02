@@ -1,0 +1,20 @@
+{
+  "schema_version": "1.0.0",
+  "assets": [
+    {
+      "asset_id": "logo-sca",
+      "content_hash": "sha256-mock-sca-logo-88992211",
+      "local_path": "assets/logo.svg",
+      "source": "Sofia Code Academy Brand Kit",
+      "rights_evidence": "Client-Supplied-Direct-License",
+      "consent_obtained": true,
+      "permitted": {
+        "client": "sofia-code-academy",
+        "channels": ["social", "web"],
+        "territories": ["BG"]
+      },
+      "attribution_required": false,
+      "status": "approved"
+    }
+  ]
+}

@@ -1,0 +1,36 @@
+{
+  "schema_version": "1.0.0",
+  "brand_id": "catalogspark-inc",
+  "name": "CatalogSpark",
+  "logos": {
+    "primary": "assets/catalogspark_logo.svg"
+  },
+  "colors": {
+    "primary": "#6366f1",
+    "secondary": "#4338ca",
+    "background": "#0b0f19",
+    "text_primary": "#f9fafb",
+    "accent": "#10b981"
+  },
+  "fonts": [
+    {
+      "family": "-apple-system, BlinkMacSystemFont, Arial, sans-serif",
+      "weight": "600",
+      "rights_evidence": "System-OFL-Compatible",
+      "supports_cyrillic": false
+    }
+  ],
+  "type_scale": {
+    "h1": 52,
+    "h2": 36,
+    "body": 20,
+    "caption": 14
+  },
+  "motion_preferences": {
+    "tempo": "smooth",
+    "camera_style": "subtle_drift",
+    "border_radius": 12,
+    "glassmorphism": true
+  },
+  "prohibited_treatments": ["unverified third party platform guarantees"]
+}

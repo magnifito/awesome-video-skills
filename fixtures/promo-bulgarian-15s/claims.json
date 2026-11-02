@@ -1,0 +1,20 @@
+{
+  "schema_version": "1.0.0",
+  "revision": "rev-bg-1",
+  "claims": [
+    {
+      "claim_id": "claim-bg-syllabus",
+      "approved_wording": "Интензивно практическо обучение по разработка на софтуер",
+      "evidence_source": "Учебен план София Код Академия 2026",
+      "owner": "Академичен съвет",
+      "locale": "bg"
+    },
+    {
+      "claim_id": "claim-bg-offer",
+      "approved_wording": "Запишете се за безплатен демо урок",
+      "evidence_source": "Кампания Прием Ноември 2026",
+      "owner": "Маркетинг отдел",
+      "locale": "bg"
+    }
+  ]
+}

@@ -1,0 +1,34 @@
+{
+  "name": "@magnifito/awesome-video-skills",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Magnifito Super Video Production Toolkit - maintained video production toolkit with schema-driven contracts, pinned renderers, and upstream tracking",
+  "author": "Kiril Kirov & Magnifito Team",
+  "license": "Apache-2.0",
+  "type": "module",
+  "main": "dist/packages/cli/src/bin/mgvideo.js",
+  "bin": {
+    "mgvideo": "dist/packages/cli/src/bin/mgvideo.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "doctor": "node dist/packages/cli/src/bin/mgvideo.js doctor",
+    "catalog": "node dist/packages/cli/src/bin/mgvideo.js catalog",
+    "test": "npx tsx evaluations/runner.ts",
+    "lint": "tsc --noEmit",
+    "upstream:check": "node dist/packages/cli/src/bin/mgvideo.js upstream check",
+    "package:skills": "node --loader ts-node/esm tools/packaging/packager.ts"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "dependencies": {
+    "commander": "^13.1.0",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.9",
+    "tsx": "^4.19.3",
+    "typescript": "^5.8.2"
+  }
+}

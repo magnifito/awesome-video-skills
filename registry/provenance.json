@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "version": "1.0.0",
+  "description": "Provenance register detailing origin, license, attribution, and modifications for all imported or adapted code and assets",
+  "entries": [
+    {
+      "source_id": "hyperframes",
+      "origin_url": "https://github.com/heygen-com/hyperframes",
+      "commit": "5c5794287bd0dc2c94f238ca89f4752ecaa045a2",
+      "license": "Apache-2.0",
+      "modifications": "Extracted seekable browser composition pattern; wrapped with Magnifito brand, claims, and ffprobe validation",
+      "attribution": "Copyright (c) 2024-2026 HeyGen Inc."
+    },
+    {
+      "source_id": "charlie-motion-graphics-skills",
+      "origin_url": "https://github.com/charlie947/motion-graphics-skills",
+      "commit": "229022ebca76972e119e36ada23a1648d51665ab",
+      "license": "MIT",
+      "modifications": "Extracted brand intake questions and motion tokens into magnifito-brand and magnifito-storyboard; removed global CLAUDE.md mutations",
+      "attribution": "Copyright (c) 2025-2026 Charlie947"
+    },
+    {
+      "source_id": "barty-motion-graphics",
+      "origin_url": "https://github.com/Barty-Bart/motion-graphics",
+      "commit": "3d83d987d658601d8a1269eb691622bdcd427335",
+      "license": "MIT",
+      "modifications": "Reused speech-timed overlay pattern in magnifito-broll; reconciled conflicting audio generation rules into explicit audio policy",
+      "attribution": "Copyright (c) 2025-2026 Barty-Bart"
+    },
+    {
+      "source_id": "herk-edit-kit",
+      "origin_url": "https://github.com/nateherkai/herk-edit-kit",
+      "commit": "10511e5af86fc47756ea89803b397422e2d89284",
+      "license": "MIT",
+      "modifications": "Preserved dual source/edited timeline mapping; converted integer microsecond / sample precision",
+      "attribution": "Copyright (c) 2025-2026 Nate Herkai"
+    },
+    {
+      "source_id": "video-shotcraft",
+      "origin_url": "https://github.com/Vincentwei1021/video-shotcraft",
+      "commit": "1266a3ec4831289c4d893d42dd5102723658039a",
+      "license": "MIT",
+      "modifications": "Adopted 12 core shot recipes into styles/recipes; wrapped under claims register",
+      "attribution": "Copyright (c) 2025-2026 Vincent Wei"
+    },
+    {
+      "source_id": "noam-saas-product-demo",
+      "origin_url": "https://github.com/noamdorr/saas-product-demo-video",
+      "commit": "74f4f7150810b1bb5bf9160c4a2742c5dce69b62",
+      "license": "MIT",
+      "modifications": "Adopted SaaS UI state demonstration guidelines in magnifito-product-demo",
+      "attribution": "Copyright (c) 2025-2026 Noam Dorr"
+    },
+    {
+      "source_id": "iart-ecommerce-video",
+      "origin_url": "https://github.com/iart-ai/ecommerce-video-skills",
+      "commit": "2bd0dd19c9b2df5230f5d8f7453861b9681e49b4",
+      "license": "MIT",
+      "modifications": "Adapted retail card layout and multi-SKU batch processing into magnifito-variants with retry tracking",
+      "attribution": "Copyright (c) 2025-2026 iart-ai"
+    }
+  ]
+}

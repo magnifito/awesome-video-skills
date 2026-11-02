@@ -1,0 +1,17 @@
+{
+  "schema_version": "1.0.0",
+  "source_audio_hash": "sha256-mock-interview-audio-77112233",
+  "language": "en",
+  "correction_version": "v1",
+  "words": [
+    { "word": "We", "start_ms": 1200, "end_ms": 1450, "confidence": 0.99, "speaker": "Founder" },
+    { "word": "built", "start_ms": 1460, "end_ms": 1800, "confidence": 0.99, "speaker": "Founder" },
+    { "word": "the", "start_ms": 1810, "end_ms": 1950, "confidence": 0.98, "speaker": "Founder" },
+    { "word": "entire", "start_ms": 1960, "end_ms": 2300, "confidence": 0.99, "speaker": "Founder" },
+    { "word": "pipeline", "start_ms": 2310, "end_ms": 2800, "confidence": 0.99, "speaker": "Founder" },
+    { "word": "in", "start_ms": 2810, "end_ms": 2950, "confidence": 0.97, "speaker": "Founder" },
+    { "word": "Rust", "start_ms": 2960, "end_ms": 3400, "confidence": 0.99, "speaker": "Founder" },
+    { "word": "and", "start_ms": 3410, "end_ms": 3550, "confidence": 0.95, "speaker": "Founder" },
+    { "word": "TypeScript.", "start_ms": 3560, "end_ms": 4200, "confidence": 0.99, "speaker": "Founder" }
+  ]
+}

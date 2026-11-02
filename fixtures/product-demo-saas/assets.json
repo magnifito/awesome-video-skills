@@ -1,0 +1,20 @@
+{
+  "schema_version": "1.0.0",
+  "assets": [
+    {
+      "asset_id": "catalogspark-logo",
+      "content_hash": "sha256-demo-logo-99887766",
+      "local_path": "assets/catalogspark_logo.svg",
+      "source": "CatalogSpark Internal Vault",
+      "rights_evidence": "Client-Licensed",
+      "consent_obtained": true,
+      "permitted": {
+        "client": "catalogspark-inc",
+        "channels": ["all"],
+        "territories": ["worldwide"]
+      },
+      "attribution_required": false,
+      "status": "approved"
+    }
+  ]
+}

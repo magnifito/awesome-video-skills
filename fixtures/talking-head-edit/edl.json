@@ -1,0 +1,30 @@
+{
+  "schema_version": "1.0.0",
+  "timing_authority": "speech",
+  "source_media_hash": "sha256-mock-raw-interview-video-66554433",
+  "source_duration_us": 60000000,
+  "output_fps": {
+    "numerator": 30,
+    "denominator": 1
+  },
+  "cuts": [
+    {
+      "cut_id": "cut-01-core-statement",
+      "source_start_us": 1200000,
+      "source_end_us": 4500000,
+      "output_start_frame": 0,
+      "output_end_frame": 99,
+      "speed_factor": 1.0,
+      "reason": "Retain crisp core statement without filler words"
+    },
+    {
+      "cut_id": "cut-02-architecture-summary",
+      "source_start_us": 12000000,
+      "source_end_us": 24000000,
+      "output_start_frame": 99,
+      "output_end_frame": 450,
+      "speed_factor": 1.0,
+      "reason": "Skip rambling transition directly to technical payoff"
+    }
+  ]
+}

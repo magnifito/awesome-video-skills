@@ -1,0 +1,34 @@
+{
+  "batch_id": "nov-flash-sale-2026",
+  "client_id": "nordic-gear-store",
+  "currency": "EUR",
+  "items": [
+    {
+      "sku": "NGS-101",
+      "title": "Nordic Thermal Trekking Jacket Pro",
+      "price": 149.99,
+      "discount_percent": 25,
+      "in_stock": true,
+      "image_asset": "assets/jacket.png",
+      "status": "pending"
+    },
+    {
+      "sku": "NGS-102",
+      "title": "Ultra-Lightweight Ergonomic Carbon Fiber Trail Poles (Pair with Quick-Lock Mechanism)",
+      "price": 89.50,
+      "discount_percent": 0,
+      "in_stock": true,
+      "image_asset": "assets/poles.png",
+      "status": "pending"
+    },
+    {
+      "sku": "NGS-103",
+      "title": "Waterproof Alpine Backpack 45L",
+      "price": 119.00,
+      "discount_percent": 15,
+      "in_stock": false,
+      "image_asset": null,
+      "status": "skipped_out_of_stock"
+    }
+  ]
+}

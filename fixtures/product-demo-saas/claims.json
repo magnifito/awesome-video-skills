@@ -1,0 +1,20 @@
+{
+  "schema_version": "1.0.0",
+  "revision": "rev-demo-1",
+  "claims": [
+    {
+      "claim_id": "claim-saas-sync",
+      "approved_wording": "Sync 50,000 product SKUs across marketplaces in under 60 seconds",
+      "evidence_source": "CatalogSpark Benchmark Audit Q3 2026",
+      "owner": "Chief Technology Officer",
+      "locale": "en"
+    },
+    {
+      "claim_id": "claim-saas-cta",
+      "approved_wording": "Start your 14-day free trial at CatalogSpark.com",
+      "evidence_source": "Pricing Page Standard Offer",
+      "owner": "Growth Team",
+      "locale": "en"
+    }
+  ]
+}
