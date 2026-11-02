@@ -102,3 +102,37 @@ export async function runUpstreamPropose(workspaceRoot: string, sourceId: string
   };
 }
 
+export async function runUpstreamRollback(
+  workspaceRoot: string,
+  sourceId: string,
+  previousCommit?: string
+): Promise<{ source_id: string; rolled_back_to: string; status: string }> {
+  const approvedPath = path.join(workspaceRoot, 'registry', 'approved.lock.json');
+  const approved = JSON.parse(await fs.readFile(approvedPath, 'utf-8'));
+
+  const currentBaseline = approved.approved_baselines[sourceId];
+  if (!currentBaseline && !previousCommit) {
+    throw new Error(`No approved baseline found for source '${sourceId}' to roll back.`);
+  }
+
+  const newCommit = previousCommit || null;
+  if (newCommit) {
+    approved.approved_baselines[sourceId] = {
+      approved_commit: newCommit,
+      license: currentBaseline?.license || 'Audited-License',
+      approved_date: new Date().toISOString(),
+      verification_status: 'rolled-back-baseline'
+    };
+  } else {
+    delete approved.approved_baselines[sourceId];
+  }
+
+  await fs.writeFile(approvedPath, JSON.stringify(approved, null, 2), 'utf-8');
+
+  return {
+    source_id: sourceId,
+    rolled_back_to: newCommit || 'UNSET (Candidate)',
+    status: 'Successfully updated approved.lock.json baseline'
+  };
+}
+

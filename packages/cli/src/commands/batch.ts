@@ -190,3 +190,4 @@ export async function runBatchCommerce(catalogFilePath: string, options?: { forc
   await fs.writeFile(reportPath, JSON.stringify(report, null, 2), 'utf-8');
   return report;
 }
+

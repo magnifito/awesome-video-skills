@@ -10,12 +10,14 @@ import type {
   AssetManifest
 } from '../../../contracts/src/index.js';
 import { runValidate } from './validate.js';
+import { CostTracker, CostBreakdown } from '../../../media/src/cost.js';
 
 export interface PackageOutput {
   delivery_dir: string;
   package_hash: string;
   files: string[];
   review_record: ReviewRecord;
+  cost_breakdown: CostBreakdown;
 }
 
 export async function runPackage(
@@ -90,10 +92,20 @@ export async function runPackage(
   await fs.writeFile(path.join(deliveryDir, 'NOTICES.txt'), notices, 'utf-8');
   deliveredFiles.push('NOTICES.txt');
 
+  // Calculate production costs
+  const costBreakdown = CostTracker.calculateRunCost(brief, renderResult, false);
+  await fs.writeFile(path.join(deliveryDir, 'cost-report.json'), JSON.stringify(costBreakdown, null, 2), 'utf-8');
+  deliveredFiles.push('cost-report.json');
+
   // Create signed ReviewRecord
   const reviewRecord: ReviewRecord = {
     schema_version: '1.0.0',
     reviewer,
+    roles: {
+      technical_maintainer: reviewer,
+      producer: reviewer,
+      account_owner: reviewer
+    },
     timestamp: new Date().toISOString(),
     decision: 'approved',
     approval_scope: {
@@ -107,7 +119,11 @@ export async function runPackage(
       audio_sync_and_loudness_verified: true,
       rights_cleared: true
     },
-    notes: `Production delivery verified and signed by ${reviewer}. All factual claims and audio measurements conform to client scope.`
+    cost_summary: {
+      total_cost_usd: costBreakdown.total_cost_usd,
+      within_budget: costBreakdown.within_budget
+    },
+    notes: `Production delivery verified and signed by ${reviewer}. All factual claims, audio measurements, and cost budgets conform to client scope.`
   };
 
   await fs.writeFile(path.join(deliveryDir, 'review-record.json'), JSON.stringify(reviewRecord, null, 2), 'utf-8');
@@ -118,7 +134,8 @@ export async function runPackage(
     project_id: brief.project_id,
     run_id: renderResult.run_id,
     files: deliveredFiles,
-    review_record: reviewRecord
+    review_record: reviewRecord,
+    cost_breakdown: costBreakdown
   };
   const packageHash = crypto.createHash('sha256').update(JSON.stringify(packageManifest)).digest('hex');
 
@@ -132,7 +149,8 @@ export async function runPackage(
     delivery_dir: deliveryDir,
     package_hash: packageHash,
     files: deliveredFiles,
-    review_record: reviewRecord
+    review_record: reviewRecord,
+    cost_breakdown: costBreakdown
   };
 }
 

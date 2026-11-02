@@ -154,6 +154,28 @@ async function runAllEvaluations() {
   assert(batchReport.skipped === 1, 'Batch skips out-of-stock SKU cleanly');
   assert(batchReport.failed === 0, 'Batch experiences zero render failures across diverse titles and offers');
 
+  // Test 14: Cost & Operational Accounting
+  console.log('\n--- Test Suite 14: Cost & Operational Accounting ---');
+  const { CostTracker } = await import('../packages/media/src/cost.js');
+  const costReport = CostTracker.calculateRunCost(testBrief, initialRender, false);
+  assert(costReport.within_budget, 'Cost accounting validates run within approved budgets');
+  assert(costReport.items.external_media_usd === 0.0, 'Zero external media cost is strictly enforced');
+  assert(costReport.total_cost_usd > 0, 'Total deliverable cost accounts for compute and agent operations');
+
+  // Test 15: Upstream Maintenance & Change Classification
+  console.log('\n--- Test Suite 15: Upstream Maintenance & Rollback ---');
+  const { classifyFileChange } = await import('../tools/upstreams/diff_classifier.js');
+  const docClass = classifyFileChange('docs/guide.md', 'modified');
+  assert(docClass.category === 'Documentation only', 'Classifier categorizes docs/guide.md as Documentation only');
+  const licenseClass = classifyFileChange('LICENSE', 'modified');
+  assert(licenseClass.category === 'License or notice', 'Classifier categorizes LICENSE as License or notice');
+  const depClass = classifyFileChange('package.json', 'modified');
+  assert(depClass.category === 'Dependency or runtime', 'Classifier categorizes package.json as Dependency or runtime');
+
+  const { runUpstreamRollback } = await import('../packages/cli/src/commands/upstream.js');
+  const rollbackRes = await runUpstreamRollback(workspaceRoot, 'hyperframes', '5c5794287bd0dc2c94f238ca89f4752ecaa045a2');
+  assert(rollbackRes.rolled_back_to === '5c5794287bd0dc2c94f238ca89f4752ecaa045a2', 'Rollback restores approved baseline');
+
   console.log(`\n========================================`);
   console.log(`EVALUATION SUMMARY: ${passCount} Passed, ${failCount} Failed`);
   console.log(`========================================\n`);

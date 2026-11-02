@@ -9,7 +9,8 @@ import { runRender } from '../commands/render.js';
 import { runValidate } from '../commands/validate.js';
 import { runPackage } from '../commands/package.js';
 import { runBatchCommerce } from '../commands/batch.js';
-import { runUpstreamCheck, runUpstreamPropose } from '../commands/upstream.js';
+import { CostTracker } from '../../../media/src/cost.js';
+import { runUpstreamCheck, runUpstreamPropose, runUpstreamRollback } from '../commands/upstream.js';
 
 const program = new Command();
 
@@ -199,6 +200,49 @@ program
     }
   });
 
+// mgvideo cost <run>
+program
+  .command('cost <run>')
+  .description('Audit production compute, storage, and agent cost for a render run')
+  .option('-p, --project <project>', 'Project directory')
+  .action(async (runPath, opts) => {
+    try {
+      const fs = await import('node:fs/promises');
+      let runDir = runPath;
+      if (path.isAbsolute(runDir)) {
+        // Absolute
+      } else if (opts.project && !runPath.includes('/') && !runPath.includes('\\')) {
+        runDir = path.join(opts.project, 'runs', runPath);
+      } else {
+        runDir = path.resolve(process.cwd(), runPath);
+      }
+      const projDir = opts.project || path.resolve(runDir, '..', '..');
+
+      const brief = JSON.parse(await fs.readFile(path.join(projDir, 'brief.json'), 'utf-8'));
+      const renderResult = JSON.parse(await fs.readFile(path.join(runDir, 'render-result.json'), 'utf-8'));
+
+      const cost = CostTracker.calculateRunCost(brief, renderResult, false);
+      console.log(`\n💰 Cost Breakdown for Project: ${cost.project_id} (Run: ${cost.run_id})`);
+      console.log('--------------------------------------------------------------------------------');
+      console.log(` • Agent Usage & Tool Dispatch : $${cost.items.agent_usage_usd.toFixed(2)} (Limit: $${cost.budget_limits.agent_budget_usd.toFixed(2)})`);
+      console.log(` • Render Compute Engine        : $${cost.items.render_compute_usd.toFixed(3)} (Limit: $${cost.budget_limits.compute_budget_usd.toFixed(2)})`);
+      console.log(` • External Media & TTS APIs    : $${cost.items.external_media_usd.toFixed(2)} (Limit: $${cost.budget_limits.media_budget_usd.toFixed(2)})`);
+      console.log(` • Storage Delivery Buffer      : $${cost.items.storage_usd.toFixed(4)}`);
+      console.log('--------------------------------------------------------------------------------');
+      console.log(` TOTAL DELIVERABLE COST        : $${cost.total_cost_usd.toFixed(2)} USD`);
+      console.log(` BUDGET STATUS                 : ${cost.within_budget ? 'WITHIN LIMITS ✅' : 'BUDGET EXCEEDED ⚠️'}\n`);
+      if (cost.budget_warnings.length > 0) {
+        for (const w of cost.budget_warnings) {
+          console.log(` ⚠️ ${w}`);
+        }
+        console.log('');
+      }
+    } catch (err) {
+      console.error('Cost audit failed:', err);
+      process.exit(1);
+    }
+  });
+
 // mgvideo batch <catalog>
 program
   .command('batch <catalog>')
@@ -263,6 +307,22 @@ upstream
       console.log(`Rollback Command: ${prop.rollback_command}\n`);
     } catch (err) {
       console.error('Upstream propose failed:', err);
+      process.exit(1);
+    }
+  });
+
+upstream
+  .command('rollback <source> [commit]')
+  .description('Roll back an approved baseline in approved.lock.json to a prior commit or unset')
+  .action(async (sourceId, commit) => {
+    try {
+      const workspaceRoot = process.cwd();
+      const res = await runUpstreamRollback(workspaceRoot, sourceId, commit);
+      console.log(`\n⏪ Upstream Rollback for: ${res.source_id}`);
+      console.log(`Baseline set to: ${res.rolled_back_to}`);
+      console.log(`Status: ${res.status}\n`);
+    } catch (err) {
+      console.error('Upstream rollback failed:', err);
       process.exit(1);
     }
   });

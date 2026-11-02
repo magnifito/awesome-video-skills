@@ -85,14 +85,23 @@ mgvideo render projects/my-promo --format 9:16
 # 6. Validate Output Files, ffprobe Specs & Claims Verification
 mgvideo validate <run-id> --project projects/my-promo
 
-# 7. Package and Sign Delivery Bundle
+# 7. Package and Sign Delivery Bundle with Three-Role Sign-off & Cost Breakdown
 mgvideo package <run-id> --project projects/my-promo --reviewer "Kiril Kirov"
 
-# 8. Check Tracked Upstreams for Changes (Read-only, no untrusted execution)
+# 8. Audit Production & Agent Costs
+mgvideo cost <run-id> --project projects/my-promo
+
+# 9. Multi-SKU Commerce Batch with Automatic Caching & Retry Tracking
+mgvideo batch fixtures/commerce-batch/catalog.json
+
+# 10. Check Tracked Upstreams for Changes (Read-only, no untrusted execution)
 mgvideo upstream check
 
-# 9. Create Candidate Proposal for Upstream Update
+# 11. Create Candidate Proposal for Upstream Update
 mgvideo upstream propose hyperframes
+
+# 12. Roll Back an Approved Baseline
+mgvideo upstream rollback hyperframes <commit-sha>
 ```
 
 ---

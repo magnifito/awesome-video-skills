@@ -329,6 +329,15 @@ export type RenderResult = z.infer<typeof RenderResultSchema>;
 export const ReviewRecordSchema = z.object({
   schema_version: z.literal('1.0.0').default('1.0.0'),
   reviewer: z.string().min(1),
+  roles: z.object({
+    technical_maintainer: z.string().default('Kiril Kirov'),
+    producer: z.string().default('Kiril Kirov'),
+    account_owner: z.string().default('Kiril Kirov')
+  }).default({
+    technical_maintainer: 'Kiril Kirov',
+    producer: 'Kiril Kirov',
+    account_owner: 'Kiril Kirov'
+  }),
   timestamp: z.string().datetime(),
   decision: z.enum(['approved', 'changes_requested', 'rejected']),
   approval_scope: z.object({
@@ -342,6 +351,10 @@ export const ReviewRecordSchema = z.object({
     audio_sync_and_loudness_verified: z.boolean(),
     rights_cleared: z.boolean()
   }),
+  cost_summary: z.object({
+    total_cost_usd: z.number().nonnegative(),
+    within_budget: z.boolean()
+  }).optional(),
   notes: z.string().optional()
 });
 
