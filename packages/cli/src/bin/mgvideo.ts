@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { Command } from 'commander';
 import path from 'node:path';
+import nodeFs from 'node:fs';
 import { runDoctor } from '../commands/doctor.js';
 import { runCatalog } from '../commands/catalog.js';
 import { runInit } from '../commands/init.js';
@@ -32,6 +33,11 @@ import { ProxyGenerator } from '../../../media/src/proxy.js';
 import { SecurityWatermarker } from '../../../media/src/watermark.js';
 import { VideoSpeedEngine } from '../../../media/src/speed.js';
 import { SafeZoneOverlayGenerator } from '../../../media/src/safezone_overlay.js';
+import { VideoConcatEngine } from '../../../media/src/concat.js';
+import { LowerThirdGenerator } from '../../../media/src/lower_third.js';
+import { ChapterGenerator } from '../../../media/src/chapters.js';
+import { VideoLoopEngine } from '../../../media/src/loop.js';
+
 
 
 
@@ -836,7 +842,105 @@ program
     }
   });
 
+// mgvideo concat <clips...>
+program
+  .command('concat <clips...>')
+  .description('Concatenate multiple video clips, normalizing resolution and audio sample rates')
+  .option('-w, --width <pixels>', 'Target width', '1920')
+  .option('-h, --height <pixels>', 'Target height', '1080')
+  .option('-o, --out <path>', 'Custom output path')
+  .action((clips, opts) => {
+    try {
+      const resolvedClips = clips.map((c: string) => path.resolve(process.cwd(), c));
+      const res = VideoConcatEngine.concatClips(resolvedClips, {
+        width: parseInt(opts.width, 10),
+        height: parseInt(opts.height, 10),
+        outputPath: opts.out ? path.resolve(process.cwd(), opts.out) : undefined
+      });
+      console.log(`\n🎞️ Clips Concatenated!`);
+      console.log(`Total Clips: ${res.clipsCount}`);
+      console.log(`Duration: ${res.totalDurationSeconds.toFixed(1)}s (${res.width}x${res.height})`);
+      console.log(`Output: ${res.outputPath}\n`);
+    } catch (err) {
+      console.error('Concat command failed:', err);
+      process.exit(1);
+    }
+  });
+
+// mgvideo lower-third <video>
+program
+  .command('lower-third <video>')
+  .description('Burn broadcast lower-third title badge onto video clip')
+  .requiredOption('-n, --name <name>', 'Speaker name')
+  .requiredOption('-t, --title <title>', 'Speaker job title or role')
+  .option('-s, --start <seconds>', 'Start timestamp in seconds', '1.5')
+  .option('-d, --duration <seconds>', 'Display duration in seconds', '5.0')
+  .option('-o, --out <path>', 'Custom output video path')
+  .action((video, opts) => {
+    try {
+      const fullVideo = path.resolve(process.cwd(), video);
+      const res = LowerThirdGenerator.applyLowerThird(fullVideo, {
+        speakerName: opts.name,
+        speakerTitle: opts.title,
+        startSeconds: parseFloat(opts.start),
+        durationSeconds: parseFloat(opts.duration),
+        outputPath: opts.out ? path.resolve(process.cwd(), opts.out) : undefined
+      });
+      console.log(`\n🏷️ Lower Third Applied!`);
+      console.log(`Speaker: ${res.speakerName} (${res.speakerTitle})`);
+      console.log(`Timeline: ${res.startSeconds}s to ${(res.startSeconds + res.durationSeconds).toFixed(1)}s`);
+      console.log(`Output: ${res.outputPath}\n`);
+    } catch (err) {
+      console.error('Lower-third command failed:', err);
+      process.exit(1);
+    }
+  });
+
+// mgvideo chapters <project>
+program
+  .command('chapters <project>')
+  .description('Generate YouTube chapters, WebVTT cues, and QuickTime markers from scene plan')
+  .action((projectPath) => {
+    try {
+      const targetDir = path.resolve(process.cwd(), projectPath);
+      const planPath = path.join(targetDir, 'scene-plan.json');
+      if (!nodeFs.existsSync(planPath)) {
+        throw new Error(`Scene plan not found in project: ${planPath}`);
+      }
+      const scenePlan = JSON.parse(nodeFs.readFileSync(planPath, 'utf8'));
+      const rep = ChapterGenerator.generateChapters(scenePlan);
+      console.log(`\n📑 Chapters Generated for ${projectPath}:`);
+      console.log('--------------------------------------------------');
+      console.log(rep.youtubeText);
+      console.log('--------------------------------------------------\n');
+    } catch (err) {
+      console.error('Chapters command failed:', err);
+      process.exit(1);
+    }
+  });
+
+// mgvideo loop <video>
+program
+  .command('loop <video>')
+  .description('Create seamless ping-pong loop (forward + reverse) for social reels and backgrounds')
+  .option('-o, --out <path>', 'Custom output video path')
+  .action((video, opts) => {
+    try {
+      const fullVideo = path.resolve(process.cwd(), video);
+      const res = VideoLoopEngine.createPingPongLoop(fullVideo, {
+        outputPath: opts.out ? path.resolve(process.cwd(), opts.out) : undefined
+      });
+      console.log(`\n🔁 Ping-Pong Loop Generated!`);
+      console.log(`Duration: ${res.originalDurationSeconds.toFixed(1)}s -> ${res.loopDurationSeconds.toFixed(1)}s (x2 cycle)`);
+      console.log(`Output: ${res.outputPath}\n`);
+    } catch (err) {
+      console.error('Loop command failed:', err);
+      process.exit(1);
+    }
+  });
+
 program.parse(process.argv);
+
 
 
 

@@ -29,5 +29,12 @@ export * from './proxy.js';
 export * from './watermark.js';
 export * from './speed.js';
 export * from './safezone_overlay.js';
+export * from './concat.js';
+export * from './lower_third.js';
+export * from './chapters.js';
+export * from './sidechain.js';
+export * from './loop.js';
+export * from './sla.js';
+
 
 

@@ -40,6 +40,10 @@ mgvideo <command> [options]
 | `watermark` | `mgvideo watermark <video>` | Burns semi-transparent security banners or embargo notices into client review videos. |
 | `speed` | `mgvideo speed <video>` | Adjusts playback speed (0.5x to 8.0x) with pitch-preserved audio synchrony. |
 | `safezone` | `mgvideo safezone <video>` | Overlays mobile platform safe margin bounding rectangles onto video for QA analysis. |
+| `concat` | `mgvideo concat <clips...>` | Concatenates video clips, normalizing resolution, framerate, and audio sample rates. |
+| `lower-third` | `mgvideo lower-third <video>` | Burns broadcast-quality lower-third speaker title badges with custom brand accents. |
+| `chapters` | `mgvideo chapters <project>` | Generates YouTube chapters, WebVTT cue markers, and QuickTime chapter metadata. |
+| `loop` | `mgvideo loop <video>` | Creates seamless ping-pong loops (forward + reverse) for social reels and web hero banners. |
 | `clean` | `mgvideo clean <project>` | Purges temporary render caches and older runs to preserve disk hygiene. |
 | `upstream` | `mgvideo upstream [check\|propose\|rollback]` | Manages external repository tracking, candidate review branches, and baseline rollbacks. |
 

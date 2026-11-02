@@ -844,6 +844,121 @@ async function runAllEvaluations() {
   assert(batchCatalog.items.length === 3, 'Commerce batch tracks 3 items');
   assert(batchCatalog.items.some((i: any) => i.status === 'skipped_out_of_stock'), 'Commerce batch tracks out-of-stock SKU');
 
+  // Test 71: Video Concatenation Engine
+  console.log('\n--- Test Suite 71: Video Concatenation Engine ---');
+  const { VideoConcatEngine } = await import('../packages/media/src/concat.js');
+  const trim1 = VideoConcatEngine.trimClip(initialVideoPath, { startSeconds: 0, durationSeconds: 2.0 });
+  const trim2 = VideoConcatEngine.trimClip(initialVideoPath, { startSeconds: 3.0, durationSeconds: 2.0 });
+  const concatRes = VideoConcatEngine.concatClips([trim1, trim2], {
+    width: 1080,
+    height: 1920,
+    fps: 30
+  });
+  assert(nodeFs.existsSync(concatRes.outputPath), 'Concatenated video exists on disk');
+  assert(concatRes.clipsCount === 2, 'Concatenated exactly 2 clips');
+  assert(concatRes.width === 1080 && concatRes.height === 1920, 'Output normalized to 1080x1920');
+  assert(Math.abs(concatRes.totalDurationSeconds - 4.0) < 0.3, 'Concatenated duration conforms to sum of parts');
+  nodeFs.rmSync(trim1, { force: true });
+  nodeFs.rmSync(trim2, { force: true });
+  nodeFs.rmSync(concatRes.outputPath, { force: true });
+
+  // Test 72: Video Trimming Engine
+  console.log('\n--- Test Suite 72: Video Trimming Engine ---');
+  const singleTrim = VideoConcatEngine.trimClip(demoVideoPath, { startSeconds: 1.0, durationSeconds: 3.0 });
+  assert(nodeFs.existsSync(singleTrim), 'Trimmed clip file exists');
+  const trimProbe = execSync(`ffprobe -v error -show_entries format=duration -of csv=p=0 "${singleTrim}"`, { encoding: 'utf8' }).trim();
+  assert(Math.abs(parseFloat(trimProbe) - 3.0) < 0.2, 'Trimmed duration conforms to 3.0s window');
+  nodeFs.rmSync(singleTrim, { force: true });
+
+  // Test 73: Broadcast Lower-Third Overlay
+  console.log('\n--- Test Suite 73: Broadcast Lower-Third Overlay ---');
+  const { LowerThirdGenerator } = await import('../packages/media/src/lower_third.js');
+  const ltRes = LowerThirdGenerator.applyLowerThird(demoVideoPath, {
+    speakerName: 'Kiril Kirov',
+    speakerTitle: 'Executive Creative Director',
+    startSeconds: 1.0,
+    durationSeconds: 4.0
+  });
+  assert(nodeFs.existsSync(ltRes.outputPath), 'Lower third video exists on disk');
+  assert(ltRes.speakerName === 'Kiril Kirov', 'Lower third records speaker name');
+  assert(ltRes.startSeconds === 1.0, 'Lower third start timestamp matches requested time');
+  nodeFs.rmSync(ltRes.outputPath, { force: true });
+
+  // Test 74: Intelligent Chapter Markers Generator
+  console.log('\n--- Test Suite 74: Intelligent Chapter Markers Generator ---');
+  const { ChapterGenerator } = await import('../packages/media/src/chapters.js');
+  const explainerPlan = JSON.parse(nodeFs.readFileSync(path.join(multilingualFixtureDir, 'scene-plan.json'), 'utf8'));
+  const chRep = ChapterGenerator.generateChapters(explainerPlan);
+  assert(chRep.chapters.length === 3, 'Generated chapters for all 3 scenes');
+  assert(chRep.youtubeText.includes('00:00'), 'YouTube chapters include initial 00:00 timestamp');
+  assert(chRep.webVtt.includes('WEBVTT'), 'WebVTT cues include standard header');
+  assert(chRep.ffmetadata.includes('[CHAPTER]'), 'FFmetadata format contains chapter definitions');
+
+  // Test 75: Audio Ducking Sidechain Processor
+  console.log('\n--- Test Suite 75: Audio Ducking Sidechain Processor ---');
+  const { SidechainDuckingEngine } = await import('../packages/media/src/sidechain.js');
+  const tmpVoice = path.join(workspaceRoot, 'tmp-sc-voice.wav');
+  const tmpMusic = path.join(workspaceRoot, 'tmp-sc-music.wav');
+  execSync(`ffmpeg -y -i "${initialVideoPath}" -vn -c:a pcm_s16le -t 4 "${tmpVoice}"`, { stdio: 'pipe' });
+  execSync(`ffmpeg -y -i "${initialVideoPath}" -vn -c:a pcm_s16le -t 4 "${tmpMusic}"`, { stdio: 'pipe' });
+  const duckRes = SidechainDuckingEngine.duckMusicUnderDialogue(tmpVoice, tmpMusic, {
+    threshold: 0.1,
+    ratio: 4.0
+  });
+  assert(nodeFs.existsSync(duckRes.outputPath), 'Ducked sidechain audio file exists');
+  assert(duckRes.threshold === 0.1, 'Sidechain records threshold setting');
+  nodeFs.rmSync(tmpVoice, { force: true });
+  nodeFs.rmSync(tmpMusic, { force: true });
+  nodeFs.rmSync(duckRes.outputPath, { force: true });
+
+  // Test 76: Video Ping-Pong Loop Engine
+  console.log('\n--- Test Suite 76: Video Ping-Pong Loop Engine ---');
+  const { VideoLoopEngine } = await import('../packages/media/src/loop.js');
+  const loopClip = VideoConcatEngine.trimClip(initialVideoPath, { startSeconds: 0, durationSeconds: 2.0 });
+  const loopRes = VideoLoopEngine.createPingPongLoop(loopClip);
+  assert(nodeFs.existsSync(loopRes.outputPath), 'Ping-pong loop video exists');
+  assert(loopRes.loopMode === 'ping-pong', 'Loop engine records ping-pong loopMode');
+  assert(Math.abs(loopRes.loopDurationSeconds - 4.0) < 0.2, 'Loop duration is twice original');
+  nodeFs.rmSync(loopClip, { force: true });
+  nodeFs.rmSync(loopRes.outputPath, { force: true });
+
+  // Test 77: Delivery SLA Reference Monitor
+  console.log('\n--- Test Suite 77: Delivery SLA Reference Monitor ---');
+  const { DeliverySlaTracker } = await import('../packages/media/src/sla.js');
+  const promoBrief = JSON.parse(nodeFs.readFileSync(path.join(promoFixtureDir, 'brief.json'), 'utf8'));
+  const now = new Date();
+  const pastJobStart = new Date(now.getTime() - 2 * 3600 * 1000).toISOString();
+  const deliveredJobEnd = new Date(now.getTime() - 1 * 3600 * 1000).toISOString();
+  const slaDelivered = DeliverySlaTracker.evaluateSla(promoBrief, pastJobStart, deliveredJobEnd, 24);
+  assert(slaDelivered.status === 'delivered', 'SLA tracker confirms on-time delivered status');
+  const activeStart = new Date(now.getTime() - 22 * 3600 * 1000).toISOString();
+  const slaAtRisk = DeliverySlaTracker.evaluateSla(promoBrief, activeStart, undefined, 24);
+  assert(slaAtRisk.status === 'at_risk', 'SLA tracker flags at_risk when < 4h remain');
+
+  // Test 78: Visual Safe Frame Grid Overlay
+  console.log('\n--- Test Suite 78: Visual Safe Frame Grid Overlay ---');
+  const { SafeZoneOverlayGenerator: OverlayGen } = await import('../packages/media/src/safezone_overlay.js');
+  const safeGuideOut = OverlayGen.applySafeZoneGuide(initialVideoPath);
+  assert(nodeFs.existsSync(safeGuideOut), 'Safe zone guide video generated');
+  nodeFs.rmSync(safeGuideOut, { force: true });
+
+  // Test 79: Programmatic SDK Extended Methods
+  console.log('\n--- Test Suite 79: Programmatic SDK Extended Capabilities ---');
+  const sdkPlan = JSON.parse(nodeFs.readFileSync(path.join(promoFixtureDir, 'scene-plan.json'), 'utf8'));
+  const sdkChapters = engine.chapters(sdkPlan);
+  assert(sdkChapters.chapters.length === 3, 'SDK chapters method parses scene plan');
+  const sdkSla = engine.sla(promoBrief, pastJobStart, deliveredJobEnd);
+  assert(sdkSla.status === 'delivered', 'SDK sla method returns valid SLA report');
+
+  // Test 80: Comprehensive Production Readiness Gate
+  console.log('\n--- Test Suite 80: Comprehensive Production Readiness Gate ---');
+  const upstreamsData = JSON.parse(nodeFs.readFileSync(path.join(workspaceRoot, 'registry', 'upstreams.json'), 'utf8'));
+  assert(upstreamsData.repositories.length === 12, 'Quarantine catalog tracks exactly 12 upstreams');
+  for (const repo of upstreamsData.repositories) {
+    assert(repo.observed_commit.length === 40, `Upstream "${repo.id}" is pinned to exact 40-char commit SHA`);
+    assert(Boolean(repo.license), `Upstream "${repo.id}" has audited license`);
+  }
+
 
 
 

@@ -19,6 +19,12 @@ import { ProxyGenerator, type ProxyOptions, type ProxyResult } from '../../media
 import { SecurityWatermarker, type WatermarkOptions, type WatermarkResult } from '../../media/src/watermark.js';
 import { VideoSpeedEngine, type SpeedOptions, type SpeedResult } from '../../media/src/speed.js';
 import { SafeZoneOverlayGenerator, type SafeZoneOverlayOptions } from '../../media/src/safezone_overlay.js';
+import { VideoConcatEngine, type ConcatOptions, type TrimOptions, type ConcatResult } from '../../media/src/concat.js';
+import { LowerThirdGenerator, type LowerThirdOptions, type LowerThirdResult } from '../../media/src/lower_third.js';
+import { ChapterGenerator, type ChapterReport } from '../../media/src/chapters.js';
+import { SidechainDuckingEngine, type SidechainOptions, type SidechainResult } from '../../media/src/sidechain.js';
+import { VideoLoopEngine, type LoopOptions, type LoopResult } from '../../media/src/loop.js';
+import { DeliverySlaTracker, type SlaEvaluation } from '../../media/src/sla.js';
 import { runVerifyBundle, type BundleVerificationResult } from '../../cli/src/commands/verify_bundle.js';
 import { runDashboard, type DashboardStatus } from '../../cli/src/commands/dashboard.js';
 import { MotionCanvasAdapter, type MotionCanvasExportResult } from '../../../adapters/motion-canvas/index.js';
@@ -176,6 +182,40 @@ export class MagnifitoVideoEngine {
     const fullOut = path.isAbsolute(outputDir) ? outputDir : path.resolve(this.workspaceRoot, outputDir);
     const adapter = new MotionCanvasAdapter();
     return adapter.exportProject(context, fullOut);
+  }
+
+  concat(clipPaths: string[], options: ConcatOptions = {}): ConcatResult {
+    const resolvedClips = clipPaths.map(c => path.isAbsolute(c) ? c : path.resolve(this.workspaceRoot, c));
+    return VideoConcatEngine.concatClips(resolvedClips, options);
+  }
+
+  trim(videoPath: string, options: TrimOptions = {}): string {
+    const fullPath = path.isAbsolute(videoPath) ? videoPath : path.resolve(this.workspaceRoot, videoPath);
+    return VideoConcatEngine.trimClip(fullPath, options);
+  }
+
+  lowerThird(videoPath: string, options: LowerThirdOptions): LowerThirdResult {
+    const fullPath = path.isAbsolute(videoPath) ? videoPath : path.resolve(this.workspaceRoot, videoPath);
+    return LowerThirdGenerator.applyLowerThird(fullPath, options);
+  }
+
+  chapters(scenePlan: ScenePlan): ChapterReport {
+    return ChapterGenerator.generateChapters(scenePlan);
+  }
+
+  sidechain(voicePath: string, musicPath: string, options: SidechainOptions = {}): SidechainResult {
+    const fullVoice = path.isAbsolute(voicePath) ? voicePath : path.resolve(this.workspaceRoot, voicePath);
+    const fullMusic = path.isAbsolute(musicPath) ? musicPath : path.resolve(this.workspaceRoot, musicPath);
+    return SidechainDuckingEngine.duckMusicUnderDialogue(fullVoice, fullMusic, options);
+  }
+
+  loop(videoPath: string, options: LoopOptions = {}): LoopResult {
+    const fullPath = path.isAbsolute(videoPath) ? videoPath : path.resolve(this.workspaceRoot, videoPath);
+    return VideoLoopEngine.createPingPongLoop(fullPath, options);
+  }
+
+  sla(brief: any, startedAtIso: string, completedAtIso?: string, targetHours = 24): SlaEvaluation {
+    return DeliverySlaTracker.evaluateSla(brief, startedAtIso, completedAtIso, targetHours);
   }
 }
 
