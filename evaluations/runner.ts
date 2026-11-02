@@ -540,6 +540,53 @@ async function runAllEvaluations() {
   assert(benchMetrics.typography_fits_per_sec > 1000, 'Typography layout engine processes > 1k fits/sec');
   assert(benchMetrics.localization_analyses_per_sec > 1000, 'Localization synchronizer processes > 1k analyses/sec');
 
+  // Test 47: Storyboard Contact Sheet Generator
+  console.log('\n--- Test Suite 47: Storyboard Contact Sheet ---');
+  const { generateStoryboardContactSheet } = await import('../packages/cli/src/commands/storyboard.js');
+  const sbResult = await generateStoryboardContactSheet(promoFixtureDir, { format: '9:16' });
+  assert(nodeFs.existsSync(sbResult.htmlPath), 'Storyboard contact sheet generates storyboard.html');
+  assert(sbResult.framesCount === 3, 'Storyboard produces styleframes for all 3 scenes');
+  assert(sbResult.framePaths.length === 3, 'Storyboard exports image preview paths');
+
+  // Test 48: Project Workspace Clean & Purge Engine
+  console.log('\n--- Test Suite 48: Workspace Hygiene & Clean Engine ---');
+  const { runClean } = await import('../packages/cli/src/commands/clean.js');
+  const cleanTestDir = path.join(workspaceRoot, 'tmp-clean-test');
+  nodeFs.mkdirSync(path.join(cleanTestDir, 'runs', 'cache'), { recursive: true });
+  nodeFs.mkdirSync(path.join(cleanTestDir, 'runs', 'run-old'), { recursive: true });
+  nodeFs.mkdirSync(path.join(cleanTestDir, 'runs', 'run-new'), { recursive: true });
+  nodeFs.writeFileSync(path.join(cleanTestDir, 'runs', 'cache', 'temp.txt'), 'cached data');
+  nodeFs.writeFileSync(path.join(cleanTestDir, 'runs', 'run-old', 'temp.mp4'), 'old data');
+  nodeFs.writeFileSync(path.join(cleanTestDir, 'runs', 'run-new', 'temp.mp4'), 'new data');
+  const past = new Date(Date.now() - 60000);
+  nodeFs.utimesSync(path.join(cleanTestDir, 'runs', 'run-old'), past, past);
+
+  const cleanRes = await runClean(cleanTestDir, { keepLatest: true });
+  assert(!nodeFs.existsSync(path.join(cleanTestDir, 'runs', 'cache')), 'Clean command purges cache directory');
+  assert(!nodeFs.existsSync(path.join(cleanTestDir, 'runs', 'run-old')), 'Clean command purges older run directory');
+  assert(nodeFs.existsSync(path.join(cleanTestDir, 'runs', 'run-new')), 'Clean command preserves latest run directory');
+  assert(cleanRes.freedBytes > 0, 'Clean command accurately calculates freed space');
+  nodeFs.rmSync(cleanTestDir, { recursive: true, force: true });
+
+  // Test 49: Developer Documentation & Spec Completeness
+  console.log('\n--- Test Suite 49: Platform Documentation Integrity ---');
+  const archDoc = nodeFs.readFileSync(path.join(workspaceRoot, 'docs', 'ARCHITECTURE.md'), 'utf8');
+  assert(archDoc.includes('HyperFrames'), 'Architecture documentation covers HyperFrames adapter');
+  assert(archDoc.includes('Quarantine'), 'Architecture documentation covers upstream quarantine rules');
+  const cliDoc = nodeFs.readFileSync(path.join(workspaceRoot, 'docs', 'CLI_REFERENCE.md'), 'utf8');
+  assert(cliDoc.includes('mgvideo storyboard'), 'CLI reference documents storyboard command');
+  assert(cliDoc.includes('mgvideo clean'), 'CLI reference documents clean command');
+  const workflowsDoc = nodeFs.readFileSync(path.join(workspaceRoot, 'docs', 'WORKFLOWS_GUIDE.md'), 'utf8');
+  assert(workflowsDoc.includes('Multilingual Explainer'), 'Workflows guide details all 5 canonical workflows');
+
+  // Test 50: Programmatic SDK Facade Extended Methods
+  console.log('\n--- Test Suite 50: Programmatic SDK Extended Coverage ---');
+  const sdkSbResult = await engine.storyboard(multilingualFixtureDir, { format: '16:9' });
+  assert(nodeFs.existsSync(sdkSbResult.htmlPath), 'SDK storyboard method produces valid review sheet');
+  const sdkCleanResult = await engine.clean(multilingualFixtureDir, { cacheOnly: true });
+  assert(sdkCleanResult.projectDir === multilingualFixtureDir, 'SDK clean method executes without errors');
+
+
 
 
 

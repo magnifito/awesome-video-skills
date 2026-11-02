@@ -5,6 +5,8 @@ import { runValidate, type ValidationReport } from '../../cli/src/commands/valid
 import { runPackage, type PackageOutput } from '../../cli/src/commands/package.js';
 import { generateDeliveryReport, type DeliveryReport } from '../../cli/src/commands/report.js';
 import { compareRenderOutputs, type DiffReport } from '../../cli/src/commands/diff.js';
+import { generateStoryboardContactSheet, type StoryboardResult } from '../../cli/src/commands/storyboard.js';
+import { runClean, type CleanResult, type CleanOptions } from '../../cli/src/commands/clean.js';
 import { ContractMigrator, type MigrationSummary } from '../../contracts/src/migrate.js';
 import { AssetAuditor, type AssetManifestAuditReport } from '../../media/src/asset_auditor.js';
 import { FontAuditor, type FontAuditResult } from '../../media/src/font_auditor.js';
@@ -74,4 +76,15 @@ export class MagnifitoVideoEngine {
   listAudioTracks(category?: AudioTrack['category'], mood?: AudioTrack['mood']): AudioTrack[] {
     return AudioCatalogManager.listTracks(category, mood);
   }
+
+  async storyboard(projectDir: string, options: { format?: '16:9' | '9:16' | '1:1'; outDir?: string } = {}): Promise<StoryboardResult> {
+    const fullPath = path.isAbsolute(projectDir) ? projectDir : path.resolve(this.workspaceRoot, projectDir);
+    return generateStoryboardContactSheet(fullPath, options);
+  }
+
+  async clean(projectDir: string, options: CleanOptions = {}): Promise<CleanResult> {
+    const fullPath = path.isAbsolute(projectDir) ? projectDir : path.resolve(this.workspaceRoot, projectDir);
+    return runClean(fullPath, options);
+  }
 }
+

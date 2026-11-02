@@ -10,6 +10,8 @@ runs/
 fixtures/**/runs/
 delivery/
 fixtures/**/delivery/
+storyboard/
+fixtures/**/storyboard/
 
 # Temporary files
 *.tmp

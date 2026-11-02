@@ -18,6 +18,9 @@ import { ContractMigrator } from '../../../contracts/src/migrate.js';
 import { inspectMedia, measureAudioLoudness } from '../../../media/src/inspector.js';
 import { ColorSpaceConfigurator } from '../../../media/src/colorspace.js';
 import { ShotRecipeRegistry } from '../../../../styles/recipes/registry.js';
+import { generateStoryboardContactSheet } from '../commands/storyboard.js';
+import { runClean } from '../commands/clean.js';
+
 
 
 const program = new Command();
@@ -495,7 +498,55 @@ program
     }
   });
 
+// mgvideo storyboard <project>
+program
+  .command('storyboard <project>')
+  .description('Generate visual storyboard cards and interactive review contact sheet')
+  .option('-f, --format <format>', 'Aspect ratio format (16:9, 9:16, 1:1)', '16:9')
+  .action(async (projectPath, opts) => {
+    try {
+      const targetDir = path.resolve(process.cwd(), projectPath);
+      const res = await generateStoryboardContactSheet(targetDir, { format: opts.format });
+      console.log(`\n📋 Storyboard Contact Sheet Generated!`);
+      console.log(`Project: ${projectPath}`);
+      console.log(`Total Styleframes: ${res.framesCount}`);
+      console.log(`Review Contact Sheet: ${res.htmlPath}\n`);
+    } catch (err) {
+      console.error('Storyboard command failed:', err);
+      process.exit(1);
+    }
+  });
+
+// mgvideo clean <project>
+program
+  .command('clean <project>')
+  .description('Purge temporary render caches, interim files, and older runs')
+  .option('--all', 'Delete all runs and caches', false)
+  .option('--cache-only', 'Delete only runs/cache without touching run folders', false)
+  .option('--keep-latest', 'Keep latest run and delete older runs', true)
+  .action(async (projectPath, opts) => {
+    try {
+      const targetDir = path.resolve(process.cwd(), projectPath);
+      const res = await runClean(targetDir, {
+        all: opts.all,
+        cacheOnly: opts.cacheOnly,
+        keepLatest: opts.keepLatest
+      });
+      console.log(`\n🧹 Cleaned project: ${projectPath}`);
+      console.log(`Freed Space: ${(res.freedBytes / 1024).toFixed(1)} KB`);
+      console.log('Purged items:');
+      for (const it of res.cleanedItems) {
+        console.log(` • ${it}`);
+      }
+      console.log('');
+    } catch (err) {
+      console.error('Clean command failed:', err);
+      process.exit(1);
+    }
+  });
+
 program.parse(process.argv);
+
 
 
 
