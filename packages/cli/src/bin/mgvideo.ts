@@ -56,6 +56,14 @@ import { MetadataSanitizer } from '../../../media/src/sanitizer.js';
 import { ChromaKeyEngine } from '../../../media/src/chromakey.js';
 import { TitleBurner } from '../../../media/src/title_burner.js';
 import { NoiseGateEngine } from '../../../media/src/noise_gate.js';
+import { SmartCropEngine } from '../../../media/src/smart_crop.js';
+import { AudioPanner } from '../../../media/src/panner.js';
+import { GlitchEngine } from '../../../media/src/glitch.js';
+import { MultiCamEngine } from '../../../media/src/multicam.js';
+import { AudioCompressor } from '../../../media/src/compressor.js';
+import { PipEngine } from '../../../media/src/pip.js';
+import { VignetteEngine } from '../../../media/src/vignette.js';
+import { DeClickerEngine } from '../../../media/src/declick.js';
 
 
 
@@ -1395,6 +1403,191 @@ program
       console.log(`Output: ${res.outputPath}\n`);
     } catch (err) {
       console.error('Noise gate command failed:', err);
+      process.exit(1);
+    }
+  });
+
+// mgvideo smart-crop <video>
+program
+  .command('smart-crop <video>')
+  .description('Reframe video into target aspect ratio with focal point bias (9:16, 1:1, 4:5, 16:9)')
+  .option('-r, --ratio <ratio>', 'Target aspect ratio (9:16, 1:1, 4:5, 16:9)', '9:16')
+  .option('-f, --focus <focus>', 'Focal point bias (center, top, bottom, left, right)', 'center')
+  .option('-o, --out <path>', 'Custom output video path')
+  .action((video, opts) => {
+    try {
+      const fullVideo = path.resolve(process.cwd(), video);
+      const res = SmartCropEngine.crop(fullVideo, {
+        targetAspectRatio: opts.ratio,
+        focus: opts.focus,
+        outputPath: opts.out ? path.resolve(process.cwd(), opts.out) : undefined
+      });
+      console.log(`\n✂️ Smart Crop Applied!`);
+      console.log(`Target: ${res.targetAspectRatio} (Focus: ${res.focus}) -> ${res.outputWidth}x${res.outputHeight}`);
+      console.log(`Output: ${res.outputPath}\n`);
+    } catch (err) {
+      console.error('Smart crop command failed:', err);
+      process.exit(1);
+    }
+  });
+
+// mgvideo pan <audio>
+program
+  .command('pan <audio>')
+  .description('Adjust stereo pan position (-1.0 left to +1.0 right) and stereo width')
+  .option('-p, --pan <value>', 'Pan position (-1.0 to 1.0)', '0.0')
+  .option('-w, --width <factor>', 'Stereo width factor (0.0 mono to 2.0 wide)', '1.0')
+  .option('-o, --out <path>', 'Custom output audio path')
+  .action((audio, opts) => {
+    try {
+      const fullAudio = path.resolve(process.cwd(), audio);
+      const res = AudioPanner.pan(fullAudio, {
+        pan: parseFloat(opts.pan),
+        stereoWidth: parseFloat(opts.width),
+        outputPath: opts.out ? path.resolve(process.cwd(), opts.out) : undefined
+      });
+      console.log(`\n🎧 Stereo Panner Applied!`);
+      console.log(`Pan: ${res.pan} | Width: ${res.stereoWidth}`);
+      console.log(`Output: ${res.outputPath}\n`);
+    } catch (err) {
+      console.error('Pan command failed:', err);
+      process.exit(1);
+    }
+  });
+
+// mgvideo glitch <video>
+program
+  .command('glitch <video>')
+  .description('Apply stylized chromatic aberration and digital glitch artifacts')
+  .option('-i, --intensity <factor>', 'Glitch intensity (0.1 to 1.0)', '0.5')
+  .option('-s, --shift <pixels>', 'Chromatic shift in pixels')
+  .option('-o, --out <path>', 'Custom output video path')
+  .action((video, opts) => {
+    try {
+      const fullVideo = path.resolve(process.cwd(), video);
+      const res = GlitchEngine.applyGlitch(fullVideo, {
+        intensity: parseFloat(opts.intensity),
+        chromaticShiftPixels: opts.shift ? parseInt(opts.shift, 10) : undefined,
+        outputPath: opts.out ? path.resolve(process.cwd(), opts.out) : undefined
+      });
+      console.log(`\n⚡ Glitch Artifacts Applied!`);
+      console.log(`Intensity: ${res.intensity} (Shift: ${res.chromaticShift}px, Noise: ${res.noiseAmount})`);
+      console.log(`Output: ${res.outputPath}\n`);
+    } catch (err) {
+      console.error('Glitch command failed:', err);
+      process.exit(1);
+    }
+  });
+
+// mgvideo multicam <videos...>
+program
+  .command('multicam <videos...>')
+  .description('Tile multiple synchronized camera angles into a split-screen layout (side-by-side, top-bottom, quad-2x2)')
+  .option('-l, --layout <layout>', 'Split layout: side-by-side, top-bottom, quad-2x2', 'side-by-side')
+  .option('-o, --out <path>', 'Custom output video path')
+  .action((videos, opts) => {
+    try {
+      const resolved = videos.map((v: string) => path.resolve(process.cwd(), v));
+      const res = MultiCamEngine.composeSplitScreen(resolved, {
+        layout: opts.layout,
+        outputPath: opts.out ? path.resolve(process.cwd(), opts.out) : undefined
+      });
+      console.log(`\n🎥 MultiCam Layout Generated!`);
+      console.log(`Layout: ${res.layout} (${res.inputVideos.length} cameras) -> ${res.width}x${res.height}`);
+      console.log(`Output: ${res.outputPath}\n`);
+    } catch (err) {
+      console.error('MultiCam command failed:', err);
+      process.exit(1);
+    }
+  });
+
+// mgvideo compress-audio <audio>
+program
+  .command('compress-audio <audio>')
+  .description('Apply professional broadcast dynamics compression and makeup gain')
+  .option('-p, --preset <preset>', 'Compressor preset: broadcast-master, vocal-leveler, punchy-bass', 'broadcast-master')
+  .option('-t, --threshold <db>', 'Threshold in dB')
+  .option('-o, --out <path>', 'Custom output audio path')
+  .action((audio, opts) => {
+    try {
+      const fullAudio = path.resolve(process.cwd(), audio);
+      const res = AudioCompressor.compress(fullAudio, {
+        preset: opts.preset,
+        thresholdDb: opts.threshold ? parseFloat(opts.threshold) : undefined,
+        outputPath: opts.out ? path.resolve(process.cwd(), opts.out) : undefined
+      });
+      console.log(`\n🎚️ Audio Compressor Applied!`);
+      console.log(`Preset: ${res.preset} (Threshold: ${res.thresholdDb}dB, Ratio: ${res.ratio}:1, Makeup: +${res.makeupGainDb}dB)`);
+      console.log(`Output: ${res.outputPath}\n`);
+    } catch (err) {
+      console.error('Compress audio command failed:', err);
+      process.exit(1);
+    }
+  });
+
+// mgvideo pip <mainVideo> <overlayVideo>
+program
+  .command('pip <mainVideo> <overlayVideo>')
+  .description('Insert picture-in-picture overlay in screen corner (bottom_right, top_right, bottom_left, top_left)')
+  .option('-c, --corner <corner>', 'PiP corner position', 'bottom_right')
+  .option('-w, --width <pixels>', 'PiP window width in pixels', '480')
+  .option('-o, --out <path>', 'Custom output video path')
+  .action((mainVideo, overlayVideo, opts) => {
+    try {
+      const fullMain = path.resolve(process.cwd(), mainVideo);
+      const fullOverlay = path.resolve(process.cwd(), overlayVideo);
+      const res = PipEngine.composePip(fullMain, fullOverlay, {
+        corner: opts.corner,
+        pipWidth: parseInt(opts.width, 10),
+        outputPath: opts.out ? path.resolve(process.cwd(), opts.out) : undefined
+      });
+      console.log(`\n🔲 Picture-in-Picture Composited!`);
+      console.log(`Corner: ${res.corner} (Width: ${res.pipWidth}px)`);
+      console.log(`Output: ${res.outputPath}\n`);
+    } catch (err) {
+      console.error('PiP command failed:', err);
+      process.exit(1);
+    }
+  });
+
+// mgvideo vignette <video>
+program
+  .command('vignette <video>')
+  .description('Apply subtle cinematic lens edge darkening')
+  .option('-a, --angle <radians>', 'Vignette angle in radians', '0.5')
+  .option('-o, --out <path>', 'Custom output video path')
+  .action((video, opts) => {
+    try {
+      const fullVideo = path.resolve(process.cwd(), video);
+      const res = VignetteEngine.applyVignette(fullVideo, {
+        angleRadians: parseFloat(opts.angle),
+        outputPath: opts.out ? path.resolve(process.cwd(), opts.out) : undefined
+      });
+      console.log(`\n🌑 Lens Vignette Applied!`);
+      console.log(`Angle: ${res.angleRadians} rad`);
+      console.log(`Output: ${res.outputPath}\n`);
+    } catch (err) {
+      console.error('Vignette command failed:', err);
+      process.exit(1);
+    }
+  });
+
+// mgvideo declick <audio>
+program
+  .command('declick <audio>')
+  .description('Eliminate mouth clicks, lip-smacks, and electrical pops from dialogue')
+  .option('-o, --out <path>', 'Custom output audio path')
+  .action((audio, opts) => {
+    try {
+      const fullAudio = path.resolve(process.cwd(), audio);
+      const res = DeClickerEngine.declick(fullAudio, {
+        outputPath: opts.out ? path.resolve(process.cwd(), opts.out) : undefined
+      });
+      console.log(`\n✨ Audio De-Clicker Applied!`);
+      console.log(`Filter: ${res.filterApplied}`);
+      console.log(`Output: ${res.outputPath}\n`);
+    } catch (err) {
+      console.error('Declick command failed:', err);
       process.exit(1);
     }
   });

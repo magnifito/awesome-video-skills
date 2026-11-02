@@ -47,6 +47,14 @@ import { MetadataSanitizer, type SanitizeOptions, type SanitizeResult } from '..
 import { ChromaKeyEngine, type ChromaKeyOptions, type ChromaKeyResult } from '../../media/src/chromakey.js';
 import { TitleBurner, type TitleOptions, type TitleResult } from '../../media/src/title_burner.js';
 import { NoiseGateEngine, type NoiseGateOptions, type NoiseGateResult } from '../../media/src/noise_gate.js';
+import { SmartCropEngine, type SmartCropOptions, type SmartCropResult } from '../../media/src/smart_crop.js';
+import { AudioPanner, type PannerOptions, type PannerResult } from '../../media/src/panner.js';
+import { GlitchEngine, type GlitchOptions, type GlitchResult } from '../../media/src/glitch.js';
+import { MultiCamEngine, type MultiCamOptions, type MultiCamResult } from '../../media/src/multicam.js';
+import { AudioCompressor, type CompressorOptions, type CompressorResult } from '../../media/src/compressor.js';
+import { PipEngine, type PipOptions, type PipResult } from '../../media/src/pip.js';
+import { VignetteEngine, type VignetteOptions, type VignetteResult } from '../../media/src/vignette.js';
+import { DeClickerEngine, type DeClickOptions, type DeClickResult } from '../../media/src/declick.js';
 import { runVerifyBundle, type BundleVerificationResult } from '../../cli/src/commands/verify_bundle.js';
 import { runDashboard, type DashboardStatus } from '../../cli/src/commands/dashboard.js';
 import { MotionCanvasAdapter, type MotionCanvasExportResult } from '../../../adapters/motion-canvas/index.js';
@@ -351,6 +359,47 @@ export class MagnifitoVideoEngine {
   noiseGate(audioPath: string, options: NoiseGateOptions = {}): NoiseGateResult {
     const fullPath = path.isAbsolute(audioPath) ? audioPath : path.resolve(this.workspaceRoot, audioPath);
     return NoiseGateEngine.applyGate(fullPath, options);
+  }
+
+  smartCrop(videoPath: string, options: SmartCropOptions = {}): SmartCropResult {
+    const fullPath = path.isAbsolute(videoPath) ? videoPath : path.resolve(this.workspaceRoot, videoPath);
+    return SmartCropEngine.crop(fullPath, options);
+  }
+
+  pan(audioPath: string, options: PannerOptions = {}): PannerResult {
+    const fullPath = path.isAbsolute(audioPath) ? audioPath : path.resolve(this.workspaceRoot, audioPath);
+    return AudioPanner.pan(fullPath, options);
+  }
+
+  glitch(videoPath: string, options: GlitchOptions = {}): GlitchResult {
+    const fullPath = path.isAbsolute(videoPath) ? videoPath : path.resolve(this.workspaceRoot, videoPath);
+    return GlitchEngine.applyGlitch(fullPath, options);
+  }
+
+  multiCam(videoPaths: string[], options: MultiCamOptions = {}): MultiCamResult {
+    const resolved = videoPaths.map(v => path.isAbsolute(v) ? v : path.resolve(this.workspaceRoot, v));
+    return MultiCamEngine.composeSplitScreen(resolved, options);
+  }
+
+  compressAudio(audioPath: string, options: CompressorOptions = {}): CompressorResult {
+    const fullPath = path.isAbsolute(audioPath) ? audioPath : path.resolve(this.workspaceRoot, audioPath);
+    return AudioCompressor.compress(fullPath, options);
+  }
+
+  pip(mainVideo: string, overlayVideo: string, options: PipOptions = {}): PipResult {
+    const fullMain = path.isAbsolute(mainVideo) ? mainVideo : path.resolve(this.workspaceRoot, mainVideo);
+    const fullOverlay = path.isAbsolute(overlayVideo) ? overlayVideo : path.resolve(this.workspaceRoot, overlayVideo);
+    return PipEngine.composePip(fullMain, fullOverlay, options);
+  }
+
+  vignette(videoPath: string, options: VignetteOptions = {}): VignetteResult {
+    const fullPath = path.isAbsolute(videoPath) ? videoPath : path.resolve(this.workspaceRoot, videoPath);
+    return VignetteEngine.applyVignette(fullPath, options);
+  }
+
+  declick(audioPath: string, options: DeClickOptions = {}): DeClickResult {
+    const fullPath = path.isAbsolute(audioPath) ? audioPath : path.resolve(this.workspaceRoot, audioPath);
+    return DeClickerEngine.declick(fullPath, options);
   }
 }
 

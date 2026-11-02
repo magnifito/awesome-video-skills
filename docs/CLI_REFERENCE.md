@@ -63,6 +63,14 @@ mgvideo <command> [options]
 | `chromakey` | `mgvideo chromakey <video>` | Keys out green or blue screen background and composites over background plate. |
 | `title` | `mgvideo title <video>` | Burns high-resolution typographic title card into video frames. |
 | `noise-gate` | `mgvideo noise-gate <audio>` | Mutes background noise floor and room hum during speech pauses via agate. |
+| `smart-crop` | `mgvideo smart-crop <video>` | Reframes video into target aspect ratio with focal point bias. |
+| `pan` | `mgvideo pan <audio>` | Adjusts stereo pan position and soundfield width. |
+| `glitch` | `mgvideo glitch <video>` | Applies stylized chromatic aberration and digital glitch artifacts. |
+| `multicam` | `mgvideo multicam <videos...>` | Tiles multiple synchronized camera angles into a split-screen grid. |
+| `compress-audio` | `mgvideo compress-audio <audio>` | Applies professional broadcast dynamics compression and makeup gain. |
+| `pip` | `mgvideo pip <main> <overlay>` | Inserts picture-in-picture overlay in screen corner. |
+| `vignette` | `mgvideo vignette <video>` | Applies subtle cinematic lens edge darkening. |
+| `declick` | `mgvideo declick <audio>` | Eliminates impulsive mouth clicks and electrical pops from dialogue. |
 | `clean` | `mgvideo clean <project>` | Purges temporary render caches and older runs to preserve disk hygiene. |
 | `upstream` | `mgvideo upstream [check\|propose\|rollback]` | Manages external repository tracking, candidate review branches, and baseline rollbacks. |
 
@@ -212,3 +220,32 @@ mgvideo <command> [options]
 ### `mgvideo noise-gate <audio>`
 - `-t, --threshold <db>`: Noise gate threshold in dB (default: `-40`).
 - `-r, --ratio <ratio>`: Expansion ratio (default: `4.0`).
+
+### `mgvideo smart-crop <video>`
+- `-r, --ratio <ratio>`: Target aspect ratio (`9:16`, `1:1`, `4:5`, `16:9`).
+- `-f, --focus <focus>`: Focal point bias (`center`, `top`, `bottom`, `left`, `right`).
+
+### `mgvideo pan <audio>`
+- `-p, --pan <val>`: Stereo pan position (`-1.0` left to `+1.0` right).
+- `-w, --width <factor>`: Stereo width factor (`0.0` mono to `2.0` wide).
+
+### `mgvideo glitch <video>`
+- `-i, --intensity <factor>`: Effect intensity (`0.1` to `1.0`).
+- `-s, --shift <pixels>`: RGB chromatic aberration split in pixels.
+
+### `mgvideo multicam <videos...>`
+- `-l, --layout <layout>`: Split layout (`side-by-side`, `top-bottom`, `quad-2x2`).
+
+### `mgvideo compress-audio <audio>`
+- `-p, --preset <preset>`: Mastering preset (`broadcast-master`, `vocal-leveler`, `punchy-bass`).
+- `-t, --threshold <db>`: Optional custom threshold.
+
+### `mgvideo pip <mainVideo> <overlayVideo>`
+- `-c, --corner <corner>`: Window corner (`bottom_right`, `top_right`, `bottom_left`, `top_left`).
+- `-w, --width <pixels>`: Window width in pixels (default: `480`).
+
+### `mgvideo vignette <video>`
+- `-a, --angle <radians>`: Lens darkening angle in radians (default: `0.5`).
+
+### `mgvideo declick <audio>`
+- Eliminates mouth clicks and electrical pops via FFmpeg `adeclick` filtering.

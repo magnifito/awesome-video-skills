@@ -56,6 +56,14 @@ export * from './sanitizer.js';
 export * from './chromakey.js';
 export * from './title_burner.js';
 export * from './noise_gate.js';
+export * from './smart_crop.js';
+export * from './panner.js';
+export * from './glitch.js';
+export * from './multicam.js';
+export * from './compressor.js';
+export * from './pip.js';
+export * from './vignette.js';
+export * from './declick.js';
 
 
 

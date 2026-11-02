@@ -1325,6 +1325,125 @@ async function runAllEvaluations() {
   assert(catalogAudit.repositories.every(r => r.observed_commit.length === 40), 'All 12 repositories pinned by 40-character commit hashes');
   console.log('🏆 GRAND ENTERPRISE PLATFORM: 110 Test Suites Verified with Zero Failures!\n');
 
+  // Test 111: Smart Aspect Ratio Re-Framing & Focal Crop
+  console.log('\n--- Test Suite 111: Smart Aspect Ratio Re-Framing & Focal Crop ---');
+  const { SmartCropEngine } = await import('../packages/media/src/smart_crop.js');
+  const cropClip = VideoConcatEngine.trimClip(initialVideoPath, { startSeconds: 0, durationSeconds: 1.0 });
+  const smartCropRes = SmartCropEngine.crop(cropClip, { targetAspectRatio: '9:16', focus: 'top' });
+  assert(nodeFs.existsSync(smartCropRes.outputPath), 'Smart crop video generated');
+  assert(smartCropRes.outputWidth === 1080 && smartCropRes.outputHeight === 1920, 'Output formatted to 1080x1920');
+  nodeFs.rmSync(cropClip, { force: true });
+  nodeFs.rmSync(smartCropRes.outputPath, { force: true });
+
+  // Test 112: Audio Stereo Panning & Soundfield Widening
+  console.log('\n--- Test Suite 112: Audio Stereo Panning & Soundfield Widening ---');
+  const { AudioPanner } = await import('../packages/media/src/panner.js');
+  const tmpPanIn = path.join(workspaceRoot, 'tmp-pan-in.wav');
+  execSync(`ffmpeg -y -i "${initialVideoPath}" -vn -c:a pcm_s16le -t 2 "${tmpPanIn}"`, { stdio: 'pipe' });
+  const panRes = AudioPanner.pan(tmpPanIn, { pan: 0.4, stereoWidth: 1.4 });
+  assert(nodeFs.existsSync(panRes.outputPath), 'Panned audio generated');
+  assert(panRes.pan === 0.4, 'Pan offset verified at +0.4 right');
+  assert(panRes.stereoWidth === 1.4, 'Stereo width set to 1.4');
+  nodeFs.rmSync(tmpPanIn, { force: true });
+  nodeFs.rmSync(panRes.outputPath, { force: true });
+
+  // Test 113: Video Glitch & Chromatic Aberration Artifacts
+  console.log('\n--- Test Suite 113: Video Glitch & Chromatic Aberration Artifacts ---');
+  const { GlitchEngine } = await import('../packages/media/src/glitch.js');
+  const glitchClip = VideoConcatEngine.trimClip(initialVideoPath, { startSeconds: 0, durationSeconds: 1.0 });
+  const glitchRes = GlitchEngine.applyGlitch(glitchClip, { intensity: 0.6 });
+  assert(nodeFs.existsSync(glitchRes.outputPath), 'Glitch artifact video generated');
+  assert(glitchRes.intensity === 0.6, 'Glitch intensity recorded');
+  assert(glitchRes.chromaticShift > 0, 'Chromatic shift pixels applied');
+  nodeFs.rmSync(glitchClip, { force: true });
+  nodeFs.rmSync(glitchRes.outputPath, { force: true });
+
+  // Test 114: Multi-Camera Split-Screen Compositor
+  console.log('\n--- Test Suite 114: Multi-Camera Split-Screen Compositor ---');
+  const { MultiCamEngine } = await import('../packages/media/src/multicam.js');
+  const camA = VideoConcatEngine.trimClip(initialVideoPath, { startSeconds: 0, durationSeconds: 1.0 });
+  const camB = VideoConcatEngine.trimClip(initialVideoPath, { startSeconds: 1.0, durationSeconds: 1.0 });
+  const multiCamRes = MultiCamEngine.composeSplitScreen([camA, camB], { layout: 'side-by-side' });
+  assert(nodeFs.existsSync(multiCamRes.outputPath), 'MultiCam split-screen video generated');
+  assert(multiCamRes.layout === 'side-by-side', 'Side-by-side layout applied');
+  assert(multiCamRes.width === 1920 && multiCamRes.height === 1080, 'Resolution normalized to 1920x1080');
+  nodeFs.rmSync(camA, { force: true });
+  nodeFs.rmSync(camB, { force: true });
+  nodeFs.rmSync(multiCamRes.outputPath, { force: true });
+
+  // Test 115: Audio Compressor & Dynamics Processor
+  console.log('\n--- Test Suite 115: Audio Compressor & Dynamics Processor ---');
+  const { AudioCompressor } = await import('../packages/media/src/compressor.js');
+  const tmpCompIn = path.join(workspaceRoot, 'tmp-comp-in.wav');
+  execSync(`ffmpeg -y -i "${initialVideoPath}" -vn -c:a pcm_s16le -t 2 "${tmpCompIn}"`, { stdio: 'pipe' });
+  const compRes = AudioCompressor.compress(tmpCompIn, { preset: 'vocal-leveler' });
+  assert(nodeFs.existsSync(compRes.outputPath), 'Compressed audio generated');
+  assert(compRes.preset === 'vocal-leveler', 'Vocal leveler preset applied');
+  assert(compRes.thresholdDb === -22, 'Threshold verified at -22dB');
+  nodeFs.rmSync(tmpCompIn, { force: true });
+  nodeFs.rmSync(compRes.outputPath, { force: true });
+
+  // Test 116: Picture-in-Picture (PiP) Corner Overlay
+  console.log('\n--- Test Suite 116: Picture-in-Picture (PiP) Corner Overlay ---');
+  const { PipEngine } = await import('../packages/media/src/pip.js');
+  const pipMain = VideoConcatEngine.trimClip(initialVideoPath, { startSeconds: 0, durationSeconds: 1.0 });
+  const pipOverlay = VideoConcatEngine.trimClip(initialVideoPath, { startSeconds: 1.0, durationSeconds: 1.0 });
+  const pipRes = PipEngine.composePip(pipMain, pipOverlay, { corner: 'bottom_right', pipWidth: 480 });
+  assert(nodeFs.existsSync(pipRes.outputPath), 'PiP composite video generated');
+  assert(pipRes.corner === 'bottom_right', 'Positioned in bottom_right corner');
+  assert(pipRes.pipWidth === 480, 'PiP window width confirmed at 480px');
+  nodeFs.rmSync(pipMain, { force: true });
+  nodeFs.rmSync(pipOverlay, { force: true });
+  nodeFs.rmSync(pipRes.outputPath, { force: true });
+
+  // Test 117: Lens Vignette & Darkening Engine
+  console.log('\n--- Test Suite 117: Lens Vignette & Darkening Engine ---');
+  const { VignetteEngine } = await import('../packages/media/src/vignette.js');
+  const vigClip = VideoConcatEngine.trimClip(initialVideoPath, { startSeconds: 0, durationSeconds: 1.0 });
+  const vigRes = VignetteEngine.applyVignette(vigClip, { angleRadians: 0.6 });
+  assert(nodeFs.existsSync(vigRes.outputPath), 'Vignetted video generated');
+  assert(vigRes.angleRadians === 0.6, 'Vignette angle verified at 0.6 rad');
+  nodeFs.rmSync(vigClip, { force: true });
+  nodeFs.rmSync(vigRes.outputPath, { force: true });
+
+  // Test 118: Dialogue De-Clicker & Impulsive Noise Filter
+  console.log('\n--- Test Suite 118: Dialogue De-Clicker & Impulsive Noise Filter ---');
+  const { DeClickerEngine } = await import('../packages/media/src/declick.js');
+  const tmpDeclickIn = path.join(workspaceRoot, 'tmp-declick-in.wav');
+  execSync(`ffmpeg -y -i "${initialVideoPath}" -vn -c:a pcm_s16le -t 2 "${tmpDeclickIn}"`, { stdio: 'pipe' });
+  const declickRes = DeClickerEngine.declick(tmpDeclickIn);
+  assert(nodeFs.existsSync(declickRes.outputPath), 'Declicked audio generated');
+  assert(declickRes.filterApplied.includes('adeclick'), 'adeclick filter verified');
+  nodeFs.rmSync(tmpDeclickIn, { force: true });
+  nodeFs.rmSync(declickRes.outputPath, { force: true });
+
+  // Test 119: Programmatic SDK Extended Coverage (Cycle 97-106)
+  console.log('\n--- Test Suite 119: Programmatic SDK Extended Coverage (Cycle 97-106) ---');
+  assert(typeof engine.smartCrop === 'function', 'SDK exposes smartCrop() method');
+  assert(typeof engine.pan === 'function', 'SDK exposes pan() method');
+  assert(typeof engine.glitch === 'function', 'SDK exposes glitch() method');
+  assert(typeof engine.multiCam === 'function', 'SDK exposes multiCam() method');
+  assert(typeof engine.compressAudio === 'function', 'SDK exposes compressAudio() method');
+  assert(typeof engine.pip === 'function', 'SDK exposes pip() method');
+  assert(typeof engine.vignette === 'function', 'SDK exposes vignette() method');
+  assert(typeof engine.declick === 'function', 'SDK exposes declick() method');
+  const sdkVigClip = VideoConcatEngine.trimClip(initialVideoPath, { startSeconds: 0, durationSeconds: 1.0 });
+  const sdkVigRes = engine.vignette(sdkVigClip, { angleRadians: 0.5 });
+  assert(nodeFs.existsSync(sdkVigRes.outputPath), 'SDK vignette() successfully generates video');
+  nodeFs.rmSync(sdkVigClip, { force: true });
+  nodeFs.rmSync(sdkVigRes.outputPath, { force: true });
+
+  // Test 120: Sovereign Invariant Assurance & Triple-Zero Audit
+  console.log('\n--- Test Suite 120: Sovereign Invariant Assurance & Triple-Zero Audit ---');
+  const catalogFinal = await runUpstreamCheck(workspaceRoot);
+  assert(catalogFinal.total_tracked === 12, 'Quarantine catalog retains all 12 upstreams');
+  for (const up of catalogFinal.repositories) {
+    assert(up.observed_commit.length === 40, `Upstream "${up.repository_id}" pinned to 40-char SHA`);
+  }
+  const skillsCheck = await packageSkills('antigravity', './dist/final-skills-pack');
+  assert(skillsCheck.verifiedAllowlist, 'Allowlist strictly preserved: exactly 10 canonical skills');
+  console.log('🏁 ULTIMATE SOVEREIGN MILESTONE: 120 Evaluation Suites Across 106 Platform Iterations!\n');
+
 
 
 
