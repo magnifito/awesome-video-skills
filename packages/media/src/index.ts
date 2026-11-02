@@ -10,5 +10,8 @@ export * from './lexicon.js';
 export * from './campaign_timer.js';
 export * from './audio_normalizer.js';
 export * from './colorspace.js';
+export * from './asset_auditor.js';
+export * from './font_auditor.js';
+export * from './audio_catalog.js';
 
 

@@ -24,12 +24,15 @@ import { HtmlSeekableAdapter } from '../../../../adapters/html/index.js';
 import { PolicyChecker } from '../../../media/src/policy.js';
 import { runPlan } from './plan.js';
 
-export async function runRender(projectDir: string, options?: {
+export interface RenderCliOptions {
   format?: '16:9' | '9:16' | '1:1';
   codec?: 'mp4' | 'webm' | 'mov_prores';
   transparent?: boolean;
   force?: boolean;
-}): Promise<RenderResult> {
+}
+
+export async function runRender(projectDir: string, options?: RenderCliOptions): Promise<RenderResult> {
+
   const briefPath = path.join(projectDir, 'brief.json');
   const brandPath = path.join(projectDir, 'brand.json');
   const claimsPath = path.join(projectDir, 'claims.json');

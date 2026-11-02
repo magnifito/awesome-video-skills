@@ -380,6 +380,99 @@ async function runAllEvaluations() {
   assert(freshUpstreamStatus.total_tracked === 12, 'Upstream check monitors all 12 tracked repositories');
   assert(freshUpstreamStatus.repositories.length === 12, 'Upstream check lists all 12 tracked repositories');
 
+  // Test 35: Asset Manifest & Cryptographic Checksum Auditor
+  console.log('\n--- Test Suite 35: Asset Manifest & Integrity Hash Auditor ---');
+  const { AssetAuditor } = await import('../packages/media/src/asset_auditor.js');
+  const assetTestDir = path.join(workspaceRoot, 'tmp-asset-test');
+  nodeFs.mkdirSync(assetTestDir, { recursive: true });
+  const sampleAssetFile = path.join(assetTestDir, 'logo.svg');
+  nodeFs.writeFileSync(sampleAssetFile, '<svg id="logo"></svg>');
+  const sampleHash = AssetAuditor.computeSha256(sampleAssetFile);
+
+  const testManifest = {
+    schema_version: '1.0.0' as const,
+    assets: [
+      {
+        asset_id: 'sample-logo',
+        content_hash: sampleHash,
+        local_path: 'logo.svg',
+        source: 'brand-kit',
+        rights_evidence: 'Internal client logo asset',
+        consent_obtained: true,
+        permitted: {
+          client: 'sofia-code-academy',
+          channels: ['all'],
+          territories: ['worldwide']
+        },
+        attribution_required: false,
+        status: 'approved' as const
+      }
+    ]
+  };
+
+  const validAudit = AssetAuditor.auditManifest(assetTestDir, testManifest);
+  assert(validAudit.valid === true, 'Asset auditor validates authentic assets matching sha256 checksum');
+  assert(validAudit.verified_assets === 1, 'Asset auditor records verified asset count');
+
+  // Corrupt the file and test tampering detection
+  nodeFs.writeFileSync(sampleAssetFile, '<svg id="tampered"></svg>');
+  const tamperedAudit = AssetAuditor.auditManifest(assetTestDir, testManifest);
+  assert(tamperedAudit.valid === false, 'Asset auditor flags checksum mismatch when asset content is modified');
+  nodeFs.rmSync(assetTestDir, { recursive: true, force: true });
+
+  // Test 36: Cyrillic & Font Glyph Clearance Auditor
+  console.log('\n--- Test Suite 36: Cyrillic & Font Glyph Clearance ---');
+  const { FontAuditor } = await import('../packages/media/src/font_auditor.js');
+  assert(FontAuditor.containsCyrillic('Здравейте на новия курс!') === true, 'Font auditor detects Cyrillic unicode block');
+  assert(FontAuditor.containsCyrillic('Hello World') === false, 'Font auditor detects pure Latin copy');
+  const safeFontAudit = FontAuditor.auditFontCoverage('Курс по софтуер', 'Inter');
+  assert(safeFontAudit.supported === true, 'Inter font is verified safe for Cyrillic copy');
+  const unsafeFontAudit = FontAuditor.auditFontCoverage('Курс по софтуер', 'Cinzel');
+  assert(unsafeFontAudit.supported === false, 'Latin-only Cinzel font is flagged to prevent tofu glyph rendering');
+  assert(unsafeFontAudit.recommended_fallback.includes('Geist'), 'Font auditor recommends Geist OFL-1.1 fallback');
+
+  // Test 37: Royalty-Free Audio Catalog & Dynamic Ducking Envelope
+  console.log('\n--- Test Suite 37: Royalty-Free Audio Catalog & Ducking Envelope ---');
+  const { AudioCatalogManager } = await import('../packages/media/src/audio_catalog.js');
+  const allTracks = AudioCatalogManager.listTracks('music');
+  assert(allTracks.length > 0, 'Audio catalog lists curated royalty-free tracks');
+  assert(allTracks.every(t => t.license === 'CC0-1.0'), 'All curated audio tracks are strictly CC0-1.0 licensed');
+  const techTrack = AudioCatalogManager.findTrackForScene(15.0, 'tech');
+  assert(techTrack.mood === 'tech', 'Audio catalog selects appropriate mood track');
+  const duckingEnvelope = AudioCatalogManager.generateDuckingEnvelope(2.0, 5.0, -18);
+  assert(duckingEnvelope.length === 4, 'Ducking envelope generates 4-point volume automation curve');
+  assert(duckingEnvelope[1].volume_factor < 0.2, 'Ducking attenuates background music during active voiceover');
+
+  // Test 38: Direct Programmatic SDK Engine
+  console.log('\n--- Test Suite 38: Programmatic SDK Facade ---');
+  const { MagnifitoVideoEngine } = await import('../packages/sdk/src/index.js');
+  const engine = new MagnifitoVideoEngine(workspaceRoot);
+  const fontCheck = engine.auditFont('Тест', 'Geist');
+  assert(fontCheck.supported === true, 'SDK facade exposes font auditing');
+  const tracks = engine.listAudioTracks('music');
+  assert(tracks.length >= 3, 'SDK facade exposes royalty-free audio catalog');
+  const migRes = engine.migrate(promoFixtureDir);
+  assert(migRes.success === true, 'SDK facade executes contract migration cleanly');
+
+  // Test 39: Media Inspection & Probe Specifications
+  console.log('\n--- Test Suite 39: Media Inspector Spec Verification ---');
+  const { inspectMedia: probeMediaFile } = await import('../packages/media/src/inspector.js');
+  const probedPromo = await probeMediaFile(masterPromoPath);
+  assert(probedPromo.width === 1080 && probedPromo.height === 1920, 'Probed video conforms to 1080x1920 vertical canvas');
+  assert(probedPromo.fps === 30, 'Probed video conforms to 30fps timing');
+  assert(probedPromo.has_audio === true, 'Probed video contains valid audio stream');
+
+  // Test 40: Shot Recipe Exploration & Schema Integrity
+  console.log('\n--- Test Suite 40: Shot Recipe Schema Integrity ---');
+  const { ShotRecipeRegistry: ShotRegistry } = await import('../styles/recipes/registry.js');
+  const reg = new ShotRegistry();
+  const saasRecipe = reg.getRecipe('saas-interface-tour');
+  assert(saasRecipe !== undefined, 'SaaS interface tour recipe exists in catalog');
+  assert(saasRecipe?.recommended_duration_seconds[0] === 5.0, 'Recipe duration lower bound is 5.0s');
+  assert(saasRecipe?.recommended_duration_seconds[1] === 10.0, 'Recipe duration upper bound is 10.0s');
+  assert(saasRecipe?.motion !== undefined, 'Recipe defines motion parameters');
+
+
 
 
   console.log(`\n========================================`);

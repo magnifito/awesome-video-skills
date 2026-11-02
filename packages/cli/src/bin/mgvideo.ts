@@ -15,6 +15,10 @@ import { runUpstreamCheck, runUpstreamPropose, runUpstreamRollback } from '../co
 import { generateDeliveryReport } from '../commands/report.js';
 import { compareRenderOutputs } from '../commands/diff.js';
 import { ContractMigrator } from '../../../contracts/src/migrate.js';
+import { inspectMedia, measureAudioLoudness } from '../../../media/src/inspector.js';
+import { ColorSpaceConfigurator } from '../../../media/src/colorspace.js';
+import { ShotRecipeRegistry } from '../../../../styles/recipes/registry.js';
+
 
 const program = new Command();
 
@@ -424,6 +428,74 @@ program
     }
   });
 
+// mgvideo inspect <file>
+program
+  .command('inspect <file>')
+  .description('Audit media file technical specifications, codecs, loudness, and color space')
+  .action(async (filePath) => {
+    try {
+      const targetFile = path.resolve(process.cwd(), filePath);
+      const probe = await inspectMedia(targetFile);
+      const loudness = await measureAudioLoudness(targetFile);
+      const color = await ColorSpaceConfigurator.inspectColorMetadata(targetFile);
+
+      console.log(`\n🔍 Media Inspection: ${path.basename(targetFile)}`);
+      console.log('--------------------------------------------------------------------------------');
+      console.log(` • Video Codec     : ${probe.video_codec || 'N/A'}`);
+      console.log(` • Audio Codec     : ${probe.audio_codec || 'N/A'}`);
+      console.log(` • Resolution      : ${probe.width}x${probe.height}`);
+      console.log(` • Framerate       : ${probe.fps} fps`);
+      console.log(` • Duration        : ${probe.duration_seconds.toFixed(3)}s`);
+      console.log(` • Alpha Channel   : ${probe.has_alpha ? 'Yes (Transparent)' : 'No (Opaque)'}`);
+      console.log(` • Audio Loudness  : ${loudness.lufs} LUFS (True Peak: ${loudness.true_peak_db} dBTP)`);
+      console.log(` • Rec.709 Color   : ${color.is_rec709_compliant ? 'Compliant ✅' : 'Non-compliant ⚠️'}`);
+      console.log('--------------------------------------------------------------------------------\n');
+    } catch (err) {
+      console.error('Inspect command failed:', err);
+      process.exit(1);
+    }
+  });
+
+// mgvideo recipe [id]
+program
+  .command('recipe [id]')
+  .description('Explore available shot recipes and motion parameters')
+  .action(async (recipeId) => {
+    try {
+      const registry = new ShotRecipeRegistry();
+      if (recipeId) {
+        const recipe = registry.getRecipe(recipeId);
+        if (!recipe) {
+          console.error(`Recipe not found: ${recipeId}`);
+          process.exit(1);
+        }
+        console.log(`\n🎨 Shot Recipe: ${recipe.name} (${recipe.id})`);
+        console.log(`Description: ${recipe.description}`);
+        console.log(`Duration Range: ${recipe.recommended_duration_seconds[0]}s - ${recipe.recommended_duration_seconds[1]}s`);
+        console.log('\nMotion Parameters:');
+        console.log(JSON.stringify(recipe.motion, null, 2));
+        console.log('\nLayout Parameters:');
+        console.log(JSON.stringify(recipe.layout, null, 2));
+        console.log('');
+      } else {
+        const recipes = registry.listRecipes();
+        console.log(`\n🎨 Magnifito Shot Recipe Catalog (${recipes.length} recipes):`);
+        console.log('--------------------------------------------------------------------------------');
+        console.log('ID'.padEnd(28) + 'DURATION'.padEnd(14) + 'DESCRIPTION');
+        console.log('--------------------------------------------------------------------------------');
+        for (const r of recipes) {
+          const durStr = `${r.recommended_duration_seconds[0]}-${r.recommended_duration_seconds[1]}s`;
+          console.log(`${r.id.padEnd(28)}${durStr.padEnd(14)}${r.description.slice(0, 38)}...`);
+        }
+        console.log('--------------------------------------------------------------------------------\n');
+      }
+    } catch (err) {
+      console.error('Recipe command failed:', err);
+      process.exit(1);
+    }
+  });
+
 program.parse(process.argv);
+
 
 
