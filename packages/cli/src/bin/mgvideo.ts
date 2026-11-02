@@ -20,6 +20,12 @@ import { ColorSpaceConfigurator } from '../../../media/src/colorspace.js';
 import { ShotRecipeRegistry } from '../../../../styles/recipes/registry.js';
 import { generateStoryboardContactSheet } from '../commands/storyboard.js';
 import { runClean } from '../commands/clean.js';
+import { runThumbnail } from '../commands/thumbnail.js';
+import { runReframe } from '../commands/reframe.js';
+import { runGrade } from '../commands/grade.js';
+import { runWaveform } from '../commands/waveform.js';
+import { runNotify } from '../commands/notify.js';
+import { ProductionBundleExporter } from '../../../media/src/bundle.js';
 
 
 
@@ -545,7 +551,145 @@ program
     }
   });
 
+// mgvideo thumbnail <target>
+program
+  .command('thumbnail <target>')
+  .description('Extract a promotional poster frame or thumbnail from a video or project')
+  .option('-t, --time <seconds>', 'Time offset in seconds', '1.0')
+  .option('-f, --format <format>', 'Image format (png, jpg, jpeg)', 'png')
+  .option('-w, --width <pixels>', 'Target width in pixels')
+  .option('-h, --height <pixels>', 'Target height in pixels')
+  .option('-o, --out <path>', 'Custom output image path')
+  .action(async (target, opts) => {
+    try {
+      const res = await runThumbnail(target, {
+        timeOffsetSeconds: parseFloat(opts.time),
+        format: opts.format,
+        width: opts.width ? parseInt(opts.width, 10) : undefined,
+        height: opts.height ? parseInt(opts.height, 10) : undefined,
+        outputPath: opts.out ? path.resolve(process.cwd(), opts.out) : undefined
+      });
+      console.log(`\n🖼️ Thumbnail Extracted!`);
+      console.log(`Output: ${res.outputPath}`);
+      console.log(`Resolution: ${res.width}x${res.height} (${res.format.toUpperCase()})`);
+      console.log(`File Size: ${(res.fileSizeBytes / 1024).toFixed(1)} KB\n`);
+    } catch (err) {
+      console.error('Thumbnail command failed:', err);
+      process.exit(1);
+    }
+  });
+
+// mgvideo reframe <video>
+program
+  .command('reframe <video>')
+  .description('Reframe master video to target aspect ratio (16:9, 9:16, 1:1, 4:5)')
+  .requiredOption('-r, --ratio <ratio>', 'Target aspect ratio (16:9, 9:16, 1:1, 4:5)')
+  .option('-s, --strategy <strategy>', 'Reframe strategy: fit (letterbox/pad) or crop (center crop)', 'fit')
+  .option('-c, --color <color>', 'Pad color for fit strategy', 'black')
+  .option('-o, --out <path>', 'Output video path')
+  .action(async (video, opts) => {
+    try {
+      const res = await runReframe(video, {
+        ratio: opts.ratio,
+        strategy: opts.strategy,
+        padColor: opts.color,
+        out: opts.out
+      });
+      console.log(`\n📐 Video Reframed!`);
+      console.log(`Target: ${res.targetRatio} (${res.width}x${res.height}) via ${res.strategy}`);
+      console.log(`Output: ${res.outputPath}\n`);
+    } catch (err) {
+      console.error('Reframe command failed:', err);
+      process.exit(1);
+    }
+  });
+
+// mgvideo grade <video>
+program
+  .command('grade <video>')
+  .description('Apply curated cinematic color grade preset (cool-tech, warm-vibrant, high-contrast, rec709-neutral, matte-film)')
+  .requiredOption('-p, --preset <preset>', 'Preset name')
+  .option('-o, --out <path>', 'Output video path')
+  .action(async (video, opts) => {
+    try {
+      const res = await runGrade(video, {
+        preset: opts.preset,
+        out: opts.out
+      });
+      console.log(`\n🎨 Color Grade Applied!`);
+      console.log(`Preset: ${res.preset.name} (${res.preset.targetGenre})`);
+      console.log(`Output: ${res.outputPath}\n`);
+    } catch (err) {
+      console.error('Grade command failed:', err);
+      process.exit(1);
+    }
+  });
+
+// mgvideo waveform <media>
+program
+  .command('waveform <media>')
+  .description('Generate high-resolution audio waveform visualizer PNG')
+  .option('-w, --width <pixels>', 'Waveform width', '1200')
+  .option('-h, --height <pixels>', 'Waveform height', '240')
+  .option('-c, --color <hex>', 'Waveform stroke color', '#2563EB')
+  .option('-o, --out <path>', 'Output image path')
+  .action(async (media, opts) => {
+    try {
+      const res = await runWaveform(media, {
+        width: parseInt(opts.width, 10),
+        height: parseInt(opts.height, 10),
+        color: opts.color,
+        out: opts.out
+      });
+      console.log(`\n🌊 Audio Waveform Generated!`);
+      console.log(`Output: ${res.outputPath} (${res.width}x${res.height})\n`);
+    } catch (err) {
+      console.error('Waveform command failed:', err);
+      process.exit(1);
+    }
+  });
+
+// mgvideo notify <project>
+program
+  .command('notify <project>')
+  .description('Dispatch webhook notification payload for CI/CD integrations')
+  .requiredOption('-e, --event <event>', 'Event type (e.g. render.completed, validation.failed)')
+  .action(async (project, opts) => {
+    try {
+      const notif = await runNotify(opts.event, project, {
+        triggered_at: new Date().toISOString()
+      });
+      console.log(JSON.stringify(notif, null, 2));
+    } catch (err) {
+      console.error('Notify command failed:', err);
+      process.exit(1);
+    }
+  });
+
+// mgvideo bundle <deliveryDir>
+program
+  .command('bundle <deliveryDir>')
+  .description('Bundle deliverables and checksums into immutable .tar.gz production package')
+  .option('-o, --out <path>', 'Output bundle .tar.gz path')
+  .action((deliveryDir, opts) => {
+    try {
+      const targetDir = path.resolve(process.cwd(), deliveryDir);
+      const res = ProductionBundleExporter.createBundle(targetDir, {
+        outputBundlePath: opts.out ? path.resolve(process.cwd(), opts.out) : undefined
+      });
+      console.log(`\n📦 Production Bundle Created!`);
+      console.log(`Archive: ${res.bundlePath}`);
+      console.log(`Size: ${(res.bundleSizeBytes / 1024).toFixed(1)} KB`);
+      console.log(`SHA-256: ${res.bundleSha256}`);
+      console.log(`Manifest: ${res.manifestPath}\n`);
+    } catch (err) {
+      console.error('Bundle command failed:', err);
+      process.exit(1);
+    }
+  });
+
 program.parse(process.argv);
+
 
 
 

@@ -7,6 +7,13 @@ import { generateDeliveryReport, type DeliveryReport } from '../../cli/src/comma
 import { compareRenderOutputs, type DiffReport } from '../../cli/src/commands/diff.js';
 import { generateStoryboardContactSheet, type StoryboardResult } from '../../cli/src/commands/storyboard.js';
 import { runClean, type CleanResult, type CleanOptions } from '../../cli/src/commands/clean.js';
+import { ThumbnailGenerator, type ThumbnailResult, type ThumbnailOptions } from '../../media/src/thumbnail.js';
+import { AspectReframeEngine, type ReframeResult, type ReframeOptions } from '../../media/src/reframe.js';
+import { ColorPresetEngine, type ColorPresetName, type ApplyGradeResult } from '../../media/src/color_presets.js';
+import { AudioWaveformVisualizer, type WaveformResult, type WaveformOptions } from '../../media/src/waveform.js';
+import { SubtitleEmbedder, type SubtitleTrackConfig, type EmbedSubtitlesResult } from '../../media/src/subtitles_embedder.js';
+import { StemExporter, type StemTrackInput, type StemExportReport } from '../../media/src/stems.js';
+import { ProductionBundleExporter, type BundleOptions, type BundleSummary } from '../../media/src/bundle.js';
 import { ContractMigrator, type MigrationSummary } from '../../contracts/src/migrate.js';
 import { AssetAuditor, type AssetManifestAuditReport } from '../../media/src/asset_auditor.js';
 import { FontAuditor, type FontAuditResult } from '../../media/src/font_auditor.js';
@@ -85,6 +92,41 @@ export class MagnifitoVideoEngine {
   async clean(projectDir: string, options: CleanOptions = {}): Promise<CleanResult> {
     const fullPath = path.isAbsolute(projectDir) ? projectDir : path.resolve(this.workspaceRoot, projectDir);
     return runClean(fullPath, options);
+  }
+
+  thumbnail(videoPath: string, options: ThumbnailOptions = {}): ThumbnailResult {
+    const fullPath = path.isAbsolute(videoPath) ? videoPath : path.resolve(this.workspaceRoot, videoPath);
+    return ThumbnailGenerator.extractThumbnail(fullPath, options);
+  }
+
+  reframe(videoPath: string, options: ReframeOptions): ReframeResult {
+    const fullPath = path.isAbsolute(videoPath) ? videoPath : path.resolve(this.workspaceRoot, videoPath);
+    return AspectReframeEngine.reframe(fullPath, options);
+  }
+
+  grade(videoPath: string, preset: ColorPresetName, options: { outputPath?: string } = {}): ApplyGradeResult {
+    const fullPath = path.isAbsolute(videoPath) ? videoPath : path.resolve(this.workspaceRoot, videoPath);
+    return ColorPresetEngine.applyGrade(fullPath, preset, options);
+  }
+
+  waveform(mediaPath: string, options: WaveformOptions = {}): WaveformResult {
+    const fullPath = path.isAbsolute(mediaPath) ? mediaPath : path.resolve(this.workspaceRoot, mediaPath);
+    return AudioWaveformVisualizer.generateWaveform(fullPath, options);
+  }
+
+  embedSubtitles(videoPath: string, tracks: SubtitleTrackConfig[], options: { outputPath?: string } = {}): EmbedSubtitlesResult {
+    const fullPath = path.isAbsolute(videoPath) ? videoPath : path.resolve(this.workspaceRoot, videoPath);
+    return SubtitleEmbedder.embed(fullPath, tracks, options);
+  }
+
+  exportStems(tracks: StemTrackInput[], outputDir: string): StemExportReport {
+    const fullOut = path.isAbsolute(outputDir) ? outputDir : path.resolve(this.workspaceRoot, outputDir);
+    return StemExporter.exportStems(tracks, fullOut);
+  }
+
+  bundle(deliveryDir: string, options: BundleOptions = {}): BundleSummary {
+    const fullOut = path.isAbsolute(deliveryDir) ? deliveryDir : path.resolve(this.workspaceRoot, deliveryDir);
+    return ProductionBundleExporter.createBundle(fullOut, options);
   }
 }
 

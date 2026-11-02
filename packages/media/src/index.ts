@@ -17,5 +17,12 @@ export * from './localization.js';
 export * from './typography.js';
 export * from './archiver.js';
 export * from './notifications.js';
+export * from './thumbnail.js';
+export * from './reframe.js';
+export * from './subtitles_embedder.js';
+export * from './color_presets.js';
+export * from './waveform.js';
+export * from './stems.js';
+export * from './bundle.js';
 
 

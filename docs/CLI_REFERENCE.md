@@ -28,6 +28,12 @@ mgvideo <command> [options]
 | `inspect` | `mgvideo inspect <file>` | Probes media specifications (resolution, fps, duration, codecs, loudness LUFS, Rec.709 compliance). |
 | `recipe` | `mgvideo recipe [id]` | Explores available shot recipes (e.g. `cinematic-title`, `saas-interface-tour`) and motion parameters. |
 | `migrate` | `mgvideo migrate <project>` | Upgrades project contracts to schema version 1.0.0 and injects zero-budget media defaults. |
+| `thumbnail` | `mgvideo thumbnail <target>` | Extracts promotional poster frame or thumbnail image in PNG, JPG, or WebP. |
+| `reframe` | `mgvideo reframe <video>` | Adapts master video into secondary aspect ratios (16:9, 9:16, 1:1, 4:5) via fit or crop. |
+| `grade` | `mgvideo grade <video>` | Applies curated cinematic color grade preset (cool-tech, warm-vibrant, high-contrast, etc.). |
+| `waveform` | `mgvideo waveform <media>` | Generates high-resolution audio waveform visualizer PNG for voiceover and podcasts. |
+| `notify` | `mgvideo notify <project>` | Dispatches webhook event payloads for automated CI/CD and production monitoring. |
+| `bundle` | `mgvideo bundle <deliveryDir>` | Compresses deliverables, review records, notices, and checksums into an immutable .tar.gz archive. |
 | `clean` | `mgvideo clean <project>` | Purges temporary render caches and older runs to preserve disk hygiene. |
 | `upstream` | `mgvideo upstream [check\|propose\|rollback]` | Manages external repository tracking, candidate review branches, and baseline rollbacks. |
 
@@ -40,6 +46,32 @@ mgvideo <command> [options]
 - `-c, --codec <codec>`: Output codec container (`mp4`, `webm`, `mov_prores`). Defaults to `mp4`.
 - `--transparent`: Render with transparent alpha channel (requires `mov_prores` or `webm`).
 - `--force`: Bypass cache and force re-rendering.
+
+### `mgvideo thumbnail <target>`
+- `-t, --time <seconds>`: Time offset in seconds (default: `1.0`).
+- `-f, --format <format>`: Image format (`png`, `jpg`, `webp`). Defaults to `png`.
+- `-w, --width <pixels>`: Optional custom width.
+- `-h, --height <pixels>`: Optional custom height.
+- `-o, --out <path>`: Custom output image file path.
+
+### `mgvideo reframe <video>`
+- `-r, --ratio <ratio>`: Target aspect ratio (`16:9`, `9:16`, `1:1`, `4:5`). Required.
+- `-s, --strategy <strategy>`: `fit` (letterbox/pad) or `crop` (center crop). Defaults to `fit`.
+- `-c, --color <color>`: Pad color for fit strategy (default: `black`).
+- `-o, --out <path>`: Custom output video path.
+
+### `mgvideo grade <video>`
+- `-p, --preset <preset>`: Preset name (`cool-tech`, `warm-vibrant`, `high-contrast`, `rec709-neutral`, `matte-film`). Required.
+- `-o, --out <path>`: Custom output video path.
+
+### `mgvideo waveform <media>`
+- `-w, --width <pixels>`: Waveform width (default: `1200`).
+- `-h, --height <pixels>`: Waveform height (default: `240`).
+- `-c, --color <hex>`: Waveform stroke color (default: `#2563EB`).
+- `-o, --out <path>`: Output image path.
+
+### `mgvideo bundle <deliveryDir>`
+- `-o, --out <path>`: Custom output `.tar.gz` bundle path.
 
 ### `mgvideo batch <catalog>`
 - `-c, --concurrency <number>`: Number of concurrent render workers (default: `2`).

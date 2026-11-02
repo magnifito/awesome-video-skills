@@ -1,6 +1,7 @@
 import path from 'node:path';
 import fs from 'node:fs/promises';
 import nodeFs from 'node:fs';
+import { execSync } from 'node:child_process';
 import { runRender } from '../packages/cli/src/commands/render.js';
 import { runValidate } from '../packages/cli/src/commands/validate.js';
 import { runPackage } from '../packages/cli/src/commands/package.js';
@@ -585,6 +586,144 @@ async function runAllEvaluations() {
   assert(nodeFs.existsSync(sdkSbResult.htmlPath), 'SDK storyboard method produces valid review sheet');
   const sdkCleanResult = await engine.clean(multilingualFixtureDir, { cacheOnly: true });
   assert(sdkCleanResult.projectDir === multilingualFixtureDir, 'SDK clean method executes without errors');
+
+  // Test 51: Poster Frame & Thumbnail Generator
+  console.log('\n--- Test Suite 51: Poster Frame & Thumbnail Generator ---');
+  const { ThumbnailGenerator } = await import('../packages/media/src/thumbnail.js');
+  const initialVideoPath = initialRender.output_files[0].path;
+  const demoVideoPath = demoRender.output_files[0].path;
+
+  const thumbPng = ThumbnailGenerator.extractThumbnail(initialVideoPath, {
+    timeOffsetSeconds: 1.0,
+    format: 'png'
+  });
+  assert(nodeFs.existsSync(thumbPng.outputPath), 'Thumbnail PNG exists on disk');
+  assert(thumbPng.width === 1080 && thumbPng.height === 1920, 'Thumbnail dimensions match 1080x1920 canvas');
+  const thumbJpg = ThumbnailGenerator.extractThumbnail(initialVideoPath, {
+    timeOffsetSeconds: 2.0,
+    format: 'jpg',
+    width: 540,
+    height: 960
+  });
+  assert(nodeFs.existsSync(thumbJpg.outputPath), 'Thumbnail JPG exists on disk');
+  assert(thumbJpg.width === 540 && thumbJpg.height === 960, 'Scaled JPG thumbnail dimensions match 540x960');
+  nodeFs.rmSync(thumbPng.outputPath, { force: true });
+  nodeFs.rmSync(thumbJpg.outputPath, { force: true });
+
+  // Test 52: Multi-Format Aspect Ratio Re-framer
+  console.log('\n--- Test Suite 52: Multi-Format Aspect Ratio Re-framer ---');
+  const { AspectReframeEngine } = await import('../packages/media/src/reframe.js');
+  const reframedVertical = AspectReframeEngine.reframe(demoVideoPath, {
+    targetRatio: '9:16',
+    strategy: 'fit'
+  });
+  assert(nodeFs.existsSync(reframedVertical.outputPath), 'Reframed vertical video exists');
+  assert(reframedVertical.width === 1080 && reframedVertical.height === 1920, 'Reframed vertical conforms to 1080x1920');
+
+  const reframedSquare = AspectReframeEngine.reframe(demoVideoPath, {
+    targetRatio: '1:1',
+    strategy: 'crop'
+  });
+  assert(nodeFs.existsSync(reframedSquare.outputPath), 'Reframed square video exists');
+  assert(reframedSquare.width === 1080 && reframedSquare.height === 1080, 'Reframed square conforms to 1080x1080');
+  nodeFs.rmSync(reframedVertical.outputPath, { force: true });
+  nodeFs.rmSync(reframedSquare.outputPath, { force: true });
+
+  // Test 53: Subtitle Stream Embedder
+  console.log('\n--- Test Suite 53: Subtitle Stream Embedder ---');
+  const { SubtitleEmbedder } = await import('../packages/media/src/subtitles_embedder.js');
+  const tmpSrt = path.join(workspaceRoot, 'tmp-sub.srt');
+  nodeFs.writeFileSync(tmpSrt, '1\n00:00:01,000 --> 00:00:03,000\nЗапочнете сега безплатно!\n');
+  const subbedResult = SubtitleEmbedder.embed(initialVideoPath, [
+    { file: tmpSrt, language: 'bg', title: 'Bulgarian Cyrillic', isDefault: true }
+  ]);
+  assert(nodeFs.existsSync(subbedResult.outputPath), 'Subbed MP4 deliverable generated');
+  assert(subbedResult.tracksCount === 1, 'Embedded 1 subtitle track');
+  assert(subbedResult.languages[0] === 'bg', 'Embedded subtitle track tagged with bg language');
+  nodeFs.rmSync(tmpSrt, { force: true });
+  nodeFs.rmSync(subbedResult.outputPath, { force: true });
+
+  // Test 54: Cinematic Color Grading Presets
+  console.log('\n--- Test Suite 54: Cinematic Color Grading Presets ---');
+  const { ColorPresetEngine } = await import('../packages/media/src/color_presets.js');
+  const presetsList = ColorPresetEngine.listPresets();
+  assert(presetsList.length >= 5, 'Color preset engine lists 5 production looks');
+  const coolGraded = ColorPresetEngine.applyGrade(demoVideoPath, 'cool-tech');
+  assert(nodeFs.existsSync(coolGraded.outputPath), 'Cool-tech color graded video exists on disk');
+  assert(coolGraded.preset.name === 'cool-tech', 'Applied preset reflects cool-tech spec');
+  nodeFs.rmSync(coolGraded.outputPath, { force: true });
+
+  // Test 55: Audio Waveform Visualizer
+  console.log('\n--- Test Suite 55: Audio Waveform Visualizer ---');
+  const { AudioWaveformVisualizer } = await import('../packages/media/src/waveform.js');
+  const waveRes = AudioWaveformVisualizer.generateWaveform(initialVideoPath, {
+    width: 800,
+    height: 160,
+    colorHex: '#10B981'
+  });
+  assert(nodeFs.existsSync(waveRes.outputPath), 'Waveform visualizer image generated');
+  assert(waveRes.width === 800 && waveRes.height === 160, 'Waveform dimensions match requested 800x160');
+  assert(waveRes.fileSizeBytes > 100, 'Waveform PNG file size is valid');
+  nodeFs.rmSync(waveRes.outputPath, { force: true });
+
+  // Test 56: Broadcast Audio Stems Exporter
+  console.log('\n--- Test Suite 56: Broadcast Audio Stems Exporter ---');
+  const { StemExporter } = await import('../packages/media/src/stems.js');
+  const stemOutputDir = path.join(workspaceRoot, 'tmp-stems-test');
+  const tmpStemAudio = path.join(workspaceRoot, 'tmp-stem-source.wav');
+  execSync(`ffmpeg -y -i "${initialVideoPath}" -vn -c:a pcm_s16le -t 3 "${tmpStemAudio}"`, { stdio: 'pipe' });
+  const stemRep = StemExporter.exportStems([
+    { name: 'dialogue', filePath: tmpStemAudio },
+    { name: 'music', filePath: tmpStemAudio }
+  ], stemOutputDir);
+  assert(nodeFs.existsSync(stemRep.manifestPath), 'Stems manifest JSON generated');
+  assert(stemRep.stems.length === 2, 'Exported 2 discrete audio stems');
+  assert(stemRep.stems[0].sampleRateHz === 48000, 'Stems resampled to broadcast standard 48kHz');
+  nodeFs.rmSync(tmpStemAudio, { force: true });
+  nodeFs.rmSync(stemOutputDir, { recursive: true, force: true });
+
+  // Test 57: Production Delivery Bundle Exporter
+  console.log('\n--- Test Suite 57: Production Delivery Bundle Exporter ---');
+  const { ProductionBundleExporter } = await import('../packages/media/src/bundle.js');
+  const bundleTestDir = path.join(workspaceRoot, 'tmp-bundle-test');
+  nodeFs.mkdirSync(bundleTestDir, { recursive: true });
+  nodeFs.writeFileSync(path.join(bundleTestDir, 'master.mp4'), 'test master video bytes');
+  nodeFs.writeFileSync(path.join(bundleTestDir, 'SHA256SUMS.txt'), 'test checksum manifest');
+  const bundleSummary = ProductionBundleExporter.createBundle(bundleTestDir);
+  assert(nodeFs.existsSync(bundleSummary.bundlePath), 'Production tarball bundle created');
+  assert(bundleSummary.bundleSha256.length === 64, 'Bundle generates valid SHA256 hex checksum');
+  assert(bundleSummary.bundledFiles.includes('master.mp4'), 'Bundle package includes master video');
+  nodeFs.rmSync(bundleTestDir, { recursive: true, force: true });
+
+  // Test 58: Notification Event Dispatch CLI Runner
+  console.log('\n--- Test Suite 58: Notification Event Dispatch CLI ---');
+  const { runNotify } = await import('../packages/cli/src/commands/notify.js');
+  const notifMsg = await runNotify('package.approved', 'promo-bulgarian-15s', {
+    durationSeconds: 15.0,
+    reviewer: 'Kiril Kirov'
+  });
+  assert(notifMsg.event === 'package.approved', 'Notification records package.approved event');
+  assert(notifMsg.project_id === 'promo-bulgarian-15s', 'Notification records project identifier');
+  assert(notifMsg.color_hex === '#8B5CF6', 'Package approved event mapped to purple badge');
+
+  // Test 59: Programmatic SDK Extended Capabilities
+  console.log('\n--- Test Suite 59: Programmatic SDK Extended Capabilities ---');
+  const sdkThumb = engine.thumbnail(demoVideoPath, { timeOffsetSeconds: 0.5, format: 'png' });
+  assert(nodeFs.existsSync(sdkThumb.outputPath), 'SDK thumbnail method produced valid image');
+  const sdkWave = engine.waveform(demoVideoPath, { width: 400, height: 100 });
+  assert(nodeFs.existsSync(sdkWave.outputPath), 'SDK waveform method produced visualizer image');
+  nodeFs.rmSync(sdkThumb.outputPath, { force: true });
+  nodeFs.rmSync(sdkWave.outputPath, { force: true });
+
+  // Test 60: End-to-End Delivery Package Verification
+  console.log('\n--- Test Suite 60: End-to-End Delivery Package Integrity ---');
+  assert(nodeFs.existsSync(promoDeliveryDir), 'Promo delivery directory exists on disk');
+  const promoSums = path.join(promoDeliveryDir, 'SHA256SUMS.txt');
+  assert(nodeFs.existsSync(promoSums), 'SHA256SUMS.txt exists in delivery directory');
+  const sumsText = nodeFs.readFileSync(promoSums, 'utf8');
+  assert(sumsText.includes('_final.mp4'), 'SHA256SUMS tracks master final mp4 deliverable');
+  assert(sumsText.includes('review-record.json'), 'SHA256SUMS tracks review-record.json');
+
 
 
 

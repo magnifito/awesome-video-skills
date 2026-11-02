@@ -54,3 +54,4 @@ This guide details the 5 canonical workflows supported by the Magnifito Super Vi
   - Multi-locale claim synchrony (`statement` vs `statement_bg`).
   - Speech pacing analysis (`LocalizationSynchronizer`) measuring expansion ratios.
   - Dynamic font sizing and line wrapping (`TypographyFitter`) to fit localized text inside card bounds without line clipping.
+
