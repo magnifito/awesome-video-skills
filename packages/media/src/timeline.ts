@@ -94,3 +94,4 @@ export class TimelineMapper {
     return null; // The source frame was cut out
   }
 }
+

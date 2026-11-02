@@ -51,3 +51,4 @@ export class RemotionProfileAdapter implements VideoRendererAdapter {
     throw new Error('inspectOutput called on uninitialized Remotion adapter');
   }
 }
+

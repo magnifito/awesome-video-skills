@@ -24,8 +24,12 @@ export async function runPackage(
   reviewer = 'Kiril Kirov'
 ): Promise<PackageOutput> {
   let runDir = runPathOrId;
-  if (!path.isAbsolute(runDir) && projectDir) {
+  if (path.isAbsolute(runDir)) {
+    // Already absolute
+  } else if (projectDir && !runPathOrId.includes('/') && !runPathOrId.includes('\\')) {
     runDir = path.join(projectDir, 'runs', runPathOrId);
+  } else {
+    runDir = path.resolve(process.cwd(), runPathOrId);
   }
   const projDir = projectDir || path.resolve(runDir, '..', '..');
 
@@ -131,3 +135,4 @@ export async function runPackage(
     review_record: reviewRecord
   };
 }
+

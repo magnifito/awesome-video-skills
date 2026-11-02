@@ -38,3 +38,4 @@ Every storyboard translates into `scene-plan.json` conforming to `ScenePlanSchem
 
 - Fail immediately if any `claims_refs` identifier is not found in `claims.json`.
 - Fail if sum of scene durations does not equal `brief.duration_seconds`.
+

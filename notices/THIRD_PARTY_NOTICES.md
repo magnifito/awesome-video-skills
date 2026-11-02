@@ -71,3 +71,4 @@ As established in the Magnifito Super Video Blueprint (2 November 2026), all ups
 - **Repository**: `motion-canvas/motion-canvas`
 - **Audited Commit**: `7b91435c301d530351dcf5ebb91dd139c002e405`
 - **License**: Core MIT; `@motion-canvas/ffmpeg` exporter is GPL-3.0.
+

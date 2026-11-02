@@ -17,3 +17,4 @@ export class HtmlSeekableAdapter extends HyperFramesAdapter {
     preview: true
   };
 }
+

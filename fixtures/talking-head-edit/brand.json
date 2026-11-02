@@ -1,0 +1,36 @@
+{
+  "schema_version": "1.0.0",
+  "brand_id": "founder-interview-series",
+  "name": "Founder Stories Tech Series",
+  "logos": {
+    "primary": "assets/series_logo.svg"
+  },
+  "colors": {
+    "primary": "#10b981",
+    "secondary": "#059669",
+    "background": "#18181b",
+    "text_primary": "#fafafa",
+    "accent": "#f59e0b"
+  },
+  "fonts": [
+    {
+      "family": "-apple-system, BlinkMacSystemFont, Arial, sans-serif",
+      "weight": "600",
+      "rights_evidence": "System-OFL-Compatible",
+      "supports_cyrillic": false
+    }
+  ],
+  "type_scale": {
+    "h1": 50,
+    "h2": 36,
+    "body": 22,
+    "caption": 14
+  },
+  "motion_preferences": {
+    "tempo": "punchy",
+    "camera_style": "static",
+    "border_radius": 8,
+    "glassmorphism": true
+  },
+  "prohibited_treatments": []
+}

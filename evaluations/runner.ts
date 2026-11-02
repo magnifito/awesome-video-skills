@@ -129,6 +129,31 @@ async function runAllEvaluations() {
   const restoredValidation = await runValidate(initialRender.run_id, promoFixtureDir);
   assert(restoredValidation.passed, 'Restoring approved claims restores valid status');
 
+  // Test 11: SaaS Product Demo Workflow
+  console.log('\n--- Test Suite 11: SaaS Product Demo Workflow ---');
+  const demoFixtureDir = path.join(workspaceRoot, 'fixtures', 'product-demo-saas');
+  const demoRender = await runRender(demoFixtureDir, { format: '16:9', force: false });
+  assert(demoRender.measurements.width === 1920 && demoRender.measurements.height === 1080, 'SaaS demo renders 16:9 1080p');
+  const demoValidation = await runValidate(demoRender.run_id, demoFixtureDir);
+  assert(demoValidation.passed, 'SaaS demo validation passes all checks');
+
+  // Test 12: Talking-Head Edit & Dual-Timeline Workflow
+  console.log('\n--- Test Suite 12: Talking-Head Edit & Timeline Alignment ---');
+  const interviewFixtureDir = path.join(workspaceRoot, 'fixtures', 'talking-head-edit');
+  const interviewRender = await runRender(interviewFixtureDir, { format: '16:9', force: false });
+  assert(interviewRender.measurements.duration_seconds > 14.5, 'Interview clip duration aligns with EDL output frame range');
+  const interviewValidation = await runValidate(interviewRender.run_id, interviewFixtureDir);
+  assert(interviewValidation.passed, 'Interview cut validation passes claims integrity');
+
+  // Test 13: Multi-SKU Commerce Batch Processing
+  console.log('\n--- Test Suite 13: Multi-SKU Commerce Batch ---');
+  const { runBatchCommerce } = await import('../packages/cli/src/commands/batch.js');
+  const catalogPath = path.join(workspaceRoot, 'fixtures', 'commerce-batch', 'catalog.json');
+  const batchReport = await runBatchCommerce(catalogPath, { force: false });
+  assert(batchReport.total_items === 3, 'Batch processes exactly 3 SKU records');
+  assert(batchReport.skipped === 1, 'Batch skips out-of-stock SKU cleanly');
+  assert(batchReport.failed === 0, 'Batch experiences zero render failures across diverse titles and offers');
+
   console.log(`\n========================================`);
   console.log(`EVALUATION SUMMARY: ${passCount} Passed, ${failCount} Failed`);
   console.log(`========================================\n`);

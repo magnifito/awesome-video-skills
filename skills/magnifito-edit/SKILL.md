@@ -27,3 +27,4 @@ Editing alters presentation times. Word timestamps from the original transcript 
 ## Stopping Conditions
 
 - Fail if an edit interval creates a negative duration or references source microseconds beyond media length.
+

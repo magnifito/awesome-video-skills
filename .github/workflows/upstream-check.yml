@@ -25,3 +25,4 @@ jobs:
 
       - name: Run Upstream Discovery Check
         run: npx tsx packages/cli/src/bin/mgvideo.ts upstream check
+

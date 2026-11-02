@@ -1,0 +1,41 @@
+{
+  "schema_version": "1.0.0",
+  "plan_revision": "rev-interview-1",
+  "renderer": "hyperframes",
+  "timing_authority": "speech",
+  "scenes": [
+    {
+      "scene_id": "scene-01-speaker-cut",
+      "factual_purpose": "Interview excerpt on pipeline technology",
+      "duration_seconds": 4.0,
+      "duration_frames": 120,
+      "copy_text": "We built the entire pipeline in Rust and TypeScript",
+      "claims_refs": ["claim-interview-core"],
+      "asset_refs": ["series-logo"],
+      "visual_recipe": "kinetic-typography",
+      "audio_events": []
+    },
+    {
+      "scene_id": "scene-02-broll-overlay",
+      "factual_purpose": "Cutaway illustrating technical architecture claims",
+      "duration_seconds": 6.0,
+      "duration_frames": 180,
+      "copy_text": "Zero-overhead performance and deterministic reproduction",
+      "claims_refs": ["claim-interview-perf"],
+      "asset_refs": [],
+      "visual_recipe": "product-reveal",
+      "audio_events": []
+    },
+    {
+      "scene_id": "scene-03-outro",
+      "factual_purpose": "Series title card and episode link",
+      "duration_seconds": 5.0,
+      "duration_frames": 150,
+      "copy_text": "Watch the full technical deep dive at magnifito.com",
+      "claims_refs": [],
+      "asset_refs": ["series-logo"],
+      "visual_recipe": "retail-card",
+      "audio_events": []
+    }
+  ]
+}

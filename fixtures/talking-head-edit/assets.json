@@ -1,0 +1,20 @@
+{
+  "schema_version": "1.0.0",
+  "assets": [
+    {
+      "asset_id": "series-logo",
+      "content_hash": "sha256-interview-logo-33445566",
+      "local_path": "assets/series_logo.svg",
+      "source": "Founder Series Production Kit",
+      "rights_evidence": "Production-Owned",
+      "consent_obtained": true,
+      "permitted": {
+        "client": "founder-interview-series",
+        "channels": ["youtube", "linkedin", "x"],
+        "territories": ["worldwide"]
+      },
+      "attribution_required": false,
+      "status": "approved"
+    }
+  ]
+}

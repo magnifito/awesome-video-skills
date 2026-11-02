@@ -26,3 +26,4 @@ The `magnifito-broll` skill generates contextual graphic layers, lower thirds, a
 ## Stopping Conditions
 
 - Stop if graphic overlay obscures speaker face or subtitles.
+

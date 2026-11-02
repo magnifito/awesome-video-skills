@@ -37,3 +37,4 @@ The output `review-record.json` records:
 - `timestamp`: UTC ISO timestamp.
 - `approval_scope`: Contains `copy_claims_revision`, `design_styleframe_revision`, and `final_cut_hash`.
 - Any subsequent change to copy, styling, or media invalidates the approval scope and requires re-review.
+

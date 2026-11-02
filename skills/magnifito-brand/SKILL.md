@@ -33,3 +33,4 @@ When `brief.language` is Bulgarian (`bg`), verify:
 
 - Reject brand profiles referencing local files that lack content hashes or rights evidence.
 - Stop if text color and background color fail minimum 4.5:1 contrast for body copy.
+

@@ -12,3 +12,4 @@ As specified in the implementation blueprint (Section 9 & 12), automated checks 
 
 ## Production Gate Policy
 - A deliverable requires a minimum score of **3.5 / 5.0** overall with no dimension below **3.0** to receive sign-off in `review-record.json`.
+

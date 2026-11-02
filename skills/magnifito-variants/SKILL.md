@@ -32,3 +32,4 @@ Never blindly crop a 16:9 composition to 9:16:
 ## Stopping Conditions
 
 - Stop batch if more than 20% of SKU records contain missing or corrupt assets.
+

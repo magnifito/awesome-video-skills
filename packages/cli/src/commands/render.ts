@@ -189,3 +189,4 @@ export async function runRender(projectDir: string, options?: {
 
   return renderResult;
 }
+

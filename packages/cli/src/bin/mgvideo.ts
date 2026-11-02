@@ -8,6 +8,7 @@ import { runPlan } from '../commands/plan.js';
 import { runRender } from '../commands/render.js';
 import { runValidate } from '../commands/validate.js';
 import { runPackage } from '../commands/package.js';
+import { runBatchCommerce } from '../commands/batch.js';
 import { runUpstreamCheck, runUpstreamPropose } from '../commands/upstream.js';
 
 const program = new Command();
@@ -198,6 +199,30 @@ program
     }
   });
 
+// mgvideo batch <catalog>
+program
+  .command('batch <catalog>')
+  .description('Render a multi-SKU commerce batch with retry manifests and per-product status')
+  .option('--force', 'Force re-render of cached SKUs', false)
+  .action(async (catalogPath, opts) => {
+    try {
+      console.log(`\n🛍️ Processing Commerce Batch: ${catalogPath}...`);
+      const rep = await runBatchCommerce(catalogPath, { force: opts.force });
+      console.log(`\nBatch: ${rep.batch_id}`);
+      console.log(`Total: ${rep.total_items} | Rendered: ${rep.rendered} | Cached: ${rep.cached} | Skipped: ${rep.skipped} | Failed: ${rep.failed}\n`);
+      for (const it of rep.items) {
+        const icon = it.status === 'rendered' || it.status === 'cached' ? '✅' : it.status === 'skipped_out_of_stock' ? '⏭️' : '❌';
+        console.log(` ${icon} [${it.sku}] ${it.status.toUpperCase()} - "${it.title.slice(0, 40)}..."`);
+        if (it.error) console.log(`    Error: ${it.error}`);
+      }
+      console.log('');
+      if (rep.failed > 0) process.exit(1);
+    } catch (err) {
+      console.error('Batch command failed:', err);
+      process.exit(1);
+    }
+  });
+
 // mgvideo upstream check
 // mgvideo upstream propose <source>
 const upstream = program.command('upstream').description('Track and propose upstream changes');
@@ -243,3 +268,4 @@ upstream
   });
 
 program.parse(process.argv);
+

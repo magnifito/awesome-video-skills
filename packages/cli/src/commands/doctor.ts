@@ -120,3 +120,4 @@ export async function runDoctor(): Promise<{ passed: boolean; items: HealthCheck
   const passed = items.every(i => i.status !== 'error');
   return { passed, items };
 }
+

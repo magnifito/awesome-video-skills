@@ -55,3 +55,4 @@ export interface VideoRendererAdapter {
   renderVideo(context: ProjectContext, options: RenderOptions): Promise<AdapterRenderOutput>;
   inspectOutput(outputPath: string): Promise<MediaProbeResult>;
 }
+

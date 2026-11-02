@@ -29,3 +29,4 @@ export async function runCatalog(workspaceRoot: string): Promise<Record<string, 
     provenance_records_count: provenance.entries.length
   };
 }
+

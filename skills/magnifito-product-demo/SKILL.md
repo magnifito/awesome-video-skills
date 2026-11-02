@@ -27,3 +27,4 @@ The `magnifito-product-demo` skill produces product demonstrations and feature t
 ## Stopping Conditions
 
 - Stop if requested feature claims are not corroborated by verified screenshot assets in `assets.json`.
+

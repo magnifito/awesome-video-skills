@@ -119,3 +119,4 @@ export async function runPlan(projectDir: string): Promise<ScenePlan> {
   await fs.writeFile(scenePlanPath, JSON.stringify(scenePlan, null, 2), 'utf-8');
   return scenePlan;
 }
+

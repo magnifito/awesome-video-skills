@@ -29,8 +29,12 @@ export interface ValidationReport {
 
 export async function runValidate(runPathOrId: string, projectDir?: string): Promise<ValidationReport> {
   let runDir = runPathOrId;
-  if (!path.isAbsolute(runDir) && projectDir) {
+  if (path.isAbsolute(runDir)) {
+    // Already absolute
+  } else if (projectDir && !runPathOrId.includes('/') && !runPathOrId.includes('\\')) {
     runDir = path.join(projectDir, 'runs', runPathOrId);
+  } else {
+    runDir = path.resolve(process.cwd(), runPathOrId);
   }
 
   const resultPath = path.join(runDir, 'render-result.json');
@@ -160,3 +164,4 @@ export async function runValidate(runPathOrId: string, projectDir?: string): Pro
   await fs.writeFile(path.join(runDir, 'validation-report.json'), JSON.stringify(report, null, 2), 'utf-8');
   return report;
 }
+

@@ -25,3 +25,4 @@ Each project brief defines its audio mode:
 
 - Fail if measured integrated loudness deviates by more than `±1.0 LUFS` from target.
 - Fail if true peak exceeds `-0.5 dBFS`.
+

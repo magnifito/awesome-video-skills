@@ -1,0 +1,20 @@
+{
+  "schema_version": "1.0.0",
+  "revision": "rev-interview-1",
+  "claims": [
+    {
+      "claim_id": "claim-interview-core",
+      "approved_wording": "We built the entire pipeline in Rust and TypeScript",
+      "evidence_source": "Founder Interview Transcript 2026",
+      "owner": "Editorial Producer",
+      "locale": "en"
+    },
+    {
+      "claim_id": "claim-interview-perf",
+      "approved_wording": "Zero-overhead performance and deterministic reproduction",
+      "evidence_source": "Founder Interview Transcript 2026",
+      "owner": "Technical Director",
+      "locale": "en"
+    }
+  ]
+}

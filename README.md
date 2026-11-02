@@ -111,3 +111,4 @@ All fixtures are stored in `fixtures/`:
 - `fixtures/product-demo-saas`: SaaS interface tour with feature claims.
 - `fixtures/talking-head-edit`: Dual-timeline interview cut with transcript mapping.
 - `fixtures/commerce-batch`: Multi-SKU commerce batch with retry states.
+

@@ -29,3 +29,4 @@ The `magnifito-promo` skill specializes in high-impact, short-form promotional v
 ## Stopping Conditions
 
 - Do not proceed with full render if styleframe still shows overlapping text, clipping on mobile vertical safe zones, or missing Cyrillic characters.
+
