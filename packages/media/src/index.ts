@@ -40,6 +40,14 @@ export * from './multitrack.js';
 export * from './silence.js';
 export * from './blur_bg.js';
 export * from './grid.js';
+export * from './framerate.js';
+export * from './deinterlace.js';
+export * from './equalizer.js';
+export * from './montage.js';
+export * from './mask.js';
+export * from './channel_map.js';
+export * from './bitrate.js';
+export * from './merkle.js';
 
 
 

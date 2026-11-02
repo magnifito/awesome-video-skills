@@ -47,6 +47,14 @@ mgvideo <command> [options]
 | `freeze` | `mgvideo freeze <video>` | Holds start or final frame of video using native tpad clone filter and audio padding. |
 | `blur-bg` | `mgvideo blur-bg <video>` | Adapts 9:16 vertical video onto a 16:9 canvas with an aesthetic blurred backdrop. |
 | `gate` | `mgvideo gate <project>` | Runs automated pre-delivery compliance audit (contracts, Cyrillic clearance, $0 budget). |
+| `framerate` | `mgvideo framerate <video>` | Converts video to standard broadcast or social framerate (24, 25, 30, 60 fps). |
+| `deinterlace` | `mgvideo deinterlace <video>` | Normalizes legacy interlaced footage into progressive scan frames via yadif. |
+| `eq` | `mgvideo eq <audio>` | Applies frequency equalization presets (voice-presence, rumble-reduction, de-ess). |
+| `montage` | `mgvideo montage <images...>` | Stitches storyboard styleframes into an animated animatic review video. |
+| `mask` | `mgvideo mask <video>` | Redacts on-screen confidential credentials or PII via blur or solid matte. |
+| `channel-map` | `mgvideo channel-map <audio>` | Remaps audio channels (mono-to-stereo, stereo-to-mono, left-only-to-stereo). |
+| `optimize` | `mgvideo optimize <video>` | Constrains video bitrate to meet file size limits (Discord 25MB, WhatsApp 16MB). |
+| `merkle` | `mgvideo merkle <dir>` | Computes hierarchical cryptographic Merkle tree root hash of deliverable package. |
 | `clean` | `mgvideo clean <project>` | Purges temporary render caches and older runs to preserve disk hygiene. |
 | `upstream` | `mgvideo upstream [check\|propose\|rollback]` | Manages external repository tracking, candidate review branches, and baseline rollbacks. |
 
@@ -134,3 +142,32 @@ mgvideo <command> [options]
   - Zero external media budget enforcement (`media_budget_usd = 0.0`)
   - Cyrillic font coverage clearance for Bulgarian copy
   - Master media specs (resolution, duration, audio presence) via ffprobe
+
+### `mgvideo framerate <video>`
+- `-r, --fps <number>`: Target framerate in frames per second (default: `30`).
+- `-o, --out <path>`: Custom output video path.
+
+### `mgvideo deinterlace <video>`
+- `-o, --out <path>`: Custom output video path for progressive frames.
+
+### `mgvideo eq <audio>`
+- `-p, --preset <name>`: Equalization preset (`voice-presence`, `rumble-reduction`, `warm-broadcast`, `de-ess`).
+- `-o, --out <path>`: Custom output audio path.
+
+### `mgvideo montage <images...>`
+- `-s, --seconds <seconds>`: Slide hold duration in seconds (default: `2.0`).
+- `-w, --width <pixels>`: Video canvas width (default: `1920`).
+- `-h, --height <pixels>`: Video canvas height (default: `1080`).
+
+### `mgvideo mask <video>`
+- `-b, --box <coords>`: Required bounding box as `x,y,width,height`.
+- `-m, --mode <mode>`: Redaction style: `blur` or `solid` (default: `blur`).
+
+### `mgvideo channel-map <audio>`
+- `-m, --mode <mode>`: Channel mapping mode (`mono-to-stereo`, `stereo-to-mono`, `left-only-to-stereo`, `right-only-to-stereo`).
+
+### `mgvideo optimize <video>`
+- `-s, --size <mb>`: Target maximum size in MB (default: `10.0`).
+
+### `mgvideo merkle <dir>`
+- Computes SHA256 hashes of all leaves and builds a binary Merkle tree root hash for client handoff integrity.

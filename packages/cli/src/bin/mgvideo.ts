@@ -40,6 +40,14 @@ import { VideoLoopEngine } from '../../../media/src/loop.js';
 import { FreezeFrameEngine } from '../../../media/src/freeze.js';
 import { BlurBackgroundEngine } from '../../../media/src/blur_bg.js';
 import { runQualityGate } from '../commands/gate.js';
+import { FrameRateConverter } from '../../../media/src/framerate.js';
+import { DeinterlaceEngine } from '../../../media/src/deinterlace.js';
+import { AudioEqualizerEngine } from '../../../media/src/equalizer.js';
+import { MontageGenerator } from '../../../media/src/montage.js';
+import { MaskEngine } from '../../../media/src/mask.js';
+import { AudioChannelMapper } from '../../../media/src/channel_map.js';
+import { BitrateOptimizer } from '../../../media/src/bitrate.js';
+import { MerkleManifest } from '../../../media/src/merkle.js';
 
 
 
@@ -1006,6 +1014,193 @@ program
       if (!res.passed) process.exit(1);
     } catch (err) {
       console.error('Quality gate command failed:', err);
+      process.exit(1);
+    }
+  });
+
+// mgvideo framerate <video>
+program
+  .command('framerate <video>')
+  .description('Convert video to target broadcast or social framerate (24, 25, 30, 60 fps)')
+  .option('-r, --fps <number>', 'Target framerate in frames per second', '30')
+  .option('-o, --out <path>', 'Custom output video path')
+  .action((video, opts) => {
+    try {
+      const fullVideo = path.resolve(process.cwd(), video);
+      const res = FrameRateConverter.convertFps(fullVideo, {
+        targetFps: parseInt(opts.fps, 10),
+        outputPath: opts.out ? path.resolve(process.cwd(), opts.out) : undefined
+      });
+      console.log(`\n🎞️ Framerate Converted!`);
+      console.log(`Framerate: ${res.originalFps}fps -> ${res.targetFps}fps`);
+      console.log(`Output: ${res.outputPath}\n`);
+    } catch (err) {
+      console.error('Framerate conversion failed:', err);
+      process.exit(1);
+    }
+  });
+
+// mgvideo deinterlace <video>
+program
+  .command('deinterlace <video>')
+  .description('Normalize interlaced footage to clean progressive scan frames via yadif')
+  .option('-o, --out <path>', 'Custom output video path')
+  .action((video, opts) => {
+    try {
+      const fullVideo = path.resolve(process.cwd(), video);
+      const res = DeinterlaceEngine.deinterlace(fullVideo, {
+        outputPath: opts.out ? path.resolve(process.cwd(), opts.out) : undefined
+      });
+      console.log(`\n📺 Deinterlaced Successfully!`);
+      console.log(`Filter: ${res.filterApplied}`);
+      console.log(`Output: ${res.outputPath}\n`);
+    } catch (err) {
+      console.error('Deinterlace failed:', err);
+      process.exit(1);
+    }
+  });
+
+// mgvideo eq <audio>
+program
+  .command('eq <audio>')
+  .description('Apply audio equalization and vocal frequency sweetening')
+  .option('-p, --preset <name>', 'EQ Preset (voice-presence, rumble-reduction, warm-broadcast, de-ess)', 'voice-presence')
+  .option('-o, --out <path>', 'Custom output audio path')
+  .action((audio, opts) => {
+    try {
+      const fullAudio = path.resolve(process.cwd(), audio);
+      const res = AudioEqualizerEngine.applyEq(fullAudio, {
+        preset: opts.preset,
+        outputPath: opts.out ? path.resolve(process.cwd(), opts.out) : undefined
+      });
+      console.log(`\n🎛️ Audio Equalizer Applied!`);
+      console.log(`Preset: ${res.preset}`);
+      console.log(`Filters: ${res.filters.join(', ')}`);
+      console.log(`Output: ${res.outputPath}\n`);
+    } catch (err) {
+      console.error('Equalizer command failed:', err);
+      process.exit(1);
+    }
+  });
+
+// mgvideo montage <images...>
+program
+  .command('montage <images...>')
+  .description('Stitch storyboard styleframes into an animated review animatic video')
+  .option('-s, --seconds <seconds>', 'Seconds per slide', '2.0')
+  .option('-w, --width <pixels>', 'Video width', '1920')
+  .option('-h, --height <pixels>', 'Video height', '1080')
+  .option('-o, --out <path>', 'Custom output video path')
+  .action((images, opts) => {
+    try {
+      const resolved = images.map((i: string) => path.resolve(process.cwd(), i));
+      const res = MontageGenerator.createAnimatic(resolved, {
+        secondsPerSlide: parseFloat(opts.seconds),
+        width: parseInt(opts.width, 10),
+        height: parseInt(opts.height, 10),
+        outputPath: opts.out ? path.resolve(process.cwd(), opts.out) : undefined
+      });
+      console.log(`\n🖼️ Animatic Montage Generated!`);
+      console.log(`Slides: ${res.imageCount} (${res.durationSeconds.toFixed(1)}s total)`);
+      console.log(`Resolution: ${res.width}x${res.height}`);
+      console.log(`Output: ${res.outputPath}\n`);
+    } catch (err) {
+      console.error('Montage command failed:', err);
+      process.exit(1);
+    }
+  });
+
+// mgvideo mask <video>
+program
+  .command('mask <video>')
+  .description('Redact sensitive on-screen client credentials, API keys, or PII')
+  .requiredOption('-b, --box <coords>', 'Bounding box "x,y,width,height"')
+  .option('-m, --mode <mode>', 'Redaction mode: blur or solid', 'blur')
+  .option('-o, --out <path>', 'Custom output video path')
+  .action((video, opts) => {
+    try {
+      const fullVideo = path.resolve(process.cwd(), video);
+      const parts = opts.box.split(',').map(Number);
+      if (parts.length !== 4 || parts.some(isNaN)) {
+        throw new Error('Bounding box must be "x,y,width,height" with numeric values');
+      }
+      const res = MaskEngine.applyRedaction(fullVideo, {
+        x: parts[0],
+        y: parts[1],
+        width: parts[2],
+        height: parts[3],
+        mode: opts.mode
+      }, {
+        outputPath: opts.out ? path.resolve(process.cwd(), opts.out) : undefined
+      });
+      console.log(`\n🛡️ Redaction Mask Applied!`);
+      console.log(`Region: [${res.box.x}, ${res.box.y}, ${res.box.width}x${res.box.height}] Mode: ${res.mode}`);
+      console.log(`Output: ${res.outputPath}\n`);
+    } catch (err) {
+      console.error('Mask command failed:', err);
+      process.exit(1);
+    }
+  });
+
+// mgvideo channel-map <audio>
+program
+  .command('channel-map <audio>')
+  .description('Remap audio channel layouts (mono-to-stereo, stereo-to-mono, left-only-to-stereo)')
+  .option('-m, --mode <mode>', 'Remap mode: mono-to-stereo, stereo-to-mono, left-only-to-stereo', 'mono-to-stereo')
+  .option('-o, --out <path>', 'Custom output audio path')
+  .action((audio, opts) => {
+    try {
+      const fullAudio = path.resolve(process.cwd(), audio);
+      const res = AudioChannelMapper.remap(fullAudio, {
+        mode: opts.mode,
+        outputPath: opts.out ? path.resolve(process.cwd(), opts.out) : undefined
+      });
+      console.log(`\n🎧 Channel Layout Remapped!`);
+      console.log(`Mode: ${res.mode}`);
+      console.log(`Output: ${res.outputPath}\n`);
+    } catch (err) {
+      console.error('Channel map command failed:', err);
+      process.exit(1);
+    }
+  });
+
+// mgvideo optimize <video>
+program
+  .command('optimize <video>')
+  .description('Constrain video bitrate to meet file size limits (e.g. Discord 25MB, WhatsApp 16MB)')
+  .option('-s, --size <mb>', 'Target maximum size in Megabytes', '10.0')
+  .option('-o, --out <path>', 'Custom output video path')
+  .action((video, opts) => {
+    try {
+      const fullVideo = path.resolve(process.cwd(), video);
+      const res = BitrateOptimizer.optimizeToSize(fullVideo, {
+        targetSizeMb: parseFloat(opts.size),
+        outputPath: opts.out ? path.resolve(process.cwd(), opts.out) : undefined
+      });
+      console.log(`\n📉 Bitrate Optimized!`);
+      console.log(`Size: ${(res.originalSizeBytes / 1024 / 1024).toFixed(2)}MB -> ${(res.optimizedSizeBytes / 1024 / 1024).toFixed(2)}MB (Target: ${res.targetSizeMb}MB)`);
+      console.log(`Bitrate: ${res.videoBitrateKbps} kbps video + ${res.audioBitrateKbps} kbps audio`);
+      console.log(`Output: ${res.outputPath}\n`);
+    } catch (err) {
+      console.error('Optimize command failed:', err);
+      process.exit(1);
+    }
+  });
+
+// mgvideo merkle <dir>
+program
+  .command('merkle <dir>')
+  .description('Compute cryptographic Merkle tree root hash of deliverable directory')
+  .action((dir) => {
+    try {
+      const fullDir = path.resolve(process.cwd(), dir);
+      const res = MerkleManifest.computeTree(fullDir);
+      console.log(`\n🌳 Cryptographic Merkle Root:`);
+      console.log(`Directory: ${fullDir}`);
+      console.log(`Root Hash: ${res.rootHash}`);
+      console.log(`Leaves: ${res.leafCount} audited files across ${res.treeLevels} tree levels\n`);
+    } catch (err) {
+      console.error('Merkle command failed:', err);
       process.exit(1);
     }
   });

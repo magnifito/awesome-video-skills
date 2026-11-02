@@ -1085,6 +1085,129 @@ async function runAllEvaluations() {
     assert(actualHash === expectedHash, `Cryptographic checksum matches for ${relPath}`);
   }
 
+  // Test 91: Framerate Conversion Engine
+  console.log('\n--- Test Suite 91: Framerate Conversion Engine ---');
+  const { FrameRateConverter } = await import('../packages/media/src/framerate.js');
+  const fpsClip = VideoConcatEngine.trimClip(initialVideoPath, { startSeconds: 0, durationSeconds: 1.5 });
+  const fpsRes = FrameRateConverter.convertFps(fpsClip, { targetFps: 24 });
+  assert(nodeFs.existsSync(fpsRes.outputPath), 'Framerate converted video exists');
+  assert(fpsRes.targetFps === 24, 'Output targeted 24fps');
+  nodeFs.rmSync(fpsClip, { force: true });
+  nodeFs.rmSync(fpsRes.outputPath, { force: true });
+
+  // Test 92: Video Deinterlacer with Yadif Filter
+  console.log('\n--- Test Suite 92: Video Deinterlacer with Yadif Filter ---');
+  const { DeinterlaceEngine } = await import('../packages/media/src/deinterlace.js');
+  const deintClip = VideoConcatEngine.trimClip(initialVideoPath, { startSeconds: 0, durationSeconds: 1.5 });
+  const deintRes = DeinterlaceEngine.deinterlace(deintClip);
+  assert(nodeFs.existsSync(deintRes.outputPath), 'Deinterlaced video exists on disk');
+  assert(deintRes.isProgressive === true, 'Engine confirms progressive scan output');
+  assert(deintRes.filterApplied.includes('yadif'), 'Yadif filter was applied to video stream');
+  nodeFs.rmSync(deintClip, { force: true });
+  nodeFs.rmSync(deintRes.outputPath, { force: true });
+
+  // Test 93: Audio Equalizer & Frequency Sweetening
+  console.log('\n--- Test Suite 93: Audio Equalizer & Frequency Sweetening ---');
+  const { AudioEqualizerEngine } = await import('../packages/media/src/equalizer.js');
+  const tmpEqAudio = path.join(workspaceRoot, 'tmp-eq-in.wav');
+  execSync(`ffmpeg -y -i "${initialVideoPath}" -vn -c:a pcm_s16le -t 2 "${tmpEqAudio}"`, { stdio: 'pipe' });
+  const eqRes = AudioEqualizerEngine.applyEq(tmpEqAudio, { preset: 'voice-presence', highpassHz: 90 });
+  assert(nodeFs.existsSync(eqRes.outputPath), 'Equalized audio file generated');
+  assert(eqRes.preset === 'voice-presence', 'Preset recorded as voice-presence');
+  assert(eqRes.filters.some(f => f.includes('highpass=f=90')), 'Highpass rumble cut applied');
+  nodeFs.rmSync(tmpEqAudio, { force: true });
+  nodeFs.rmSync(eqRes.outputPath, { force: true });
+
+  // Test 94: Storyboard Animatic Montage Generator
+  console.log('\n--- Test Suite 94: Storyboard Animatic Montage Generator ---');
+  const { MontageGenerator } = await import('../packages/media/src/montage.js');
+  const tmpImg1 = path.join(workspaceRoot, 'tmp-slide1.png');
+  const tmpImg2 = path.join(workspaceRoot, 'tmp-slide2.png');
+  execSync(`ffmpeg -y -f lavfi -i "color=c=blue:s=640x360:d=1" -vframes 1 "${tmpImg1}"`, { stdio: 'pipe' });
+  execSync(`ffmpeg -y -f lavfi -i "color=c=red:s=640x360:d=1" -vframes 1 "${tmpImg2}"`, { stdio: 'pipe' });
+  const montageRes = MontageGenerator.createAnimatic([tmpImg1, tmpImg2], { secondsPerSlide: 1.5, width: 1280, height: 720 });
+  assert(nodeFs.existsSync(montageRes.outputPath), 'Animatic montage video generated');
+  assert(montageRes.imageCount === 2, 'Montage compiled 2 styleframe slides');
+  assert(Math.abs(montageRes.durationSeconds - 3.0) < 0.2, 'Montage duration equals slide duration sum');
+  nodeFs.rmSync(tmpImg1, { force: true });
+  nodeFs.rmSync(tmpImg2, { force: true });
+  nodeFs.rmSync(montageRes.outputPath, { force: true });
+
+  // Test 95: Video Redaction & Bounding Mask Inpainter
+  console.log('\n--- Test Suite 95: Video Redaction & Bounding Mask Inpainter ---');
+  const { MaskEngine } = await import('../packages/media/src/mask.js');
+  const maskClip = VideoConcatEngine.trimClip(initialVideoPath, { startSeconds: 0, durationSeconds: 1.5 });
+  const blurMaskRes = MaskEngine.applyRedaction(maskClip, { x: 40, y: 40, width: 200, height: 100, mode: 'blur' });
+  assert(nodeFs.existsSync(blurMaskRes.outputPath), 'Blur redacted video generated');
+  assert(blurMaskRes.mode === 'blur', 'Blur redaction mode confirmed');
+  const solidMaskRes = MaskEngine.applyRedaction(maskClip, { x: 50, y: 50, width: 150, height: 80, mode: 'solid', color: 'black@0.9' });
+  assert(nodeFs.existsSync(solidMaskRes.outputPath), 'Solid matte redacted video generated');
+  assert(solidMaskRes.mode === 'solid', 'Solid redaction mode confirmed');
+  nodeFs.rmSync(maskClip, { force: true });
+  nodeFs.rmSync(blurMaskRes.outputPath, { force: true });
+  nodeFs.rmSync(solidMaskRes.outputPath, { force: true });
+
+  // Test 96: Audio Channel Remapping & Downmixing
+  console.log('\n--- Test Suite 96: Audio Channel Remapping & Downmixing ---');
+  const { AudioChannelMapper } = await import('../packages/media/src/channel_map.js');
+  const tmpMapIn = path.join(workspaceRoot, 'tmp-map-in.wav');
+  execSync(`ffmpeg -y -i "${initialVideoPath}" -vn -c:a pcm_s16le -t 2 "${tmpMapIn}"`, { stdio: 'pipe' });
+  const monoToStereo = AudioChannelMapper.remap(tmpMapIn, { mode: 'mono-to-stereo' });
+  assert(nodeFs.existsSync(monoToStereo.outputPath), 'Mono-to-stereo mapped audio exists');
+  assert(monoToStereo.mode === 'mono-to-stereo', 'Mode recorded as mono-to-stereo');
+  const stereoToMono = AudioChannelMapper.remap(tmpMapIn, { mode: 'stereo-to-mono' });
+  assert(nodeFs.existsSync(stereoToMono.outputPath), 'Stereo-to-mono mapped audio exists');
+  assert(stereoToMono.mode === 'stereo-to-mono', 'Mode recorded as stereo-to-mono');
+  nodeFs.rmSync(tmpMapIn, { force: true });
+  nodeFs.rmSync(monoToStereo.outputPath, { force: true });
+  nodeFs.rmSync(stereoToMono.outputPath, { force: true });
+
+  // Test 97: Video Bitrate & File Size Optimizer
+  console.log('\n--- Test Suite 97: Video Bitrate & File Size Optimizer ---');
+  const { BitrateOptimizer } = await import('../packages/media/src/bitrate.js');
+  const optClip = VideoConcatEngine.trimClip(initialVideoPath, { startSeconds: 0, durationSeconds: 2.0 });
+  const optRes = BitrateOptimizer.optimizeToSize(optClip, { targetSizeMb: 2.0 });
+  assert(nodeFs.existsSync(optRes.outputPath), 'Bitrate optimized video generated');
+  assert(optRes.targetSizeMb === 2.0, 'Optimization targeted 2.0MB constraint');
+  assert(optRes.videoBitrateKbps > 0, 'Computed positive video bitrate');
+  nodeFs.rmSync(optClip, { force: true });
+  nodeFs.rmSync(optRes.outputPath, { force: true });
+
+  // Test 98: Cryptographic Merkle Tree Hash Manifest
+  console.log('\n--- Test Suite 98: Cryptographic Merkle Tree Hash Manifest ---');
+  const { MerkleManifest } = await import('../packages/media/src/merkle.js');
+  const merkleTree = MerkleManifest.computeTree(promoDeliveryDir);
+  assert(merkleTree.rootHash.length === 64, 'Merkle root hash is valid 64-char hex SHA256');
+  assert(merkleTree.leafCount >= 3, 'Merkle tree aggregates >= 3 audited deliverable files');
+  assert(merkleTree.treeLevels >= 2, 'Hierarchical tree structure has >= 2 levels');
+
+  // Test 99: Programmatic SDK Comprehensive Method Audit
+  console.log('\n--- Test Suite 99: Programmatic SDK Comprehensive Method Audit ---');
+  assert(typeof engine.framerate === 'function', 'SDK exposes framerate() method');
+  assert(typeof engine.deinterlace === 'function', 'SDK exposes deinterlace() method');
+  assert(typeof engine.eq === 'function', 'SDK exposes eq() method');
+  assert(typeof engine.montage === 'function', 'SDK exposes montage() method');
+  assert(typeof engine.mask === 'function', 'SDK exposes mask() method');
+  assert(typeof engine.channelMap === 'function', 'SDK exposes channelMap() method');
+  assert(typeof engine.optimizeBitrate === 'function', 'SDK exposes optimizeBitrate() method');
+  assert(typeof engine.merkle === 'function', 'SDK exposes merkle() method');
+  const sdkMerkle = engine.merkle(promoDeliveryDir);
+  assert(sdkMerkle.rootHash.length === 64, 'SDK merkle() computes valid cryptographic root');
+
+  // Test 100: Total Platform Century Milestone & Invariant Verification
+  console.log('\n--- Test Suite 100: Total Platform Century Milestone & Invariant Verification ---');
+  const allUpstreams = JSON.parse(nodeFs.readFileSync(path.join(workspaceRoot, 'registry', 'upstreams.json'), 'utf8'));
+  assert(allUpstreams.repositories.length === 12, '12 open-source upstreams tracked in strict quarantine');
+  for (const r of allUpstreams.repositories) {
+    assert(r.observed_commit.length === 40, `Upstream "${r.id}" SHA is 40-char immutable commit`);
+    assert(Boolean(r.license), `Upstream "${r.id}" has audited open source license`);
+  }
+  const packCentury = await packageSkills('antigravity', './dist/century-skills-pack');
+  assert(packCentury.verifiedAllowlist, 'Only canonical specialist skills packaged');
+  const zeroViol = PolicyChecker.checkExternalMediaBudget(promoBrief, 50.0);
+  assert(zeroViol.length === 1 && zeroViol[0].code === 'MEDIA_BUDGET_ZERO_VIOLATION', 'Zero media budget strictly guarded');
+  console.log('🎉 CENTURY MILESTONE: All 100 test suites and core invariants verified!\n');
+
 
 
 
