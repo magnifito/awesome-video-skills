@@ -1,6 +1,6 @@
-import { execSync } from 'node:child_process';
 import path from 'node:path';
 import fs from 'node:fs';
+import { runFfmpeg, probe, requirePositive } from './proc.js';
 
 export interface ResampleOptions {
   sampleRate?: number;
@@ -24,23 +24,12 @@ export class AudioResampler {
       throw new Error(`Audio file not found: ${audioPath}`);
     }
 
-    const targetRate = options.sampleRate ?? 48000;
+    const targetRate = Math.round(requirePositive(options.sampleRate ?? 48000, 'sampleRate'));
 
-    let origRate = 44100;
-    let duration = 5.0;
-    try {
-      const probeRate = execSync(`ffprobe -v error -select_streams a:0 -show_entries stream=sample_rate -of csv=p=0 "${audioPath}"`, {
-        encoding: 'utf8'
-      }).trim();
-      origRate = parseInt(probeRate, 10) || 44100;
-
-      const probeDur = execSync(`ffprobe -v error -show_entries format=duration -of csv=p=0 "${audioPath}"`, {
-        encoding: 'utf8'
-      }).trim();
-      duration = parseFloat(probeDur) || 5.0;
-    } catch {
-      // fallback
-    }
+    const info = probe(audioPath);
+    if (!info.hasAudio) throw new Error(`No audio stream in ${audioPath}`);
+    const origRate = info.sampleRate;
+    const duration = info.durationSeconds;
 
     const outPath = options.outputPath ?? path.join(
       path.dirname(audioPath),
@@ -52,15 +41,7 @@ export class AudioResampler {
       fs.mkdirSync(parentDir, { recursive: true });
     }
 
-    const cmd = [
-      'ffmpeg -y',
-      `-i "${audioPath}"`,
-      `-af "aresample=${targetRate}"`,
-      '-c:a pcm_s16le',
-      `"${outPath}"`
-    ].join(' ');
-
-    execSync(cmd, { stdio: 'pipe' });
+    runFfmpeg(['-i', audioPath, '-vn', '-af', `aresample=${targetRate}`, '-c:a', 'pcm_s16le', outPath]);
 
     if (!fs.existsSync(outPath)) {
       throw new Error(`Failed to resample audio at: ${outPath}`);

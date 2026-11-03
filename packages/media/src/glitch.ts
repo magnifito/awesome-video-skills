@@ -1,4 +1,4 @@
-import { execSync } from 'node:child_process';
+import { runFfmpeg } from './proc.js';
 import path from 'node:path';
 import fs from 'node:fs';
 
@@ -29,6 +29,13 @@ export class GlitchEngine {
     const intensity = options.intensity ?? 0.5;
     const shift = options.chromaticShiftPixels ?? Math.round(intensity * 12);
     const noise = options.noiseAmount ?? Math.round(intensity * 30);
+    // rgbashift accepts -255..255 px; noise strength is 0..100.
+    if (!Number.isInteger(shift) || shift < 0 || shift > 255) {
+      throw new Error(`chromaticShiftPixels must be an integer in [0, 255], got ${shift}`);
+    }
+    if (!Number.isFinite(noise) || noise < 0 || noise > 100) {
+      throw new Error(`noiseAmount must be in [0, 100], got ${noise}`);
+    }
 
     const outPath = options.outputPath ?? path.join(
       path.dirname(videoPath),
@@ -42,16 +49,23 @@ export class GlitchEngine {
 
     const filter = `rgbashift=rh=${shift}:bv=-${shift},noise=alls=${noise}:allf=t`;
 
-    const cmd = [
-      'ffmpeg -y',
-      `-i "${videoPath}"`,
-      `-vf "${filter}"`,
-      '-c:v libx264 -preset fast -crf 20 -pix_fmt yuv420p',
-      '-c:a copy',
-      `"${outPath}"`
-    ].join(' ');
-
-    execSync(cmd, { stdio: 'pipe' });
+    runFfmpeg([
+      '-i',
+      videoPath,
+      '-vf',
+      filter,
+      '-c:v',
+      'libx264',
+      '-preset',
+      'fast',
+      '-crf',
+      '20',
+      '-pix_fmt',
+      'yuv420p',
+      '-c:a',
+      'copy',
+      outPath
+    ]);
 
     if (!fs.existsSync(outPath)) {
       throw new Error(`Failed to apply glitch effect at: ${outPath}`);

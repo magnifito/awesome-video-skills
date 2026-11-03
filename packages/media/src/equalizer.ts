@@ -1,4 +1,4 @@
-import { execSync } from 'node:child_process';
+import { runFfmpeg } from './proc.js';
 import path from 'node:path';
 import fs from 'node:fs';
 
@@ -47,7 +47,16 @@ export class AudioEqualizerEngine {
     }
 
     const preset = options.preset ?? 'voice-presence';
-    const filters: string[] = [...(this.PRESET_FILTERS[preset] || this.PRESET_FILTERS['voice-presence'])];
+    const presetFilters = this.PRESET_FILTERS[preset];
+    if (!presetFilters) {
+      throw new Error(`Unknown EQ preset: ${JSON.stringify(preset)}`);
+    }
+    const filters: string[] = [...presetFilters];
+    for (const [label, hz] of [['highpassHz', options.highpassHz], ['lowpassHz', options.lowpassHz]] as const) {
+      if (hz !== undefined && !(Number.isFinite(hz) && hz > 0 && hz < 24000)) {
+        throw new Error(`${label} must be between 0 and 24000 Hz, got ${hz}`);
+      }
+    }
 
     if (options.highpassHz) {
       filters.unshift(`highpass=f=${options.highpassHz}`);
@@ -68,16 +77,17 @@ export class AudioEqualizerEngine {
 
     const filterStr = filters.join(',');
 
-    const cmd = [
-      'ffmpeg -y',
-      `-i "${audioPath}"`,
-      `-af "${filterStr}"`,
-      '-ar 48000',
-      '-c:a pcm_s16le',
-      `"${outPath}"`
-    ].join(' ');
-
-    execSync(cmd, { stdio: 'pipe' });
+    runFfmpeg([
+      '-i',
+      audioPath,
+      '-af',
+      filterStr,
+      '-ar',
+      '48000',
+      '-c:a',
+      'pcm_s16le',
+      outPath
+    ]);
 
     if (!fs.existsSync(outPath)) {
       throw new Error(`Failed to generate equalized audio at: ${outPath}`);

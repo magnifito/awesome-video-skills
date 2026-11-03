@@ -1,3 +1,4 @@
+import { parseDateStrict } from './proc.js';
 import type { ProjectBrief, RenderResult } from '../../contracts/src/index.js';
 
 export interface CostBreakdown {
@@ -19,6 +20,20 @@ export interface CostBreakdown {
   };
   within_budget: boolean;
   budget_warnings: string[];
+  /** Which line items are measured from the run and which are flat estimates. */
+  basis: {
+    render_compute_usd: 'measured_wall_clock';
+    storage_usd: 'measured_output_bytes';
+    agent_usage_usd: 'flat_estimate' | 'reported';
+    external_media_usd: 'reported';
+  };
+}
+
+export interface RunCostInputs {
+  /** Actual agent/LLM spend for this run, if known (e.g. from a billing export). */
+  agentUsageUsd?: number;
+  /** Actual paid media/API spend for this run (stock footage, TTS, etc). Default 0. */
+  externalMediaUsd?: number;
 }
 
 export class CostTracker {
@@ -31,12 +46,12 @@ export class CostTracker {
   static calculateRunCost(
     brief: ProjectBrief,
     result: RenderResult,
-    isFirstProjectForClient = false
+    isFirstProjectForClient = false,
+    inputs: RunCostInputs = {}
   ): CostBreakdown {
-    const elapsedComputeSeconds = Math.max(
-      1.0,
-      (new Date(result.completed_at).getTime() - new Date(result.started_at).getTime()) / 1000
-    );
+    const started = parseDateStrict(result.started_at, 'started_at').getTime();
+    const completed = parseDateStrict(result.completed_at, 'completed_at').getTime();
+    const elapsedComputeSeconds = Math.max(1.0, (completed - started) / 1000);
 
     const computeCost = Math.round(elapsedComputeSeconds * this.COMPUTE_RATE_PER_SECOND * 1000) / 1000;
 
@@ -44,8 +59,13 @@ export class CostTracker {
     const storageMb = totalOutputBytes / (1024 * 1024);
     const storageCost = Math.round(storageMb * this.STORAGE_RATE_PER_MB_MONTH * 1000) / 1000;
 
-    const mediaCost = 0.0; // Kept strictly zero-budget
-    const agentCost = Math.round(this.BASE_AGENT_DISPATCH_COST * (result.logs.length > 5 ? 1.5 : 1.0) * 100) / 100;
+    // Media spend is whatever the caller reports; this toolkit itself makes no paid media calls.
+    const mediaCost = Math.round((inputs.externalMediaUsd ?? 0) * 100) / 100;
+    // Without reported usage, agent cost is a flat per-run estimate and is labelled as such.
+    const agentReported = inputs.agentUsageUsd !== undefined;
+    const agentCost = agentReported
+      ? Math.round(inputs.agentUsageUsd! * 100) / 100
+      : this.BASE_AGENT_DISPATCH_COST;
     const brandSetupCost = isFirstProjectForClient ? this.DEFAULT_BRAND_SETUP_ESTIMATE : 0.0;
 
     const total = Math.round((computeCost + storageCost + mediaCost + agentCost + brandSetupCost) * 100) / 100;
@@ -79,7 +99,13 @@ export class CostTracker {
         media_budget_usd: brief.budgets.media_budget_usd
       },
       within_budget: warnings.length === 0,
-      budget_warnings: warnings
+      budget_warnings: warnings,
+      basis: {
+        render_compute_usd: 'measured_wall_clock',
+        storage_usd: 'measured_output_bytes',
+        agent_usage_usd: agentReported ? 'reported' : 'flat_estimate',
+        external_media_usd: 'reported'
+      }
     };
   }
 }

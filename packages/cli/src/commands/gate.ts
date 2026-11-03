@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import { inspectMedia } from '../../../media/src/inspector.js';
 import { FontAuditor } from '../../../media/src/font_auditor.js';
 import { PolicyChecker } from '../../../media/src/policy.js';
+import { findLatestMaster } from './_shared.js';
 
 export interface GateCheckItem {
   name: string;
@@ -56,7 +57,10 @@ export async function runQualityGate(projectDir: string): Promise<QualityGateRes
   // 3. Cyrillic font clearance if Bulgarian
   if (briefData && briefData.language === 'bg') {
     const brandPath = path.join(fullProjDir, 'brand.json');
-    if (fs.existsSync(brandPath)) {
+    if (!fs.existsSync(brandPath)) {
+      checks.push({ name: 'Cyrillic Clearance', status: 'fail', message: 'Missing brand.json; cannot verify Cyrillic font coverage' });
+      allPassed = false;
+    } else {
       const brandData = JSON.parse(fs.readFileSync(brandPath, 'utf8'));
       const font = brandData.fonts && brandData.fonts[0] ? brandData.fonts[0].family : 'Inter';
       const fontAudit = FontAuditor.auditFontCoverage('Тестов надпис за верификация', font);
@@ -69,19 +73,8 @@ export async function runQualityGate(projectDir: string): Promise<QualityGateRes
     }
   }
 
-  // 4. Rendered Master Probe
-  const runsDir = path.join(fullProjDir, 'runs');
-  let masterVideo: string | null = null;
-  if (fs.existsSync(runsDir)) {
-    const sub = fs.readdirSync(runsDir);
-    for (const s of sub) {
-      const candidate = path.join(runsDir, s, `final_output_${s}.mp4`);
-      if (fs.existsSync(candidate)) {
-        masterVideo = candidate;
-        break;
-      }
-    }
-  }
+  // 4. Rendered Master Probe (newest run; mp4, mov or webm)
+  const masterVideo = findLatestMaster(fullProjDir);
 
   if (masterVideo) {
     try {
@@ -101,7 +94,8 @@ export async function runQualityGate(projectDir: string): Promise<QualityGateRes
       allPassed = false;
     }
   } else {
-    checks.push({ name: 'Media Specifications', status: 'warn', message: 'No rendered run found to inspect' });
+    checks.push({ name: 'Media Specifications', status: 'fail', message: 'No rendered master found to inspect; render before the gate can pass' });
+    allPassed = false;
   }
 
   return {

@@ -16,6 +16,7 @@ export interface DashboardStatus {
   doctorPassed: boolean;
   trackedReposCount: number;
   workflows: DashboardWorkflowStatus[];
+  /** True when every fixture brief declares a zero external media budget. */
   mediaBudgetZeroEnforced: boolean;
 }
 
@@ -33,8 +34,18 @@ export async function runDashboard(workspaceRoot: string = process.cwd()): Promi
   ];
 
   const workflows: DashboardWorkflowStatus[] = [];
+  let allZeroBudget = true;
   for (const wf of fixtureWorkflows) {
     const projDir = path.join(workspaceRoot, 'fixtures', wf.id);
+    const briefPath = path.join(projDir, 'brief.json');
+    if (fs.existsSync(briefPath)) {
+      try {
+        const brief = JSON.parse(fs.readFileSync(briefPath, 'utf8'));
+        if (brief?.budgets?.media_budget_usd !== 0) allZeroBudget = false;
+      } catch {
+        allZeroBudget = false;
+      }
+    }
     const hasRuns = fs.existsSync(path.join(projDir, 'runs'));
     const hasDelivery = fs.existsSync(path.join(projDir, 'delivery'));
     workflows.push({
@@ -51,6 +62,6 @@ export async function runDashboard(workspaceRoot: string = process.cwd()): Promi
     doctorPassed: doctorReport.passed,
     trackedReposCount: repos.length,
     workflows,
-    mediaBudgetZeroEnforced: true
+    mediaBudgetZeroEnforced: allZeroBudget
   };
 }

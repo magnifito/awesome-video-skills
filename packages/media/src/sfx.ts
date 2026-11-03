@@ -1,6 +1,6 @@
-import { execSync } from 'node:child_process';
 import path from 'node:path';
 import fs from 'node:fs';
+import { runFfmpeg, requirePositive } from './proc.js';
 
 export type SfxType = 'whoosh' | 'thud' | 'pop' | 'chime';
 
@@ -17,33 +17,50 @@ export interface SfxResult {
   sampleRate: number;
 }
 
+interface SfxRecipe {
+  defaultDuration: number;
+  /** Builds the lavfi source graph for a given duration (seconds) and sample rate. */
+  build: (d: number, sr: number) => string;
+}
+
+const f = (n: number) => n.toFixed(3);
+
 export class SfxSynthesizer {
-  private static readonly SFX_FILTERS: Record<SfxType, { filter: string; defaultDuration: number }> = {
+  private static readonly SFX_RECIPES: Record<SfxType, SfxRecipe> = {
     whoosh: {
-      filter: 'anoisesrc=d=0.8:c=white:r=48000,bandpass=f=800:width_type=h:w=500,afade=t=in:st=0:d=0.25,afade=t=out:st=0.25:d=0.55',
-      defaultDuration: 0.8
+      defaultDuration: 0.8,
+      build: (d, sr) =>
+        `anoisesrc=d=${f(d)}:c=white:r=${sr},bandpass=f=800:width_type=h:w=500,afade=t=in:st=0:d=${f(d * 0.31)},afade=t=out:st=${f(d * 0.31)}:d=${f(d * 0.69)}`,
     },
     thud: {
-      filter: 'sine=frequency=55:duration=1.0,afade=t=out:st=0.05:d=0.95',
-      defaultDuration: 1.0
+      defaultDuration: 1.0,
+      build: (d, sr) => `sine=frequency=55:duration=${f(d)}:sample_rate=${sr},afade=t=out:st=${f(d * 0.05)}:d=${f(d * 0.95)}`,
     },
     pop: {
-      filter: 'sine=frequency=1400:duration=0.08,afade=t=out:st=0.01:d=0.07',
-      defaultDuration: 0.08
+      defaultDuration: 0.08,
+      build: (d, sr) => `sine=frequency=1400:duration=${f(d)}:sample_rate=${sr},afade=t=out:st=${f(d * 0.125)}:d=${f(d * 0.875)}`,
     },
     chime: {
-      filter: 'sine=frequency=1046.5:duration=1.5,afade=t=out:st=0.1:d=1.4',
-      defaultDuration: 1.5
-    }
+      defaultDuration: 1.5,
+      build: (d, sr) => `sine=frequency=1046.5:duration=${f(d)}:sample_rate=${sr},afade=t=out:st=${f(d * 0.067)}:d=${f(d * 0.933)}`,
+    },
   };
+
+  /** Supported effect types. */
+  static readonly TYPES = Object.keys(SfxSynthesizer.SFX_RECIPES) as SfxType[];
 
   /**
    * Procedurally synthesizes transition sound effects without external audio assets or spend.
+   * The requested duration shapes both the source length and the fade envelope.
    */
   static synthesize(type: SfxType, options: SfxOptions = {}): SfxResult {
-    const config = this.SFX_FILTERS[type] || this.SFX_FILTERS.whoosh;
-    const duration = options.durationSeconds ?? config.defaultDuration;
-    const sampleRate = options.sampleRate ?? 48000;
+    const recipe = this.SFX_RECIPES[type];
+    if (!recipe) {
+      throw new Error(`Unknown SFX type "${String(type)}". Supported: ${this.TYPES.join(', ')}`);
+    }
+    const duration = requirePositive(options.durationSeconds ?? recipe.defaultDuration, 'durationSeconds');
+    if (duration > 60) throw new Error(`durationSeconds must be <= 60, got ${duration}`);
+    const sampleRate = Math.round(requirePositive(options.sampleRate ?? 48000, 'sampleRate'));
 
     const outPath = options.outputPath ?? path.join(
       process.cwd(),
@@ -57,16 +74,13 @@ export class SfxSynthesizer {
       fs.mkdirSync(parentDir, { recursive: true });
     }
 
-    const cmd = [
-      'ffmpeg -y',
-      `-f lavfi -i "${config.filter}"`,
-      `-t ${duration.toFixed(2)}`,
-      `-ar ${sampleRate}`,
-      '-c:a pcm_s16le',
-      `"${outPath}"`
-    ].join(' ');
-
-    execSync(cmd, { stdio: 'pipe' });
+    runFfmpeg([
+      '-f', 'lavfi', '-i', recipe.build(duration, sampleRate),
+      '-t', f(duration),
+      '-ar', String(sampleRate),
+      '-c:a', 'pcm_s16le',
+      outPath,
+    ]);
 
     if (!fs.existsSync(outPath)) {
       throw new Error(`Failed to synthesize sound effect at: ${outPath}`);
@@ -80,4 +94,3 @@ export class SfxSynthesizer {
     };
   }
 }
-

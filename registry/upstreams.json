@@ -61,7 +61,7 @@
       "github_repo_id": 874512963,
       "tracking_branch": "main",
       "observed_commit": "5c5794287bd0dc2c94f238ca89f4752ecaa045a2",
-      "approved_commit": null,
+      "approved_commit": "5c5794287bd0dc2c94f238ca89f4752ecaa045a2",
       "license": "Apache-2.0",
       "component_licenses": {
         "audio/historical": "Separate-Attribution-Required"

@@ -1,11 +1,11 @@
-import { execSync } from 'node:child_process';
 import path from 'node:path';
 import fs from 'node:fs';
+import { runFfmpeg } from './proc.js';
 
 export interface SubtitleTrackConfig {
   file: string;
-  language: string; // e.g. "bg", "en"
-  title: string;    // e.g. "Bulgarian", "English"
+  language: string; // e.g. "bg", "en", "bul"
+  title: string; // e.g. "Bulgarian", "English"
   isDefault?: boolean;
 }
 
@@ -36,10 +36,12 @@ export class SubtitleEmbedder {
     if (!tracks || tracks.length === 0) {
       throw new Error('At least one subtitle track must be provided for embedding');
     }
-
     for (const tr of tracks) {
       if (!fs.existsSync(tr.file)) {
         throw new Error(`Subtitle track file not found: ${tr.file}`);
+      }
+      if (!/^[a-z]{2,3}(-[A-Za-z0-9]{2,8})?$/.test(tr.language)) {
+        throw new Error(`Invalid subtitle language code: ${JSON.stringify(tr.language)}`);
       }
     }
 
@@ -53,30 +55,20 @@ export class SubtitleEmbedder {
       fs.mkdirSync(parentDir, { recursive: true });
     }
 
-    const inputArgs: string[] = [`-i "${videoPath}"`];
-    const mapArgs: string[] = ['-map 0:v', '-map 0:a?'];
-    const metaArgs: string[] = [];
-
+    const args: string[] = ['-i', videoPath];
+    tracks.forEach(tr => args.push('-i', tr.file));
+    args.push('-map', '0:v', '-map', '0:a?');
+    tracks.forEach((_, idx) => args.push('-map', `${idx + 1}:s`));
+    args.push('-c:v', 'copy', '-c:a', 'copy', '-c:s', 'mov_text');
     tracks.forEach((tr, idx) => {
-      inputArgs.push(`-i "${tr.file}"`);
-      mapArgs.push(`-map ${idx + 1}:s`);
-      metaArgs.push(`-metadata:s:s:${idx} language="${tr.language}"`);
-      metaArgs.push(`-metadata:s:s:${idx} title="${tr.title}"`);
-      if (tr.isDefault) {
-        metaArgs.push(`-disposition:s:${idx} default`);
-      }
+      // Argument arrays pass titles verbatim; no shell quoting is involved.
+      args.push(`-metadata:s:s:${idx}`, `language=${tr.language}`);
+      args.push(`-metadata:s:s:${idx}`, `title=${tr.title}`);
+      args.push(`-disposition:s:${idx}`, tr.isDefault ? 'default' : '0');
     });
+    args.push(outPath);
 
-    const cmd = [
-      'ffmpeg -y',
-      inputArgs.join(' '),
-      mapArgs.join(' '),
-      '-c:v copy -c:a copy -c:s mov_text',
-      metaArgs.join(' '),
-      `"${outPath}"`
-    ].join(' ');
-
-    execSync(cmd, { stdio: 'pipe' });
+    runFfmpeg(args);
 
     if (!fs.existsSync(outPath)) {
       throw new Error(`Failed to generate subbed video at: ${outPath}`);
@@ -90,4 +82,3 @@ export class SubtitleEmbedder {
     };
   }
 }
-

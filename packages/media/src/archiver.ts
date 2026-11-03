@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
+import { safeJoin } from './proc.js';
 
 export interface ChecksumItem {
   filename: string;
@@ -15,9 +16,23 @@ export interface ChecksumManifestResult {
 }
 
 export class DeliverableArchiver {
+  /**
+   * Streams the file through SHA-256 in 1 MiB chunks so files larger than 2 GiB
+   * (the Buffer limit of readFileSync) can be hashed.
+   */
   static computeSha256(filePath: string): string {
-    const data = fs.readFileSync(filePath);
-    return crypto.createHash('sha256').update(data).digest('hex');
+    const hash = crypto.createHash('sha256');
+    const fd = fs.openSync(filePath, 'r');
+    try {
+      const buf = Buffer.allocUnsafe(1024 * 1024);
+      let n: number;
+      while ((n = fs.readSync(fd, buf, 0, buf.length, null)) > 0) {
+        hash.update(buf.subarray(0, n));
+      }
+    } finally {
+      fs.closeSync(fd);
+    }
+    return hash.digest('hex');
   }
 
   /**
@@ -71,10 +86,20 @@ export class DeliverableArchiver {
 
     for (const line of lines) {
       const match = line.match(/^([a-f0-9]{64})\s+(.+)$/);
-      if (!match) continue;
+      if (!match) {
+        errors.push(`Malformed manifest line: ${line}`);
+        continue;
+      }
 
-      const [_, expectedHash, filename] = match;
-      const targetFile = path.join(dir, filename);
+      const [, expectedHash, filename] = match;
+      let targetFile: string;
+      try {
+        // Reject entries such as ../../etc/passwd or absolute paths.
+        targetFile = safeJoin(dir, filename);
+      } catch {
+        errors.push(`Manifest entry escapes delivery directory: ${filename}`);
+        continue;
+      }
 
       if (!fs.existsSync(targetFile)) {
         errors.push(`Missing deliverable file: ${filename}`);

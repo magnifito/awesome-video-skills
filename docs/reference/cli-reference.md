@@ -1,3 +1,9 @@
+---
+title: Magnifito Super Video CLI Reference
+kind: reference
+status: reference
+updated: 2026-11-03
+---
 # Magnifito Super Video CLI Reference
 
 The `mgvideo` CLI orchestrates the full lifecycle of video production jobs across the Magnifito platform.

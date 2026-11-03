@@ -59,11 +59,13 @@ export async function runClean(projectDir: string, options: CleanOptions = {}): 
     const runEntries = (await fs.readdir(runsDir, { withFileTypes: true }))
       .filter(entry => entry.isDirectory() && entry.name.startsWith('run-'))
       .map(entry => {
-        const full = path.join(runsDir, entry.name);
-        const stat = nodeFs.statSync(full);
+        // Run directories are named run-<epochMs>-<hash>; use the creation timestamp from the
+        // name so touching an old run's files cannot make it look like the latest one.
+        const fromName = Number(/^run-(\d+)-/.exec(entry.name)?.[1]);
+        const stat = nodeFs.statSync(path.join(runsDir, entry.name));
         return {
           name: entry.name,
-          time: stat.mtimeMs || stat.birthtimeMs || 0
+          time: Number.isFinite(fromName) ? fromName : stat.birthtimeMs || stat.mtimeMs || 0
         };
       })
       .sort((a, b) => a.time - b.time);

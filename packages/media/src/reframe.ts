@@ -1,6 +1,6 @@
-import { execSync } from 'node:child_process';
 import path from 'node:path';
 import fs from 'node:fs';
+import { runFfmpeg, safeColor } from './proc.js';
 
 export type TargetAspectRatio = '16:9' | '9:16' | '1:1' | '4:5';
 export type ReframeStrategy = 'fit' | 'crop';
@@ -38,6 +38,10 @@ export class AspectReframeEngine {
     }
 
     const { targetRatio, strategy = 'fit', padColor = 'black' } = options;
+    if (strategy !== 'fit' && strategy !== 'crop') {
+      throw new Error(`Unsupported reframe strategy: ${String(strategy)}`);
+    }
+    const color = safeColor(padColor);
     const targetDim = RESOLUTION_MAP[targetRatio];
     if (!targetDim) {
       throw new Error(`Unsupported target aspect ratio: ${targetRatio}`);
@@ -58,22 +62,20 @@ export class AspectReframeEngine {
 
     if (strategy === 'fit') {
       // Scale to fit within target bounding box, then pad
-      vf = `scale=${tw}:${th}:force_original_aspect_ratio=decrease,pad=${tw}:${th}:(ow-iw)/2:(oh-ih)/2:color=${padColor}`;
+      vf = `scale=${tw}:${th}:force_original_aspect_ratio=decrease,pad=${tw}:${th}:(ow-iw)/2:(oh-ih)/2:color=${color},setsar=1`;
     } else {
       // Scale to completely fill target box, then crop center
-      vf = `scale=${tw}:${th}:force_original_aspect_ratio=increase,crop=${tw}:${th}`;
+      vf = `scale=${tw}:${th}:force_original_aspect_ratio=increase,crop=${tw}:${th},setsar=1`;
     }
 
-    const cmd = [
-      'ffmpeg -y',
-      `-i "${inputPath}"`,
-      `-vf "${vf}"`,
-      '-c:v libx264 -preset fast -crf 20 -pix_fmt yuv420p',
-      '-c:a aac -b:a 192k',
-      `"${outPath}"`
-    ].join(' ');
-
-    execSync(cmd, { stdio: 'pipe' });
+    runFfmpeg([
+      '-i', inputPath,
+      '-vf', vf,
+      '-map', '0:v:0', '-map', '0:a?',
+      '-c:v', 'libx264', '-preset', 'fast', '-crf', '20', '-pix_fmt', 'yuv420p',
+      '-c:a', 'aac', '-b:a', '192k',
+      outPath,
+    ]);
 
     if (!fs.existsSync(outPath)) {
       throw new Error(`Failed to generate reframed video at: ${outPath}`);

@@ -1,33 +1,68 @@
-# Magnifito Super Video Platform Documentation
+# Documentation
 
-Welcome to the technical documentation for the **Magnifito Super Video** platform — a sovereign, contract-driven, automated video production toolkit developed for high-fidelity social, B2B SaaS, e-commerce, and broadcast deliverables.
+Documents are grouped by **authority** — how much weight a reader should give them — not by topic.
+Topic is the second level, inside each tier.
 
----
+**Agents: read [`index.json`](index.json) first and filter by `kind` and `status`. Never grep this
+tree blind.** [`INDEX.md`](INDEX.md) holds the same data for humans. Both are generated — run
+`npm run gen:docs-index` after adding, moving or restatusing a document; never hand-edit them.
 
-## Documentation Directory Index
+## Current state
 
-| Document | File Link | Description |
+Every document in this tree is `status: reference`. They were written alongside the code and
+describe intended behaviour; a 2026-11-03 code review found many claims that the code did not
+meet (stub engines, self-approving review records, undocumented or missing commands). Treat
+them as background, **not** as a specification. Each one is promoted out of `reference/` only
+after its claims are checked against the code.
+
+## The tiers
+
+| Tier | `kind` | What it is |
 |---|---|---|
-| **System Architecture** | [`ARCHITECTURE.md`](file:///Users/kirov/dev/magnifito/awesome-video-skills/docs/ARCHITECTURE.md) | High-level system architecture, package topology, rendering adapters, pipeline diagrams, and execution isolation. |
-| **CLI Reference** | [`CLI_REFERENCE.md`](file:///Users/kirov/dev/magnifito/awesome-video-skills/docs/CLI_REFERENCE.md) | Complete reference guide for all 61 subcommands in the `mgvideo` unified terminal interface. |
-| **SDK Reference** | [`SDK_REFERENCE.md`](file:///Users/kirov/dev/magnifito/awesome-video-skills/docs/SDK_REFERENCE.md) | Programmatic TypeScript API guide for the `MagnifitoVideoEngine` facade class. |
-| **Contracts Specification** | [`CONTRACTS_SPECIFICATION.md`](file:///Users/kirov/dev/magnifito/awesome-video-skills/docs/CONTRACTS_SPECIFICATION.md) | Detailed schema specifications for all 11 Zod data contracts, deterministic request hashing, and contract migration. |
-| **Workflows Guide** | [`WORKFLOWS_GUIDE.md`](file:///Users/kirov/dev/magnifito/awesome-video-skills/docs/WORKFLOWS_GUIDE.md) | Operational walkthroughs for the 5 canonical workflows (Promo, SaaS Demo, Talking-Head, Commerce Batch, Explainer). |
-| **Audio Engineering** | [`AUDIO_ENGINEERING.md`](file:///Users/kirov/dev/magnifito/awesome-video-skills/docs/AUDIO_ENGINEERING.md) | Broadcast audio standards: EBU R128 loudness (-16 LUFS), sidechain ducking, multitrack audio, noise gate, EQ, and synthesis. |
-| **Video Engineering** | [`VIDEO_ENGINEERING.md`](file:///Users/kirov/dev/magnifito/awesome-video-skills/docs/VIDEO_ENGINEERING.md) | Video specifications: Rec.709 color spaces, ProRes 4444 alpha transparency, smart crop, PiP, chroma keying, and SSIM/PSNR diffing. |
-| **Security & Governance** | [`SECURITY_AND_GOVERNANCE.md`](file:///Users/kirov/dev/magnifito/awesome-video-skills/docs/SECURITY_AND_GOVERNANCE.md) | Zero-budget external media spend enforcement, 12-upstream quarantine boundaries, 3-role human review, and Merkle tree verification. |
-| **Developer Guide** | [`DEVELOPER_GUIDE.md`](file:///Users/kirov/dev/magnifito/awesome-video-skills/docs/DEVELOPER_GUIDE.md) | Developer onboarding, local environment diagnostics, build & test execution, adding shot recipes, and debugging tools. |
-| **Original Blueprint** | [`magnifito-super-video-blueprint.txt`](file:///Users/kirov/dev/magnifito/awesome-video-skills/docs/magnifito-super-video-blueprint.txt) | Original specification blueprint for Kiril Kirov and the Magnifito video production team. |
+| `reference/` | `reference` | Captured or unverified documentation. **Not a commitment, never a build spec.** Promote first (below). |
+| `product/` | `product` | Committed scope. |
+| `engineering/` | `engineering` | How this repository works. Current and authoritative. `engineering/adr/` holds ADRs, `engineering/runbooks/` holds runbooks. |
+| `plans/` | `plan` | Work in flight. `plans/done/` is where a plan goes when it genuinely closes. |
+| `archive/` | `archive` | Replaced. Everything here is `status: superseded` and names its replacement. |
 
+`kind` is derived from the path and also stored in frontmatter; the gate rejects a document where
+the two disagree. Move files between tiers with `npx docs-notary mv <from> <to>`, which restamps
+`kind`, `status` and `updated` and records `promoted_from`.
+
+## Frontmatter
+
+Every `.md` under `docs/` carries a YAML block. The only exemptions are this file and the
+generated `INDEX.md`.
+
+```yaml
 ---
+title: CLI Reference                   # required
+summary: Every mgvideo subcommand      # optional, one line — shown in the index
+kind: reference                        # required — must equal what the path implies
+status: reference                      # required — reference | draft | active | shipped | superseded
+updated: 2026-11-03                    # required — ISO date, bumped on a substantive edit
+---
+```
 
-## Key Platform Statistics
+Write new documents with `npx docs-notary new <path> --title "…" --summary "…"`; it passes the gate
+on the first run. `status: reference` is legal only under `reference/`, and everything under
+`reference/` must carry it.
 
-- **Platform Iterations**: 106 automated enhancement iterations across 16 production commits.
-- **Evaluation Test Suites**: 120 automated test suites in `evaluations/runner.ts` (**440 passed assertions, 0 failures**).
-- **CLI Commands**: 61 subcommands registered under `mgvideo`.
-- **Media Engines**: 35+ specialized native audio & video post-production engines.
-- **Canonical Specialist Skills**: 10 packaged under strict allowlist boundary.
-- **Upstream Quarantine**: 12 external open-source repositories tracked by immutable 40-character commit SHAs.
-- **External Media Budget**: Strictly `$0.00` across all production runs.
+## The promotion lifecycle
 
+```
+reference/   →   engineering/ or product/   →   plans/   →   plans/done/
+(unverified)     (checked against code)         (active)      (shipped)
+```
+
+1. `npx docs-notary mv docs/reference/<doc>.md docs/engineering/<doc>.md`.
+2. **Rewrite every claim to match the code as it is.** Delete claims the code does not meet.
+   Promoting a document verbatim turns its old assumptions into requirements.
+3. Add `code:` pointing at the implementation.
+
+## The gate
+
+`npm run lint:docs` is a blocking CI step. It checks frontmatter, kind versus path, status versus
+tier, kebab-case paths, duplicate basenames, index freshness, and dead Markdown links (inside
+`docs/` and from tracked files outside it). `npm run lint:docs:advisory` reports drift without
+failing. `npm run docs:impact` lists documents whose claims cover changed paths.

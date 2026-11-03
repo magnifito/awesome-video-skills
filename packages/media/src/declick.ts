@@ -1,4 +1,4 @@
-import { execSync } from 'node:child_process';
+import { runFfmpeg } from './proc.js';
 import path from 'node:path';
 import fs from 'node:fs';
 
@@ -40,16 +40,17 @@ export class DeClickerEngine {
 
     const filter = `adeclick=window=${windowMs}:overlap=${overlap}:threshold=${threshold}`;
 
-    const cmd = [
-      'ffmpeg -y',
-      `-i "${audioPath}"`,
-      `-af "${filter}"`,
-      '-ar 48000',
-      '-c:a pcm_s16le',
-      `"${outPath}"`
-    ].join(' ');
-
-    execSync(cmd, { stdio: 'pipe' });
+    runFfmpeg([
+      '-i',
+      audioPath,
+      '-af',
+      filter,
+      '-ar',
+      '48000',
+      '-c:a',
+      'pcm_s16le',
+      outPath
+    ]);
 
     if (!fs.existsSync(outPath)) {
       throw new Error(`Failed to generate declicked audio at: ${outPath}`);

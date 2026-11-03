@@ -18,7 +18,10 @@ export async function runCatalog(workspaceRoot: string): Promise<Record<string, 
       id: r.id,
       name: r.name,
       observed_commit: (r.observed_commit as string).slice(0, 10),
-      approved_commit: r.approved_commit ? (r.approved_commit as string).slice(0, 10) : 'UNSET (Candidate)',
+      // Approvals come only from approved.lock.json
+      approved_commit: approved.approved_baselines?.[r.id as string]?.approved_commit
+        ? (approved.approved_baselines[r.id as string].approved_commit as string).slice(0, 10)
+        : 'UNSET (Candidate)',
       license: r.license,
       skills_count: r.skills_count,
       decision: r.magnifito_decision

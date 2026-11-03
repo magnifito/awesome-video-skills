@@ -1,4 +1,4 @@
-import { execSync } from 'node:child_process';
+import { runFfmpeg, probe, requirePositive } from './proc.js';
 import path from 'node:path';
 import fs from 'node:fs';
 
@@ -52,48 +52,48 @@ export class VideoConcatEngine {
       fs.mkdirSync(parentDir, { recursive: true });
     }
 
+    requirePositive(width, 'width');
+    requirePositive(height, 'height');
+    requirePositive(fps, 'fps');
+
     const inputArgs: string[] = [];
     const filterClauses: string[] = [];
     const concatStreams: string[] = [];
 
     clipPaths.forEach((clip, idx) => {
-      inputArgs.push(`-i "${clip}"`);
-      // Normalize dimensions and fps
+      const info = probe(clip);
+      if (!info.hasVideo) throw new Error(`Clip has no video stream: ${clip}`);
+      inputArgs.push('-i', clip);
+      // Normalize dimensions, fps and timebase
       filterClauses.push(
-        `[${idx}:v]scale=${width}:${height}:force_original_aspect_ratio=decrease,pad=${width}:${height}:(ow-iw)/2:(oh-ih)/2:color=black,fps=${fps},setsar=1[v${idx}]`
+        `[${idx}:v]scale=${width}:${height}:force_original_aspect_ratio=decrease,pad=${width}:${height}:(ow-iw)/2:(oh-ih)/2:color=black,fps=${fps},setsar=1,format=yuv420p[v${idx}]`
       );
-      filterClauses.push(`[${idx}:a]aformat=sample_rates=48000:channel_layouts=stereo[a${idx}]`);
+      if (info.hasAudio) {
+        filterClauses.push(`[${idx}:a]aformat=sample_rates=48000:channel_layouts=stereo[a${idx}]`);
+      } else {
+        // Clips without audio (screen recordings, generated clips) get matching silence.
+        filterClauses.push(`anullsrc=r=48000:cl=stereo,atrim=duration=${info.durationSeconds.toFixed(3)}[a${idx}]`);
+      }
       concatStreams.push(`[v${idx}][a${idx}]`);
     });
 
     const filtergraph = `${filterClauses.join(';')};${concatStreams.join('')}concat=n=${clipPaths.length}:v=1:a=1[outv][outa]`;
 
-    const cmd = [
-      'ffmpeg -y',
-      inputArgs.join(' '),
-      `-filter_complex "${filtergraph}"`,
-      '-map "[outv]"',
-      '-map "[outa]"',
-      '-c:v libx264 -preset fast -crf 20 -pix_fmt yuv420p',
-      '-c:a aac -b:a 192k',
-      `"${outPath}"`
-    ].join(' ');
-
-    execSync(cmd, { stdio: 'pipe' });
+    runFfmpeg([
+      ...inputArgs,
+      '-filter_complex', filtergraph,
+      '-map', '[outv]',
+      '-map', '[outa]',
+      '-c:v', 'libx264', '-preset', 'fast', '-crf', '20', '-pix_fmt', 'yuv420p',
+      '-c:a', 'aac', '-b:a', '192k',
+      outPath
+    ]);
 
     if (!fs.existsSync(outPath)) {
       throw new Error(`Failed to generate concatenated video at: ${outPath}`);
     }
 
-    let totalDuration = 0;
-    try {
-      const probeOut = execSync(`ffprobe -v error -show_entries format=duration -of csv=p=0 "${outPath}"`, {
-        encoding: 'utf8'
-      }).trim();
-      totalDuration = parseFloat(probeOut) || 0;
-    } catch {
-      // fallback
-    }
+    const totalDuration = probe(outPath).durationSeconds;
 
     return {
       outputPath: outPath,
@@ -119,17 +119,20 @@ export class VideoConcatEngine {
       `${path.basename(videoPath, path.extname(videoPath))}-trimmed-${start}s-${duration}s.mp4`
     );
 
-    const cmd = [
-      'ffmpeg -y',
-      `-ss ${start.toFixed(3)}`,
-      `-i "${videoPath}"`,
-      `-t ${duration.toFixed(3)}`,
-      '-c:v libx264 -preset fast -crf 20 -pix_fmt yuv420p',
-      '-c:a aac -b:a 192k',
-      `"${outPath}"`
-    ].join(' ');
+    if (!(start >= 0) || !Number.isFinite(start)) throw new Error(`startSeconds must be >= 0, got ${start}`);
+    requirePositive(duration, 'durationSeconds');
+    fs.mkdirSync(path.dirname(outPath), { recursive: true });
 
-    execSync(cmd, { stdio: 'pipe' });
+    runFfmpeg([
+      '-ss', start.toFixed(3),
+      '-i', videoPath,
+      '-t', duration.toFixed(3),
+      '-map', '0:v:0',
+      '-map', '0:a:0?',
+      '-c:v', 'libx264', '-preset', 'fast', '-crf', '20', '-pix_fmt', 'yuv420p',
+      '-c:a', 'aac', '-b:a', '192k',
+      outPath
+    ]);
     return outPath;
   }
 }

@@ -12,14 +12,23 @@ permissions:
 jobs:
   package-and-verify:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
 
       - name: Setup Node.js 22
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 22
+          cache: npm
+
+      - name: Install FFmpeg and SVG rasterizer
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg librsvg2-bin
 
       - name: Install Dependencies
         run: npm ci
@@ -27,13 +36,22 @@ jobs:
       - name: Build TypeScript
         run: npm run build
 
+      - name: Run Evaluation Suite
+        run: npm test
+
       - name: Package Canonical Skills
-        run: npx tsx tools/packaging/packager.ts
+        # The packager exits non-zero when the allowlist is not satisfied.
+        run: npm run package:skills
 
       - name: Verify Packaging Allowlist
         run: |
-          test -f dist/packaged-skills/antigravity/skills-manifest.json
-          test -f dist/packaged-skills/claude/skills-manifest.json
-          test -f dist/packaged-skills/codex/skills-manifest.json
-          echo "Packaging allowlist verified for Antigravity, Claude, and Codex."
+          for p in antigravity claude codex; do
+            node -e "const m=require('./dist/packaged-skills/'+process.argv[1]+'/skills-manifest.json'); if(!m.verified_allowlist||m.skills_count!==10){console.error(m);process.exit(1)}" "$p"
+          done
 
+      - name: Upload Packaged Skills
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: packaged-skills-${{ github.ref_name }}
+          path: dist/packaged-skills/
+          if-no-files-found: error

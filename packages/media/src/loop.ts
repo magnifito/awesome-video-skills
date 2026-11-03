@@ -1,10 +1,12 @@
-import { execSync } from 'node:child_process';
+import { runFfmpeg, probe } from './proc.js';
 import path from 'node:path';
 import fs from 'node:fs';
 
 export interface LoopOptions {
   loops?: number; // default 1 ping-pong cycle
   outputPath?: string;
+  /** reverse buffers the whole clip in memory; longer inputs are rejected. Default 60 s. */
+  maxInputSeconds?: number;
 }
 
 export interface LoopResult {
@@ -13,6 +15,9 @@ export interface LoopResult {
   loopMode: 'ping-pong';
   originalDurationSeconds: number;
   loopDurationSeconds: number;
+  loops: number;
+  /** The loop is video-only; true when the source had an audio track that was not carried over. */
+  audioDropped: boolean;
 }
 
 export class VideoLoopEngine {
@@ -24,15 +29,17 @@ export class VideoLoopEngine {
       throw new Error(`Video file not found: ${videoPath}`);
     }
 
-    let origDuration = 3.0;
-    try {
-      const probeOut = execSync(`ffprobe -v error -show_entries format=duration -of csv=p=0 "${videoPath}"`, {
-        encoding: 'utf8'
-      }).trim();
-      origDuration = parseFloat(probeOut) || 3.0;
-    } catch {
-      // fallback
+    const loops = Math.floor(options.loops ?? 1);
+    if (!(loops >= 1)) throw new Error(`loops must be an integer >= 1, got ${options.loops}`);
+    const info = probe(videoPath);
+    if (!info.hasVideo) throw new Error(`No video stream in ${videoPath}`);
+    const origDuration = info.durationSeconds;
+    const maxInput = options.maxInputSeconds ?? 60;
+    if (origDuration > maxInput) {
+      throw new Error(`Input is ${origDuration.toFixed(1)} s; ping-pong loops buffer the whole clip in memory (limit ${maxInput} s)`);
     }
+    const fps = info.fps > 0 ? info.fps : 30;
+    const frameCount = Math.max(2, Math.round(origDuration * fps));
 
     const outPath = options.outputPath ?? path.join(
       path.dirname(videoPath),
@@ -45,18 +52,32 @@ export class VideoLoopEngine {
     }
 
     // Split stream: forward and reverse, then concatenate
-    const filter = `[0:v]split=2[fwd][rev_in];[rev_in]reverse[rev];[fwd][rev]concat=n=2:v=1:a=0[outv]`;
+    // The reversed leg drops its first frame (duplicate of the last forward frame) and its last
+    // frame (duplicate of the first forward frame of the next cycle), so the seam does not stutter.
+    const reverseLeg = frameCount > 2
+      ? `reverse,trim=start_frame=1:end_frame=${frameCount - 1},setpts=PTS-STARTPTS`
+      : 'reverse';
+    const cycleFrames = frameCount + Math.max(0, frameCount - 2);
+    const repeat = loops > 1 ? `,loop=loop=${loops - 1}:size=${cycleFrames}:start=0,setpts=N/(${fps}*TB)` : '';
+    const filter = `[0:v]fps=${fps},split=2[fwd][rev_in];[rev_in]${reverseLeg}[rev];[fwd][rev]concat=n=2:v=1:a=0${repeat}[outv]`;
 
-    const cmd = [
-      'ffmpeg -y',
-      `-i "${videoPath}"`,
-      `-filter_complex "${filter}"`,
-      '-map "[outv]"',
-      '-c:v libx264 -preset fast -crf 20 -pix_fmt yuv420p',
-      `"${outPath}"`
-    ].join(' ');
-
-    execSync(cmd, { stdio: 'pipe' });
+    runFfmpeg([
+      '-i',
+      videoPath,
+      '-filter_complex',
+      filter,
+      '-map',
+      '[outv]',
+      '-c:v',
+      'libx264',
+      '-preset',
+      'fast',
+      '-crf',
+      '20',
+      '-pix_fmt',
+      'yuv420p',
+      outPath
+    ]);
 
     if (!fs.existsSync(outPath)) {
       throw new Error(`Failed to generate ping-pong loop at: ${outPath}`);
@@ -67,7 +88,9 @@ export class VideoLoopEngine {
       outputPath: outPath,
       loopMode: 'ping-pong',
       originalDurationSeconds: origDuration,
-      loopDurationSeconds: origDuration * 2
+      loopDurationSeconds: probe(outPath).durationSeconds,
+      loops,
+      audioDropped: info.hasAudio
     };
   }
 }

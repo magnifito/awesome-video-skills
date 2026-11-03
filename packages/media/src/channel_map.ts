@@ -1,4 +1,4 @@
-import { execSync } from 'node:child_process';
+import { runFfmpeg } from './proc.js';
 import path from 'node:path';
 import fs from 'node:fs';
 
@@ -33,7 +33,10 @@ export class AudioChannelMapper {
     }
 
     const mode = options.mode ?? 'mono-to-stereo';
-    const panFilter = this.PAN_FILTERS[mode] || this.PAN_FILTERS['mono-to-stereo'];
+    const panFilter = this.PAN_FILTERS[mode];
+    if (!panFilter) {
+      throw new Error(`Unknown channel layout mode: ${JSON.stringify(mode)}`);
+    }
 
     const outPath = options.outputPath ?? path.join(
       path.dirname(audioPath),
@@ -45,16 +48,13 @@ export class AudioChannelMapper {
       fs.mkdirSync(parentDir, { recursive: true });
     }
 
-    const cmd = [
-      'ffmpeg -y',
-      `-i "${audioPath}"`,
-      `-af "${panFilter}"`,
-      '-ar 48000',
-      '-c:a pcm_s16le',
-      `"${outPath}"`
-    ].join(' ');
-
-    execSync(cmd, { stdio: 'pipe' });
+    runFfmpeg([
+      '-i', audioPath,
+      '-af', panFilter,
+      '-ar', '48000',
+      '-c:a', 'pcm_s16le',
+      outPath
+    ]);
 
     if (!fs.existsSync(outPath)) {
       throw new Error(`Failed to generate remapped audio at: ${outPath}`);

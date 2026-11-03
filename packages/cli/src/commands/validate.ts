@@ -4,11 +4,11 @@ import crypto from 'node:crypto';
 import type {
   RenderResult,
   RenderRequest,
-  ClaimsRegister,
-  ProjectBrief
+  ClaimsRegister
 } from '../../../contracts/src/index.js';
 import { inspectMedia } from '../../../media/src/inspector.js';
 import { LayoutAuditor } from '../../../media/src/layout.js';
+import { resolveRunDir, resolveProjectDir, sha256String } from './_shared.js';
 
 export interface ValidationItem {
   check: string;
@@ -29,14 +29,7 @@ export interface ValidationReport {
 }
 
 export async function runValidate(runPathOrId: string, projectDir?: string): Promise<ValidationReport> {
-  let runDir = runPathOrId;
-  if (path.isAbsolute(runDir)) {
-    // Already absolute
-  } else if (projectDir && !runPathOrId.includes('/') && !runPathOrId.includes('\\')) {
-    runDir = path.join(projectDir, 'runs', runPathOrId);
-  } else {
-    runDir = path.resolve(process.cwd(), runPathOrId);
-  }
+  const runDir = resolveRunDir(runPathOrId, projectDir);
 
   const resultPath = path.join(runDir, 'render-result.json');
   const requestPath = path.join(runDir, 'render-request.json');
@@ -132,19 +125,36 @@ export async function runValidate(runPathOrId: string, projectDir?: string): Pro
   }
 
   // 3. Factual Claims Check against claims register
-  const projDir = projectDir || path.resolve(runDir, '..', '..');
+  const projDir = resolveProjectDir(runDir, projectDir);
   try {
-    const claimsPath = path.join(projDir, 'claims.json');
-    const claimsData: ClaimsRegister = JSON.parse(await fs.readFile(claimsPath, 'utf-8'));
-    const scenePlanPath = path.join(projDir, 'scene-plan.json');
-    const scenePlanData = JSON.parse(await fs.readFile(scenePlanPath, 'utf-8'));
+    const claimsStr = await fs.readFile(path.join(projDir, 'claims.json'), 'utf-8');
+    const scenesStr = await fs.readFile(path.join(projDir, 'scene-plan.json'), 'utf-8');
 
-    // Verify all referenced claim wording is preserved exactly
+    // The plan and claims being checked must be the exact ones the run was rendered from.
+    const scenesMatch = sha256String(scenesStr) === renderRequest.input_hashes.scenes_hash;
+    const claimsMatch = sha256String(claimsStr) === renderRequest.input_hashes.claims_hash;
+    items.push({
+      check: 'Rendered Inputs Unchanged',
+      passed: scenesMatch && claimsMatch,
+      details: scenesMatch && claimsMatch
+        ? 'scene-plan.json and claims.json match the hashes recorded in render-request.json.'
+        : `Inputs changed since render: ${[!scenesMatch && 'scene-plan.json', !claimsMatch && 'claims.json'].filter(Boolean).join(', ')}. Re-render before delivery.`
+    });
+    if (!scenesMatch) unresolvedReviewItems.push('scene-plan.json changed after rendering; validation does not describe the rendered video.');
+    if (!claimsMatch) unresolvedReviewItems.push('claims.json changed after rendering.');
+
+    const claimsData: ClaimsRegister = JSON.parse(claimsStr);
+    const scenePlanData = JSON.parse(scenesStr);
+
+    // Every referenced claim must exist, and its approved wording must be preserved exactly
     let claimsIntact = true;
     for (const sc of scenePlanData.scenes) {
-      for (const ref of sc.claims_refs) {
+      for (const ref of sc.claims_refs ?? []) {
         const matchingClaim = claimsData.claims.find(c => c.claim_id === ref);
-        if (matchingClaim && !sc.copy_text.includes(matchingClaim.approved_wording)) {
+        if (!matchingClaim) {
+          claimsIntact = false;
+          unresolvedReviewItems.push(`Scene '${sc.scene_id}' references unknown claim '${ref}' (not in claims register).`);
+        } else if (!sc.copy_text.includes(matchingClaim.approved_wording)) {
           claimsIntact = false;
           unresolvedReviewItems.push(
             `Factual claim '${ref}' copy mismatch in scene '${sc.scene_id}'. Expected: "${matchingClaim.approved_wording}", Found: "${sc.copy_text}"`
@@ -166,6 +176,7 @@ export async function runValidate(runPathOrId: string, projectDir?: string): Pro
       passed: false,
       details: `Could not verify claims register: ${(err as Error).message}`
     });
+    unresolvedReviewItems.push(`Claims register audit failed: ${(err as Error).message}`);
   }
 
   const passedChecks = items.filter(i => i.passed).length;

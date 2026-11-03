@@ -3,9 +3,11 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import type {
   ProjectBrief,
+  RenderRequest,
   RenderResult,
   ReviewRecord
 } from '../../../contracts/src/index.js';
+import { CostTracker } from '../../../media/src/cost.js';
 import type { ValidationReport } from './validate.js';
 import { inspectMedia, measureAudioLoudness } from '../../../media/src/inspector.js';
 
@@ -23,8 +25,9 @@ export interface DeliveryReport {
     fps: number;
     video_codec: string;
     audio_codec: string;
-    audio_lufs: number;
-    audio_true_peak_db: number;
+    /** Null when loudness could not be measured. */
+    audio_lufs: number | null;
+    audio_true_peak_db: number | null;
   };
   compliance: {
     safe_zones_pass: boolean;
@@ -33,8 +36,10 @@ export interface DeliveryReport {
     all_validations_pass: boolean;
   };
   governance: {
+    /** Where the review record was read from, or null when no review exists yet. */
+    review_record_path: string | null;
     reviewer: string;
-    decision: string;
+    decision: 'approved' | 'changes_requested' | 'rejected' | 'pending';
     roles: {
       technical_maintainer: string;
       producer: string;
@@ -46,13 +51,14 @@ export interface DeliveryReport {
       audio_sync_and_loudness_verified: boolean;
       rights_cleared: boolean;
     };
-    review_date: string;
+    review_date: string | null;
   };
   financials: {
     external_media_budget_usd: number;
     external_media_spent_usd: number;
     zero_budget_compliant: boolean;
-    total_compute_cost_usd: number;
+    /** Estimated by CostTracker; null when it cannot be computed. */
+    total_compute_cost_usd: number | null;
   };
   provenance: {
     render_engine: string;
@@ -98,11 +104,28 @@ export async function generateDeliveryReport(projectDir: string, runId?: string)
     validation = JSON.parse(fs.readFileSync(validationPath, 'utf8'));
   }
 
-  const reviewPath = path.join(projectDir, 'review-record.json');
+  const requestPath = path.join(targetRunDir, 'render-request.json');
+  const renderRequest: RenderRequest | null = fs.existsSync(requestPath)
+    ? JSON.parse(fs.readFileSync(requestPath, 'utf8'))
+    : null;
+
+  // `mgvideo package` copies the approved review into delivery/<run_id>/. A record in the
+  // project root is a review that has not been packaged yet.
+  const reviewCandidates = [
+    path.join(projectDir, 'delivery', renderResult.run_id, 'review-record.json'),
+    path.join(projectDir, 'review-record.json')
+  ];
   let reviewRecord: ReviewRecord | null = null;
-  if (fs.existsSync(reviewPath)) {
-    reviewRecord = JSON.parse(fs.readFileSync(reviewPath, 'utf8'));
+  let reviewRecordPath: string | null = null;
+  for (const candidate of reviewCandidates) {
+    if (fs.existsSync(candidate)) {
+      reviewRecord = JSON.parse(fs.readFileSync(candidate, 'utf8'));
+      reviewRecordPath = candidate;
+      break;
+    }
   }
+  // A review only counts for this run when it approves this exact cut.
+  const reviewMatchesCut = reviewRecord?.approval_scope?.final_cut_hash === renderResult.output_files[0]?.hash;
 
   const primaryOutputFile = renderResult.output_files[0];
   const videoPath = primaryOutputFile?.path || path.join(targetRunDir, 'master.mp4');
@@ -112,13 +135,27 @@ export async function generateDeliveryReport(projectDir: string, runId?: string)
     : (primaryOutputFile?.hash || renderResult.request_hash);
 
   const probe = fs.existsSync(videoPath) ? await inspectMedia(videoPath) : null;
-  const loudness = fs.existsSync(videoPath) ? await measureAudioLoudness(videoPath) : { lufs: -16.0, true_peak_db: -1.0 };
+  let loudness: { lufs: number | null; true_peak_db: number | null } = { lufs: null, true_peak_db: null };
+  if (fs.existsSync(videoPath) && probe?.has_audio) {
+    try {
+      loudness = await measureAudioLoudness(videoPath);
+    } catch {
+      loudness = { lufs: null, true_peak_db: null };
+    }
+  }
+
+  let computeCost: number | null = null;
+  try {
+    computeCost = CostTracker.calculateRunCost(brief, renderResult, false).items.render_compute_usd;
+  } catch {
+    computeCost = null;
+  }
 
   const report: DeliveryReport = {
     project_id: brief.project_id,
     project_name: brief.objective || brief.project_id,
     generated_at: new Date().toISOString(),
-    run_id: renderResult.request_hash,
+    run_id: renderResult.run_id,
     deliverables: {
       video_path: videoPath,
       file_size_bytes: fileBytes,
@@ -126,45 +163,59 @@ export async function generateDeliveryReport(projectDir: string, runId?: string)
       resolution: `${renderResult.measurements.width}x${renderResult.measurements.height}`,
       duration_seconds: renderResult.measurements.duration_seconds,
       fps: renderResult.measurements.fps,
-      video_codec: probe?.video_codec || 'h264',
-      audio_codec: probe?.audio_codec || 'aac',
+      video_codec: probe?.video_codec || 'unknown',
+      audio_codec: probe?.audio_codec || 'none',
       audio_lufs: loudness.lufs,
       audio_true_peak_db: loudness.true_peak_db
     },
     compliance: {
-      safe_zones_pass: !validation || validation.items.every(c => !c.check.includes('safe-zone') || c.passed),
-      claims_verified: !validation || validation.items.every(c => !c.check.includes('claims') || c.passed),
+      // Without a validation report nothing has been verified, so every flag is false.
+      safe_zones_pass: !!validation && validation.items.every(c => !/safe zone/i.test(c.check) || c.passed),
+      claims_verified: !!validation && validation.items.some(c => /claim/i.test(c.check)) &&
+        validation.items.every(c => !/claim/i.test(c.check) || c.passed),
       zero_media_budget_verified: brief.budgets.media_budget_usd === 0,
-      all_validations_pass: validation ? validation.passed : true
+      all_validations_pass: validation ? validation.passed : false
     },
     governance: {
-      reviewer: reviewRecord?.reviewer || 'Kiril Kirov',
-      decision: reviewRecord?.decision || 'approved',
+      review_record_path: reviewRecordPath,
+      reviewer: reviewRecord?.reviewer || 'Pending',
+      decision: reviewRecord && reviewMatchesCut ? reviewRecord.decision : 'pending',
       roles: {
-        technical_maintainer: reviewRecord?.roles.technical_maintainer || 'Kiril Kirov',
-        producer: reviewRecord?.roles.producer || 'Kiril Kirov',
-        account_owner: reviewRecord?.roles.account_owner || 'Kiril Kirov'
+        technical_maintainer: reviewRecord?.roles?.technical_maintainer || 'Pending',
+        producer: reviewRecord?.roles?.producer || 'Pending',
+        account_owner: reviewRecord?.roles?.account_owner || 'Pending'
       },
       export_checks: {
-        factual_accuracy_verified: reviewRecord?.export_checks.factual_accuracy_verified ?? true,
-        visual_layout_clean: reviewRecord?.export_checks.visual_layout_clean ?? true,
-        audio_sync_and_loudness_verified: reviewRecord?.export_checks.audio_sync_and_loudness_verified ?? true,
-        rights_cleared: reviewRecord?.export_checks.rights_cleared ?? true
+        factual_accuracy_verified: reviewMatchesCut && reviewRecord?.export_checks.factual_accuracy_verified === true,
+        visual_layout_clean: reviewMatchesCut && reviewRecord?.export_checks.visual_layout_clean === true,
+        audio_sync_and_loudness_verified: reviewMatchesCut && reviewRecord?.export_checks.audio_sync_and_loudness_verified === true,
+        rights_cleared: reviewMatchesCut && reviewRecord?.export_checks.rights_cleared === true
       },
-      review_date: reviewRecord?.timestamp || new Date().toISOString()
+      review_date: reviewRecord?.timestamp ?? null
     },
     financials: {
       external_media_budget_usd: brief.budgets.media_budget_usd,
+      // No external media APIs are integrated, so nothing can be spent on them.
       external_media_spent_usd: 0.00,
       zero_budget_compliant: brief.budgets.media_budget_usd === 0,
-      total_compute_cost_usd: 0.05
+      total_compute_cost_usd: computeCost
     },
     provenance: {
-      render_engine: 'HyperFrames (Native SVG/Canvas + FFmpeg)',
-      upstream_commit: '5c5794287bd0dc2c94f238ca89f4752ecaa045a2',
+      render_engine: renderRequest?.adapter ?? 'unknown',
+      upstream_commit: renderRequest?.approved_source_lock ?? 'unknown',
       licenses: ['Apache-2.0', 'OFL-1.1 (Geist)', 'ISC (Lucide Icons)']
     }
   };
+
+  const decisionLabel = {
+    approved: '✅ Approved',
+    changes_requested: '✏️ Changes requested',
+    rejected: '❌ Rejected',
+    pending: '⏳ Pending'
+  }[report.governance.decision];
+  const { width: rw, height: rh } = renderResult.measurements;
+  const aspectLabel = rw > rh ? 'Landscape' : rw < rh ? 'Vertical' : 'Square';
+  const fmtNum = (v: number | null, unit: string): string => (v === null ? 'not measured' : `${v} ${unit}`);
 
   const mdContent = `# Magnifito Executive Delivery Report: ${report.project_name}
 
@@ -176,10 +227,10 @@ export async function generateDeliveryReport(projectDir: string, runId?: string)
 
 ## 1. Deliverable Specifications
 - **Master Video File**: \`${path.basename(report.deliverables.video_path)}\`
-- **Resolution**: ${report.deliverables.resolution} (${report.deliverables.resolution.includes('1920x1080') ? '16:9 Landscape' : '9:16 Vertical'})
+- **Resolution**: ${report.deliverables.resolution} (${aspectLabel})
 - **Duration**: ${report.deliverables.duration_seconds}s @ ${report.deliverables.fps} fps
 - **Video / Audio Codecs**: \`${report.deliverables.video_codec}\` / \`${report.deliverables.audio_codec}\`
-- **Audio Loudness**: ${report.deliverables.audio_lufs} LUFS (Target: -14 to -16 LUFS, True Peak: ${report.deliverables.audio_true_peak_db} dBTP)
+- **Audio Loudness**: ${fmtNum(report.deliverables.audio_lufs, 'LUFS')} (Target: -14 to -16 LUFS, True Peak: ${fmtNum(report.deliverables.audio_true_peak_db, 'dBTP')})
 - **File Size**: ${(report.deliverables.file_size_bytes / 1024).toFixed(1)} KB
 - **SHA-256 Checksum**: \`${report.deliverables.sha256}\`
 
@@ -188,9 +239,9 @@ export async function generateDeliveryReport(projectDir: string, runId?: string)
 ## 2. Governance & Multi-Role Sign-offs
 | Role | Reviewer | Decision | Date |
 |---|---|:---:|---|
-| **Technical Maintainer** | ${report.governance.roles.technical_maintainer} | ${report.governance.decision === 'approved' ? '✅ Approved' : '⏳ Pending'} | ${report.governance.review_date.slice(0, 10)} |
-| **Producer** | ${report.governance.roles.producer} | ${report.governance.decision === 'approved' ? '✅ Approved' : '⏳ Pending'} | ${report.governance.review_date.slice(0, 10)} |
-| **Account Owner** | ${report.governance.roles.account_owner} | ${report.governance.decision === 'approved' ? '✅ Approved' : '⏳ Pending'} | ${report.governance.review_date.slice(0, 10)} |
+| **Technical Maintainer** | ${report.governance.roles.technical_maintainer} | ${decisionLabel} | ${report.governance.review_date ? report.governance.review_date.slice(0, 10) : '—'} |
+| **Producer** | ${report.governance.roles.producer} | ${decisionLabel} | ${report.governance.review_date ? report.governance.review_date.slice(0, 10) : '—'} |
+| **Account Owner** | ${report.governance.roles.account_owner} | ${decisionLabel} | ${report.governance.review_date ? report.governance.review_date.slice(0, 10) : '—'} |
 
 ### Export Checks
 - **Factual Accuracy Verified**: ${report.governance.export_checks.factual_accuracy_verified ? '✅ Yes' : '❌ No'}
@@ -204,7 +255,7 @@ export async function generateDeliveryReport(projectDir: string, runId?: string)
 - **Authorized External Media Budget**: $${report.financials.external_media_budget_usd.toFixed(2)}
 - **Actual External Media Spent**: $${report.financials.external_media_spent_usd.toFixed(2)}
 - **Policy Compliance**: ${report.financials.zero_budget_compliant ? '✅ 100% Policy Compliant ($0 External Spend)' : '⚠️ Warning'}
-- **Total Local Compute Cost**: $${report.financials.total_compute_cost_usd.toFixed(2)}
+- **Total Local Compute Cost**: $${report.financials.total_compute_cost_usd === null ? 'unknown' : report.financials.total_compute_cost_usd.toFixed(2)}
 
 ---
 

@@ -73,7 +73,14 @@ export class MotionCanvasAdapter implements VideoRendererAdapter {
       sceneRefs.push(varName);
 
       const fontFam = (context.brand.fonts && context.brand.fonts[0]?.family) || 'Inter';
-      const copyText = (sc.copy_text || '').replace(/'/g, "\\'");
+      // All values are emitted as JSON literals so no input can terminate the string and inject code.
+      const lit = (v: unknown) => JSON.stringify(v).replace(/</g, '\\u003c').replace(/\u2028/g, '\\u2028').replace(/\u2029/g, '\\u2029');
+      const copyText = lit(sc.copy_text || '');
+      const bgColor = lit(context.brand.colors.background || '#0F172A');
+      const fgColor = lit(context.brand.colors.primary || '#FFFFFF');
+      const fontLit = lit(fontFam);
+      const duration = Number(sc.duration_seconds);
+      if (!Number.isFinite(duration) || duration <= 0) throw new Error(`Invalid scene duration for ${sc.scene_id}`);
 
       const sceneContent = `import { makeScene2D, Txt, Rect, all } from '@motion-canvas/2d';
 import { createRef, easeInOutCubic } from '@motion-canvas/core';
@@ -87,20 +94,20 @@ export default makeScene2D(function* (view) {
       ref={box}
       width={view.width}
       height={view.height}
-      fill={'${context.brand.colors.background || '#0F172A'}'}
+      fill={${bgColor}}
     >
       <Txt
         ref={text}
-        text={'${copyText}'}
-        fill={'${context.brand.colors.primary || '#FFFFFF'}'}
-        fontFamily={'${fontFam}'}
+        text={${copyText}}
+        fill={${fgColor}}
+        fontFamily={${fontLit}}
         fontSize={44}
       />
     </Rect>
   );
 
   yield* all(
-    text().scale(1.1, ${sc.duration_seconds.toFixed(2)}, easeInOutCubic)
+    text().scale(1.1, ${duration.toFixed(2)}, easeInOutCubic)
   );
 });
 `;

@@ -1,6 +1,6 @@
-import { execSync } from 'node:child_process';
 import path from 'node:path';
 import fs from 'node:fs';
+import { runFfmpeg } from './proc.js';
 
 export interface VignetteOptions {
   angleRadians?: number; // default 0.5 (subtle edge shading)
@@ -23,6 +23,10 @@ export class VignetteEngine {
     }
 
     const angle = options.angleRadians ?? 0.5;
+    // ffmpeg's vignette angle is valid in [0, PI/2].
+    if (!Number.isFinite(angle) || angle < 0 || angle > Math.PI / 2) {
+      throw new Error(`angleRadians must be in [0, ${(Math.PI / 2).toFixed(4)}], got ${angle}`);
+    }
 
     const outPath = options.outputPath ?? path.join(
       path.dirname(videoPath),
@@ -36,16 +40,14 @@ export class VignetteEngine {
 
     const filter = `vignette=angle=${angle.toFixed(2)}`;
 
-    const cmd = [
-      'ffmpeg -y',
-      `-i "${videoPath}"`,
-      `-vf "${filter}"`,
-      '-c:v libx264 -preset fast -crf 20 -pix_fmt yuv420p',
-      '-c:a copy',
-      `"${outPath}"`
-    ].join(' ');
-
-    execSync(cmd, { stdio: 'pipe' });
+    runFfmpeg([
+      '-i', videoPath,
+      '-vf', filter,
+      '-map', '0:v:0', '-map', '0:a?',
+      '-c:v', 'libx264', '-preset', 'fast', '-crf', '20', '-pix_fmt', 'yuv420p',
+      '-c:a', 'copy',
+      outPath,
+    ]);
 
     if (!fs.existsSync(outPath)) {
       throw new Error(`Failed to generate vignette video at: ${outPath}`);

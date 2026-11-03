@@ -19,6 +19,10 @@ export async function runPlan(projectDir: string): Promise<ScenePlan> {
   const brand: BrandProfile = BrandProfileSchema.parse(JSON.parse(await fs.readFile(brandPath, 'utf-8')));
   const claims: ClaimsRegister = ClaimsRegisterSchema.parse(JSON.parse(await fs.readFile(claimsPath, 'utf-8')));
 
+  if (claims.claims.length === 0) {
+    throw new Error('Cannot plan scenes: claims.json has no approved claims. Add at least one claim first.');
+  }
+
   // Formulate scenes linking approved claims
   const scenes: ScenePlanItem[] = [];
 
@@ -26,12 +30,17 @@ export async function runPlan(projectDir: string): Promise<ScenePlan> {
     // 3-scene structure: Hook, Core Claim, Call to Action
     const claim1 = claims.claims[0];
     const claim2 = claims.claims[1] || claims.claims[0];
+    // Split the requested duration 4:6:5 across hook, claim and CTA (the 15 s template ratio)
+    const total = brief.duration_seconds;
+    const hookSec = Math.round(total * (4 / 15) * 10) / 10;
+    const claimSec = Math.round(total * (6 / 15) * 10) / 10;
+    const ctaSec = Math.round((total - hookSec - claimSec) * 10) / 10;
 
     scenes.push({
       scene_id: 'scene-01-hook',
       factual_purpose: 'Hook audience and establish brand problem-solving scope',
-      duration_seconds: 4.0,
-      duration_frames: 120,
+      duration_seconds: hookSec,
+      duration_frames: Math.round(hookSec * 30),
       copy_text: brief.language === 'bg' ? 'Търсите истински практически резултати?' : 'Looking for proven practical results?',
       claims_refs: [],
       asset_refs: ['brand-logo'],
@@ -44,8 +53,8 @@ export async function runPlan(projectDir: string): Promise<ScenePlan> {
     scenes.push({
       scene_id: 'scene-02-core-claim',
       factual_purpose: 'Deliver primary approved educational claim',
-      duration_seconds: 6.0,
-      duration_frames: 180,
+      duration_seconds: claimSec,
+      duration_frames: Math.round(claimSec * 30),
       copy_text: claim1.approved_wording,
       claims_refs: [claim1.claim_id],
       asset_refs: [],
@@ -58,8 +67,8 @@ export async function runPlan(projectDir: string): Promise<ScenePlan> {
     scenes.push({
       scene_id: 'scene-03-cta',
       factual_purpose: 'Deliver secondary claim and direct trial action',
-      duration_seconds: 5.0,
-      duration_frames: 150,
+      duration_seconds: ctaSec,
+      duration_frames: Math.round(ctaSec * 30),
       copy_text: claim2.approved_wording,
       claims_refs: [claim2.claim_id],
       asset_refs: ['brand-logo'],

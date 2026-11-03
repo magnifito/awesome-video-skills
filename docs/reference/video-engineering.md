@@ -1,3 +1,9 @@
+---
+title: Magnifito Video Engineering Standards
+kind: reference
+status: reference
+updated: 2026-11-03
+---
 # Magnifito Video Engineering Standards
 
 This document establishes the video post-production standards, colorimetry specifications, aspect ratio adaptations, and visual quality metrics enforced across the Magnifito Super Video platform.

@@ -24,7 +24,13 @@ export async function compareRenderOutputs(
     throw new Error(`Target B not found: ${targetB}`);
   }
 
-  const isVideo = targetA.endsWith('.mp4') || targetA.endsWith('.mov') || targetA.endsWith('.webm');
+  const VIDEO_EXTS = new Set(['.mp4', '.mov', '.webm', '.mkv', '.m4v']);
+  const aIsVideo = VIDEO_EXTS.has(path.extname(targetA).toLowerCase());
+  const bIsVideo = VIDEO_EXTS.has(path.extname(targetB).toLowerCase());
+  if (aIsVideo !== bIsVideo) {
+    throw new Error('Cannot compare a video with an image: both targets must be the same media type.');
+  }
+  const isVideo = aIsVideo;
 
   if (isVideo) {
     const videoMetrics = await measureVideoQuality(targetA, targetB);

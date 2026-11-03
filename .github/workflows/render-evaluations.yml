@@ -13,22 +13,38 @@ permissions:
 jobs:
   evaluate:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
 
       - name: Setup Node.js 22
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 22
+          cache: npm
 
-      - name: Install FFmpeg
+      - name: Install FFmpeg and SVG rasterizer
         run: |
           sudo apt-get update
-          sudo apt-get install -y ffmpeg
+          sudo apt-get install -y ffmpeg librsvg2-bin
 
       - name: Install Dependencies
         run: npm ci
+
+      - name: Documentation Gate
+        run: npm run lint:docs
+
+      - name: Documentation Gate (history-aware, PR only)
+        if: github.event_name == 'pull_request'
+        run: npx docs-notary check --format github --base origin/${{ github.base_ref }}
+
+      - name: Documentation Impact (PR only, non-blocking)
+        if: github.event_name == 'pull_request'
+        run: npx docs-notary impact --base origin/${{ github.base_ref }} >> "$GITHUB_STEP_SUMMARY"
 
       - name: TypeScript Build
         run: npm run build
@@ -37,5 +53,7 @@ jobs:
         run: npx tsx packages/cli/src/bin/mgvideo.ts doctor
 
       - name: Run Full Evaluation Suite
-        run: npx tsx evaluations/runner.ts
+        run: npm test
 
+      - name: Ensure evaluations left tracked files untouched
+        run: git diff --exit-code

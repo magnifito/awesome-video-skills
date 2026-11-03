@@ -5,6 +5,14 @@ export type PipelineEventType =
   | 'validation.failed'
   | 'package.approved';
 
+export const PIPELINE_EVENTS: readonly PipelineEventType[] = [
+  'render.started',
+  'render.completed',
+  'validation.passed',
+  'validation.failed',
+  'package.approved',
+];
+
 export interface NotificationPayload {
   event: PipelineEventType;
   timestamp: string;
@@ -37,6 +45,10 @@ export class NotificationDispatcher {
       { title: 'Project', value: projectId, short: true },
       { title: 'Event', value: event, short: true }
     ];
+
+    if (!PIPELINE_EVENTS.includes(event)) {
+      throw new Error(`Unknown pipeline event: ${String(event)}`);
+    }
 
     switch (event) {
       case 'render.started':
@@ -79,6 +91,32 @@ export class NotificationDispatcher {
       color_hex: colorHex,
       fields
     };
+  }
+
+  /**
+   * Delivers a payload to an HTTPS webhook. formatEvent() alone never sends anything;
+   * call this to actually dispatch. Throws on non-2xx responses or non-HTTPS URLs.
+   */
+  static async send(payload: NotificationPayload, webhookUrl: string, timeoutMs = 10_000): Promise<{ status: number }> {
+    let url: URL;
+    try {
+      url = new URL(webhookUrl);
+    } catch {
+      throw new Error(`Invalid webhook URL: ${webhookUrl}`);
+    }
+    if (url.protocol !== 'https:') {
+      throw new Error(`Webhook URL must use https: ${url.origin}`);
+    }
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(payload),
+      signal: AbortSignal.timeout(timeoutMs),
+    });
+    if (!res.ok) {
+      throw new Error(`Webhook responded with HTTP ${res.status}`);
+    }
+    return { status: res.status };
   }
 }
 

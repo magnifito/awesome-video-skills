@@ -1,3 +1,9 @@
+---
+title: Magnifito Developer Guide
+kind: reference
+status: reference
+updated: 2026-11-03
+---
 # Magnifito Developer Guide
 
 This guide covers getting started with development on the Magnifito Super Video platform, running evaluations, extending shot recipes, and adding new media engines.
@@ -90,7 +96,7 @@ When introducing a new media processing capability:
 3. Export the module in `packages/media/src/index.ts`.
 4. Expose the method on `MagnifitoVideoEngine` in `packages/sdk/src/index.ts`.
 5. Register the corresponding CLI command in `packages/cli/src/bin/mgvideo.ts`.
-6. Add options documentation to `docs/CLI_REFERENCE.md`.
+6. Add options documentation to `docs/reference/cli-reference.md`.
 7. Add an end-to-end test suite in `evaluations/runner.ts`.
 8. Verify with `npm run build && npx tsx evaluations/runner.ts`.
 

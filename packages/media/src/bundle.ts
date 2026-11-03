@@ -1,7 +1,7 @@
-import { execSync } from 'node:child_process';
 import path from 'node:path';
 import fs from 'node:fs';
-import crypto from 'node:crypto';
+import { runTool } from './proc.js';
+import { DeliverableArchiver } from './archiver.js';
 
 export interface BundleOptions {
   outputBundlePath?: string;
@@ -20,20 +20,21 @@ export interface BundleSummary {
 export class ProductionBundleExporter {
   /**
    * Bundles validated deliverables, signed review records, license notices, and checksums
-   * into an immutable .tar.gz production package ready for air or cold storage.
+   * into an immutable .tar.gz production package ready for cold storage.
    */
   static createBundle(deliveryDir: string, options: BundleOptions = {}): BundleSummary {
     if (!fs.existsSync(deliveryDir)) {
       throw new Error(`Delivery directory not found: ${deliveryDir}`);
     }
 
-    const defaultName = `production-bundle-${Date.now()}.tar.gz`;
+    const defaultName = options.bundleName
+      ? `${path.basename(options.bundleName, '.tar.gz')}.tar.gz`
+      : `production-bundle-${Date.now()}.tar.gz`;
     const outBundlePath = options.outputBundlePath ?? path.join(deliveryDir, defaultName);
 
-    // List all files inside deliveryDir (excluding existing .tar.gz)
+    // List all files inside deliveryDir (excluding existing bundles and hidden files)
     const filesToBundle: string[] = [];
-    const entries = fs.readdirSync(deliveryDir);
-    for (const entry of entries) {
+    for (const entry of fs.readdirSync(deliveryDir).sort()) {
       if (entry.endsWith('.tar.gz') || entry.startsWith('.')) continue;
       filesToBundle.push(entry);
     }
@@ -42,16 +43,16 @@ export class ProductionBundleExporter {
       throw new Error(`No deliverable files found in: ${deliveryDir}`);
     }
 
-    // Use standard tar to compress
-    const tarCmd = `tar -czf "${outBundlePath}" -C "${deliveryDir}" ${filesToBundle.map(f => `"${f}"`).join(' ')}`;
-    execSync(tarCmd, { stdio: 'pipe' });
+    // Argument array: no shell, so file names cannot inject commands.
+    // "--" stops option parsing so an entry named "-x" is treated as a file.
+    runTool('tar', ['-czf', outBundlePath, '-C', deliveryDir, '--', ...filesToBundle]);
 
     if (!fs.existsSync(outBundlePath)) {
       throw new Error(`Failed to create production bundle at: ${outBundlePath}`);
     }
 
-    const bundleBytes = fs.readFileSync(outBundlePath);
-    const bundleSha256 = crypto.createHash('sha256').update(bundleBytes).digest('hex');
+    const bundleSha256 = DeliverableArchiver.computeSha256(outBundlePath);
+    const bundleSizeBytes = fs.statSync(outBundlePath).size;
 
     const manifestPath = path.join(path.dirname(outBundlePath), `${path.basename(outBundlePath, '.tar.gz')}-summary.json`);
     const summaryData = {
@@ -59,7 +60,7 @@ export class ProductionBundleExporter {
       created_at: new Date().toISOString(),
       bundle_file: path.basename(outBundlePath),
       bundle_sha256: bundleSha256,
-      bundle_size_bytes: bundleBytes.length,
+      bundle_size_bytes: bundleSizeBytes,
       bundled_files: filesToBundle
     };
 
@@ -67,11 +68,10 @@ export class ProductionBundleExporter {
 
     return {
       bundlePath: outBundlePath,
-      bundleSizeBytes: bundleBytes.length,
+      bundleSizeBytes,
       bundleSha256,
       bundledFiles: filesToBundle,
       manifestPath
     };
   }
 }
-

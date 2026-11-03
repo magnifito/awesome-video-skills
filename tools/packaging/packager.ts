@@ -14,50 +14,82 @@ export const CANONICAL_SKILL_ALLOWLIST = [
   'magnifito-deliver'
 ] as const;
 
+export interface PackageResult {
+  packagedSkills: string[];
+  verifiedAllowlist: boolean;
+  errors: string[];
+}
+
+/** Recursively copies a skill directory, refusing symlinks so nothing outside the skill is pulled in. */
+async function copySkillDir(src: string, dest: string): Promise<number> {
+  await fs.mkdir(dest, { recursive: true });
+  let count = 0;
+  for (const ent of await fs.readdir(src, { withFileTypes: true })) {
+    const from = path.join(src, ent.name);
+    const to = path.join(dest, ent.name);
+    if (ent.isSymbolicLink()) {
+      throw new Error(`Refusing to package symlink: ${from}`);
+    }
+    if (ent.isDirectory()) {
+      count += await copySkillDir(from, to);
+    } else if (ent.isFile()) {
+      await fs.copyFile(from, to);
+      count++;
+    }
+  }
+  return count;
+}
+
 export async function packageSkills(
   targetPlatform: 'claude' | 'antigravity' | 'codex',
-  outputDir: string
-): Promise<{ packagedSkills: string[]; verifiedAllowlist: boolean }> {
-  const workspaceRoot = process.cwd();
+  outputDir: string,
+  workspaceRoot = process.cwd()
+): Promise<PackageResult> {
   const sourceSkillsDir = path.join(workspaceRoot, 'skills');
   const targetDir = path.resolve(outputDir, targetPlatform);
-
+  // Start from a clean target so stale skills from earlier runs cannot leak into the package.
+  await fs.rm(targetDir, { recursive: true, force: true });
   await fs.mkdir(targetDir, { recursive: true });
 
-  const entries = await fs.readdir(sourceSkillsDir);
+  const entries = await fs.readdir(sourceSkillsDir, { withFileTypes: true });
   const discoveredSkills: string[] = [];
+  const errors: string[] = [];
 
   for (const entry of entries) {
-    const entryPath = path.join(sourceSkillsDir, entry);
-    const stat = await fs.stat(entryPath);
-    if (!stat.isDirectory()) continue;
+    if (!entry.isDirectory()) continue;
 
     // Strict allowlist enforcement
-    if (!CANONICAL_SKILL_ALLOWLIST.includes(entry as typeof CANONICAL_SKILL_ALLOWLIST[number])) {
-      console.warn(`[Packager] Skipping unapproved non-canonical directory: ${entry}`);
+    if (!CANONICAL_SKILL_ALLOWLIST.includes(entry.name as typeof CANONICAL_SKILL_ALLOWLIST[number])) {
+      errors.push(`Unapproved non-canonical skill directory: ${entry.name}`);
       continue;
     }
 
-    discoveredSkills.push(entry);
-
-    const skillDest = path.join(targetDir, entry);
-    await fs.mkdir(skillDest, { recursive: true });
-
-    // Copy SKILL.md
-    const skillMdSource = path.join(entryPath, 'SKILL.md');
+    const entryPath = path.join(sourceSkillsDir, entry.name);
     try {
-      await fs.copyFile(skillMdSource, path.join(skillDest, 'SKILL.md'));
+      await fs.access(path.join(entryPath, 'SKILL.md'));
     } catch {
-      console.warn(`[Packager] Warning: ${entry} lacks SKILL.md`);
+      errors.push(`${entry.name} lacks SKILL.md`);
+      continue;
     }
+
+    await copySkillDir(entryPath, path.join(targetDir, entry.name));
+    discoveredSkills.push(entry.name);
   }
 
-  // Generate platform-specific manifest
+  for (const required of CANONICAL_SKILL_ALLOWLIST) {
+    if (!discoveredSkills.includes(required)) errors.push(`Missing canonical skill: ${required}`);
+  }
+
+  const verified = errors.length === 0 &&
+    discoveredSkills.length === CANONICAL_SKILL_ALLOWLIST.length;
+
   const manifest = {
     platform: targetPlatform,
     generated_at: new Date().toISOString(),
     skills_count: discoveredSkills.length,
-    skills: discoveredSkills.sort()
+    skills: discoveredSkills.sort(),
+    verified_allowlist: verified,
+    errors
   };
 
   await fs.writeFile(
@@ -66,12 +98,10 @@ export async function packageSkills(
     'utf-8'
   );
 
-  const verified = discoveredSkills.length === CANONICAL_SKILL_ALLOWLIST.length &&
-    CANONICAL_SKILL_ALLOWLIST.every(s => discoveredSkills.includes(s));
-
   return {
     packagedSkills: discoveredSkills,
-    verifiedAllowlist: verified
+    verifiedAllowlist: verified,
+    errors
   };
 }
 
@@ -79,10 +109,19 @@ export async function packageSkills(
 if (process.argv[1]?.endsWith('packager.ts') || process.argv[1]?.endsWith('packager.js')) {
   (async () => {
     console.log('📦 Running Magnifito Skill Packager...');
+    let failed = false;
     for (const p of ['antigravity', 'claude', 'codex'] as const) {
       const res = await packageSkills(p, './dist/packaged-skills');
-      console.log(` • Platform [${p}]: Packaged ${res.packagedSkills.length} skills (Allowlist verified: ${res.verifiedAllowlist})`);
+      console.log(`  • Platform [${p}]: Packaged ${res.packagedSkills.length} skills (Allowlist verified: ${res.verifiedAllowlist})`);
+      for (const e of res.errors) console.error(`    ✗ ${e}`);
+      if (!res.verifiedAllowlist) failed = true;
     }
-  })();
+    if (failed) {
+      console.error('❌ Packaging failed allowlist verification.');
+      process.exit(1);
+    }
+  })().catch(err => {
+    console.error(err);
+    process.exit(1);
+  });
 }
-

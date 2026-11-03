@@ -1,4 +1,4 @@
-import { execSync } from 'node:child_process';
+import { runFfmpeg, probe, safeColor } from './proc.js';
 import path from 'node:path';
 import fs from 'node:fs';
 
@@ -42,26 +42,56 @@ export class MaskEngine {
       fs.mkdirSync(parentDir, { recursive: true });
     }
 
-    let filterComplex = '';
-    if (mode === 'blur') {
-      filterComplex = `[0:v]split=2[base][cropin];[cropin]crop=${box.width}:${box.height}:${box.x}:${box.y},boxblur=luma_radius=15:luma_power=3[blurred];[base][blurred]overlay=${box.x}:${box.y}[outv]`;
-    } else {
-      const color = box.color ?? 'black@0.95';
-      filterComplex = `[0:v]drawbox=x=${box.x}:y=${box.y}:w=${box.width}:h=${box.height}:color=${color}:t=fill[outv]`;
+    const info = probe(videoPath);
+    if (!info.hasVideo) throw new Error(`No video stream in ${videoPath}`);
+    // Clamp the box to the frame so crop/drawbox never reference pixels outside it.
+    const x = Math.max(0, Math.floor(box.x));
+    const y = Math.max(0, Math.floor(box.y));
+    const bw = Math.min(Math.floor(box.width), info.width - x);
+    const bh = Math.min(Math.floor(box.height), info.height - y);
+    if (!(bw > 0 && bh > 0)) {
+      throw new Error(`Redaction box ${JSON.stringify(box)} does not overlap the ${info.width}x${info.height} frame`);
     }
 
-    const cmd = [
-      'ffmpeg -y',
-      `-i "${videoPath}"`,
-      `-filter_complex "${filterComplex}"`,
-      '-map "[outv]"',
-      '-map "0:a?"',
-      '-c:v libx264 -preset fast -crf 20 -pix_fmt yuv420p',
-      '-c:a copy',
-      `"${outPath}"`
-    ].join(' ');
+    let filterComplex: string;
+    if (mode === 'blur') {
+      // Pixelate (downscale to at most 8x8 blocks, then nearest-neighbour upscale) and blur on top.
+      // Pixelation destroys detail irreversibly for any box size, unlike a blur whose radius
+      // is limited by the plane size (boxblur requires radius < half the smallest plane).
+      const blocksW = Math.max(1, Math.min(8, Math.floor(bw / 4)));
+      const blocksH = Math.max(1, Math.min(8, Math.floor(bh / 4)));
+      const chromaLimit = Math.floor(Math.min(bw, bh) / 4) - 1;
+      const blur = chromaLimit >= 1
+        ? `,boxblur=luma_radius=${Math.min(15, chromaLimit)}:luma_power=2:chroma_radius=${Math.min(15, chromaLimit)}:chroma_power=2`
+        : '';
+      filterComplex = `[0:v]split=2[base][cropin];[cropin]crop=${bw}:${bh}:${x}:${y},scale=${blocksW}:${blocksH}:flags=area,scale=${bw}:${bh}:flags=neighbor${blur}[blurred];[base][blurred]overlay=${x}:${y}[outv]`;
+    } else {
+      // Fully opaque by default: any transparency would leave the redacted pixels recoverable.
+      const color = safeColor(box.color ?? 'black');
+      filterComplex = `[0:v]drawbox=x=${x}:y=${y}:w=${bw}:h=${bh}:color=${color}:t=fill[outv]`;
+    }
 
-    execSync(cmd, { stdio: 'pipe' });
+    runFfmpeg([
+      '-i',
+      videoPath,
+      '-filter_complex',
+      filterComplex,
+      '-map',
+      '[outv]',
+      '-map',
+      '0:a?',
+      '-c:v',
+      'libx264',
+      '-preset',
+      'fast',
+      '-crf',
+      '20',
+      '-pix_fmt',
+      'yuv420p',
+      '-c:a',
+      'copy',
+      outPath
+    ]);
 
     if (!fs.existsSync(outPath)) {
       throw new Error(`Failed to generate redacted video at: ${outPath}`);

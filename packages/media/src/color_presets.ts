@@ -1,4 +1,5 @@
-import { execSync } from 'node:child_process';
+import { runFfmpeg, probe } from './proc.js';
+import { ColorSpaceConfigurator } from './colorspace.js';
 import path from 'node:path';
 import fs from 'node:fs';
 
@@ -88,17 +89,21 @@ export class ColorPresetEngine {
       fs.mkdirSync(parentDir, { recursive: true });
     }
 
-    const cmd = [
-      'ffmpeg -y',
-      `-i "${inputPath}"`,
-      `-vf "${preset.filterString}"`,
-      '-c:v libx264 -preset fast -crf 19 -pix_fmt yuv420p',
-      '-colorspace bt709 -color_primaries bt709 -color_trc bt709 -color_range tv',
-      '-c:a copy',
-      `"${outPath}"`
-    ].join(' ');
+    // Convert (not just tag) the source into BT.709 limited range so the output tags are true.
+    const conversion = this.buildRec709Conversion(inputPath);
+    // setparams stamps the frame color properties; recent ffmpeg versions take frame
+    // properties over the encoder -color_* options, so tagging must happen in the graph too.
+    const tag = 'setparams=color_primaries=bt709:color_trc=bt709:colorspace=bt709:range=tv';
+    const vf = [preset.filterString, conversion, tag].filter(Boolean).join(',');
 
-    execSync(cmd, { stdio: 'pipe' });
+    runFfmpeg([
+      '-i', inputPath,
+      '-vf', vf,
+      '-c:v', 'libx264', '-preset', 'fast', '-crf', '19', '-pix_fmt', 'yuv420p',
+      ...ColorSpaceConfigurator.getRec709Flags(),
+      '-c:a', 'copy',
+      outPath
+    ]);
 
     if (!fs.existsSync(outPath)) {
       throw new Error(`Failed to generate graded video at: ${outPath}`);
@@ -110,5 +115,25 @@ export class ColorPresetEngine {
       preset
     };
   }
-}
 
+  /**
+   * Builds a scale filter that converts the source matrix/range to BT.709 limited range.
+   * Untagged sources are assumed BT.601 below 720 lines and BT.709 otherwise (common practice).
+   * Returns null when the source is already BT.709 limited range.
+   */
+  private static buildRec709Conversion(inputPath: string): string | null {
+    const info = probe(inputPath);
+    const streams = (info.raw.streams as Array<Record<string, unknown>> | undefined) ?? [];
+    const v = streams.find(s => s.codec_type === 'video') ?? {};
+    const space = String(v.color_space ?? 'unknown');
+    const range = String(v.color_range ?? 'unknown');
+    const matrixMap: Record<string, string> = {
+      bt709: 'bt709', smpte170m: 'bt601', bt470bg: 'bt601', bt601: 'bt601',
+      smpte240m: 'smpte240m', bt2020nc: 'bt2020', bt2020c: 'bt2020', fcc: 'fcc'
+    };
+    const inMatrix = matrixMap[space] ?? (info.height >= 720 ? 'bt709' : 'bt601');
+    const inRange = range === 'pc' ? 'full' : 'tv';
+    if (inMatrix === 'bt709' && inRange === 'tv') return null;
+    return `scale=in_color_matrix=${inMatrix}:out_color_matrix=bt709:in_range=${inRange}:out_range=tv`;
+  }
+}

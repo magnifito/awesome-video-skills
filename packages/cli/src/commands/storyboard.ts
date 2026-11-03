@@ -1,7 +1,5 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import { execFile } from 'node:child_process';
-import { promisify } from 'node:util';
 import type {
   ProjectBrief,
   BrandProfile,
@@ -9,8 +7,9 @@ import type {
   ClaimsRegister
 } from '../../../contracts/src/index.js';
 import { HyperFramesAdapter } from '../../../../adapters/hyperframes/index.js';
+import { rasterizeSvg, safeCssColor, safeId } from '../../../media/src/proc.js';
+import { escapeHtml } from './_shared.js';
 
-const execFileAsync = promisify(execFile);
 
 export interface StoryboardResult {
   htmlPath: string;
@@ -46,21 +45,15 @@ export async function generateStoryboardContactSheet(
   for (let i = 0; i < scenePlan.scenes.length; i++) {
     const scene = scenePlan.scenes[i];
     const svg = (adapter as any).generateSceneSvg(scene, brand, width, height, false);
+    // scene_id becomes part of a file name, so reject path separators and other unsafe characters
+    safeId(scene.scene_id, 'scene_id');
     const svgPath = path.join(storyboardDir, `frame_${i + 1}_${scene.scene_id}.svg`);
     const pngPath = path.join(storyboardDir, `frame_${i + 1}_${scene.scene_id}.png`);
 
     await fs.writeFile(svgPath, svg, 'utf8');
 
-    try {
-      await execFileAsync('sips', ['-s', 'format', 'png', svgPath, '--out', pngPath]);
-    } catch {
-      await execFileAsync('/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', [
-        '--headless=new',
-        `--screenshot=${pngPath}`,
-        `--window-size=${width},${height}`,
-        svgPath
-      ]);
-    }
+    // Portable rasterizer (rsvg-convert, resvg, ImageMagick, sips, or headless Chrome)
+    rasterizeSvg(svgPath, pngPath, width, height);
 
     try { await fs.unlink(svgPath); } catch {}
     framePaths.push(pngPath);
@@ -68,18 +61,18 @@ export async function generateStoryboardContactSheet(
 
   // Generate responsive HTML review contact sheet
   const htmlContent = `<!DOCTYPE html>
-<html lang="${brief.language}">
+<html lang="${escapeHtml(brief.language)}">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Magnifito Storyboard: ${brief.objective}</title>
+  <title>Magnifito Storyboard: ${escapeHtml(brief.objective)}</title>
   <style>
     :root {
       --bg: #0B0F19;
       --card-bg: #1E293B;
       --text-main: #F8FAFC;
       --text-muted: #94A3B8;
-      --accent: ${brand.colors.primary || '#3B82F6'};
+      --accent: ${safeCssColor(brand.colors.primary || '#3B82F6')};
       --border: #334155;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -163,14 +156,14 @@ export async function generateStoryboardContactSheet(
 </head>
 <body>
   <div class="header">
-    <h1>🎬 Storyboard Contact Sheet: ${brief.objective}</h1>
+    <h1>🎬 Storyboard Contact Sheet: ${escapeHtml(brief.objective)}</h1>
     <div class="meta-badges">
-      <span class="badge primary">Project: ${brief.project_id}</span>
+      <span class="badge primary">Project: ${escapeHtml(brief.project_id)}</span>
       <span class="badge">Format: ${targetFormat} (${width}x${height})</span>
       <span class="badge">Total Duration: ${brief.duration_seconds}s</span>
       <span class="badge">Scenes: ${scenePlan.scenes.length}</span>
-      <span class="badge">Timing: ${brief.timing_authority}</span>
-      <span class="badge">Brand: ${brand.name}</span>
+      <span class="badge">Timing: ${escapeHtml(brief.timing_authority)}</span>
+      <span class="badge">Brand: ${escapeHtml(brand.name)}</span>
     </div>
   </div>
 
@@ -180,18 +173,18 @@ export async function generateStoryboardContactSheet(
       return `
       <div class="card">
         <div class="card-img-wrap">
-          <img src="${frameFileName}" alt="Scene ${i + 1} Preview" loading="lazy">
+          <img src="${escapeHtml(frameFileName)}" alt="Scene ${i + 1} Preview" loading="lazy">
         </div>
         <div class="card-body">
           <div class="card-header">
-            <span class="scene-title">Scene ${i + 1}: ${scene.scene_id}</span>
+            <span class="scene-title">Scene ${i + 1}: ${escapeHtml(scene.scene_id)}</span>
             <span class="scene-duration">${scene.duration_seconds}s (${scene.duration_frames || (scene.duration_seconds * 30)}f)</span>
           </div>
-          <div class="scene-copy">"${scene.copy_text}"</div>
+          <div class="scene-copy">"${escapeHtml(scene.copy_text)}"</div>
           <div class="claims-list">
-            <div><strong>Recipe:</strong> ${scene.visual_recipe}</div>
+            <div><strong>Recipe:</strong> ${escapeHtml(scene.visual_recipe)}</div>
             ${scene.claims_refs.length > 0
-              ? `<div><strong>Verified Claims:</strong><br>${scene.claims_refs.map(c => `<span class="claim-tag">✓ ${c}</span>`).join(' ')}</div>`
+              ? `<div><strong>Verified Claims:</strong><br>${scene.claims_refs.map(c => `<span class="claim-tag">✓ ${escapeHtml(c)}</span>`).join(' ')}</div>`
               : `<span style="color: #64748B;">No factual claims in this scene</span>`}
           </div>
         </div>

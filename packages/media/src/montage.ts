@@ -1,6 +1,7 @@
-import { execSync } from 'node:child_process';
 import path from 'node:path';
 import fs from 'node:fs';
+import crypto from 'node:crypto';
+import { runFfmpeg, concatListLine, requirePositive } from './proc.js';
 
 export interface MontageOptions {
   secondsPerSlide?: number;
@@ -37,10 +38,15 @@ export class MontageGenerator {
     const width = options.width ?? 1920;
     const height = options.height ?? 1080;
     const fps = options.fps ?? 30;
+    requirePositive(secondsPerSlide, 'secondsPerSlide');
+    requirePositive(width, 'width');
+    requirePositive(height, 'height');
+    requirePositive(fps, 'fps');
+    const runTag = `${Date.now()}-${crypto.randomBytes(4).toString('hex')}`;
 
     const outPath = options.outputPath ?? path.join(
       path.dirname(imagePaths[0]),
-      `animatic-montage-${Date.now()}.mp4`
+      `animatic-montage-${runTag}.mp4`
     );
 
     const parentDir = path.dirname(outPath);
@@ -51,38 +57,27 @@ export class MontageGenerator {
     const tempClips: string[] = [];
     try {
       imagePaths.forEach((img, idx) => {
-        const clipPath = path.join(parentDir, `tmp-montage-clip-${idx}-${Date.now()}.mp4`);
+        const clipPath = path.join(parentDir, `tmp-montage-clip-${idx}-${runTag}.mp4`);
         const scaleFilter = `scale=${width}:${height}:force_original_aspect_ratio=decrease,pad=${width}:${height}:(ow-iw)/2:(oh-ih)/2:black,setsar=1`;
-        
-        const cmd = [
-          'ffmpeg -y',
-          `-loop 1 -t ${secondsPerSlide.toFixed(2)}`,
-          `-i "${img}"`,
-          `-f lavfi -t ${secondsPerSlide.toFixed(2)} -i anullsrc=r=48000:cl=stereo`,
-          `-vf "${scaleFilter}"`,
-          `-r ${fps}`,
-          '-c:v libx264 -preset fast -crf 20 -pix_fmt yuv420p',
-          '-c:a aac -b:a 128k',
-          `"${clipPath}"`
-        ].join(' ');
-
-        execSync(cmd, { stdio: 'pipe' });
+        const dur = secondsPerSlide.toFixed(3);
+        runFfmpeg([
+          '-loop', '1', '-t', dur, '-i', img,
+          '-f', 'lavfi', '-t', dur, '-i', 'anullsrc=r=48000:cl=stereo',
+          '-vf', scaleFilter,
+          '-r', String(fps),
+          '-c:v', 'libx264', '-preset', 'fast', '-crf', '20', '-pix_fmt', 'yuv420p',
+          '-c:a', 'aac', '-b:a', '128k',
+          '-shortest',
+          clipPath,
+        ]);
         tempClips.push(clipPath);
       });
 
-      const concatListPath = path.join(parentDir, `tmp-concat-${Date.now()}.txt`);
-      const listContent = tempClips.map(c => `file '${path.resolve(c)}'`).join('\n');
-      fs.writeFileSync(concatListPath, listContent);
-
-      const concatCmd = [
-        'ffmpeg -y',
-        `-f concat -safe 0 -i "${concatListPath}"`,
-        '-c copy',
-        `"${outPath}"`
-      ].join(' ');
+      const concatListPath = path.join(parentDir, `tmp-concat-${runTag}.txt`);
+      fs.writeFileSync(concatListPath, tempClips.map(c => concatListLine(c)).join('\n'));
 
       try {
-        execSync(concatCmd, { stdio: 'pipe' });
+        runFfmpeg(['-f', 'concat', '-safe', '0', '-i', concatListPath, '-c', 'copy', outPath]);
       } finally {
         if (fs.existsSync(concatListPath)) fs.unlinkSync(concatListPath);
       }

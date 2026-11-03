@@ -1,6 +1,6 @@
-import { execSync } from 'node:child_process';
 import path from 'node:path';
 import fs from 'node:fs';
+import { runFfmpeg } from './proc.js';
 
 export interface PannerOptions {
   pan?: number; // -1.0 (full left) to +1.0 (full right), 0 = center
@@ -24,6 +24,8 @@ export class AudioPanner {
       throw new Error(`Audio file not found: ${audioPath}`);
     }
 
+    if (options.pan !== undefined && !Number.isFinite(options.pan)) throw new Error('pan must be a finite number');
+    if (options.stereoWidth !== undefined && !Number.isFinite(options.stereoWidth)) throw new Error('stereoWidth must be a finite number');
     const panVal = options.pan !== undefined ? Math.max(-1.0, Math.min(1.0, options.pan)) : 0.0;
     const widthVal = options.stereoWidth !== undefined ? Math.max(0.0, Math.min(3.0, options.stereoWidth)) : 1.0;
 
@@ -47,16 +49,7 @@ export class AudioPanner {
 
     const filterArg = filters.length > 0 ? filters.join(',') : 'anull';
 
-    const cmd = [
-      'ffmpeg -y',
-      `-i "${audioPath}"`,
-      `-af "${filterArg}"`,
-      '-ar 48000',
-      '-c:a pcm_s16le',
-      `"${outPath}"`
-    ].join(' ');
-
-    execSync(cmd, { stdio: 'pipe' });
+    runFfmpeg(['-i', audioPath, '-af', filterArg, '-ar', '48000', '-c:a', 'pcm_s16le', outPath]);
 
     if (!fs.existsSync(outPath)) {
       throw new Error(`Failed to generate panned audio at: ${outPath}`);

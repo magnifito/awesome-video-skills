@@ -1,6 +1,6 @@
-import { execSync } from 'node:child_process';
 import path from 'node:path';
 import fs from 'node:fs';
+import { runFfmpeg, probe } from './proc.js';
 
 export interface SilenceRemoveOptions {
   thresholdDb?: number;
@@ -27,16 +27,12 @@ export class AudioSilenceRemover {
 
     const thresholdDb = options.thresholdDb ?? -38;
     const minSilence = options.minSilenceDurationSeconds ?? 0.4;
+    if (!Number.isFinite(thresholdDb) || thresholdDb > 0) throw new Error(`thresholdDb must be <= 0, got ${thresholdDb}`);
+    if (!Number.isFinite(minSilence) || minSilence <= 0) throw new Error(`minSilenceDurationSeconds must be > 0, got ${minSilence}`);
 
-    let origDuration = 5.0;
-    try {
-      const probeOut = execSync(`ffprobe -v error -show_entries format=duration -of csv=p=0 "${audioPath}"`, {
-        encoding: 'utf8'
-      }).trim();
-      origDuration = parseFloat(probeOut) || 5.0;
-    } catch {
-      // fallback
-    }
+    const before = probe(audioPath);
+    if (!before.hasAudio) throw new Error(`No audio stream in ${audioPath}`);
+    const origDuration = before.durationSeconds;
 
     const outPath = options.outputPath ?? path.join(
       path.dirname(audioPath),
@@ -48,34 +44,15 @@ export class AudioSilenceRemover {
       fs.mkdirSync(parentDir, { recursive: true });
     }
 
-    // silenceremove filter
     const filter = `silenceremove=start_periods=1:start_duration=0.08:start_threshold=${thresholdDb}dB:stop_periods=-1:stop_duration=${minSilence.toFixed(2)}:stop_threshold=${thresholdDb}dB`;
 
-    const cmd = [
-      'ffmpeg -y',
-      `-i "${audioPath}"`,
-      `-af "${filter}"`,
-      '-ar 48000',
-      '-c:a pcm_s16le',
-      `"${outPath}"`
-    ].join(' ');
-
-    execSync(cmd, { stdio: 'pipe' });
+    runFfmpeg(['-i', audioPath, '-vn', '-af', filter, '-ar', '48000', '-c:a', 'pcm_s16le', outPath]);
 
     if (!fs.existsSync(outPath)) {
       throw new Error(`Failed to generate desilenced audio at: ${outPath}`);
     }
 
-    let trimmedDuration = origDuration;
-    try {
-      const probeOut = execSync(`ffprobe -v error -show_entries format=duration -of csv=p=0 "${outPath}"`, {
-        encoding: 'utf8'
-      }).trim();
-      trimmedDuration = parseFloat(probeOut) || origDuration;
-    } catch {
-      // fallback
-    }
-
+    const trimmedDuration = probe(outPath).durationSeconds;
     const timeSaved = Math.max(0, origDuration - trimmedDuration);
 
     return {
@@ -87,4 +64,3 @@ export class AudioSilenceRemover {
     };
   }
 }
-

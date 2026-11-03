@@ -3,6 +3,8 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
+import { scenePlanFps } from '../../packages/contracts/src/index.js';
+import { rasterizeSvg, concatListLine, safeCssColor } from '../../packages/media/src/proc.js';
 import type {
   VideoRendererAdapter,
   AdapterCapabilities,
@@ -16,13 +18,15 @@ const execFileAsync = promisify(execFile);
 
 export class HyperFramesAdapter implements VideoRendererAdapter {
   readonly id: string = 'hyperframes';
-  readonly name: string = 'HyperFrames HTML Video Engine';
+  // Honest description: each scene is rendered as one static SVG card held for its duration.
+  // The seekable composition.html is emitted as a contract artifact but is not frame-captured.
+  readonly name: string = 'HyperFrames Static Card Renderer';
   readonly capabilities: AdapterCapabilities = {
-    formats: ['mp4', 'webm', 'mov_prores', 'png_sequence'],
+    formats: ['mp4', 'webm', 'mov_prores'],
     transparency: true,
     audioMixing: true,
     dynamicInput: true,
-    headlessBrowser: true,
+    headlessBrowser: false,
     preview: true
   };
 
@@ -43,6 +47,10 @@ export class HyperFramesAdapter implements VideoRendererAdapter {
         errors.push("HyperFrames: Brief requests Bulgarian ('bg'), but brand has no verified Cyrillic-supporting font.");
       }
     }
+    for (const [k, v] of Object.entries(context.brand.colors)) {
+      if (v === undefined) continue;
+      try { safeCssColor(v); } catch { errors.push(`HyperFrames: brand color ${k} is not a valid CSS color.`); }
+    }
     return {
       valid: errors.length === 0,
       errors
@@ -56,23 +64,30 @@ export class HyperFramesAdapter implements VideoRendererAdapter {
     const { brand, scenePlan, brief } = context;
     const totalDurationSeconds = scenePlan.scenes.reduce((acc, s) => acc + s.duration_seconds, 0);
 
-    const scenesJson = JSON.stringify(scenePlan.scenes);
-    const brandJson = JSON.stringify(brand);
+    const scenesJson = jsonForScript(scenePlan.scenes);
+    const brandJson = jsonForScript(brand);
+    const fps = scenePlanFps(scenePlan);
+    const fontFamily = cssFontFamily(brand.fonts[0]?.family);
+    const c = {
+      background: safeCssColor(brand.colors.background),
+      text: safeCssColor(brand.colors.text_primary),
+      primary: safeCssColor(brand.colors.primary),
+    };
 
     return `<!DOCTYPE html>
-<html lang="${brief.language}">
+<html lang="${escapeHtml(brief.language)}">
 <head>
   <meta charset="UTF-8">
-  <title>${brief.objective}</title>
+  <title>${escapeHtml(brief.objective)}</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
       width: ${width}px;
       height: ${height}px;
       overflow: hidden;
-      background-color: ${brand.colors.background};
-      color: ${brand.colors.text_primary};
-      font-family: ${brand.fonts[0]?.family || 'system-ui'}, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background-color: ${c.background};
+      color: ${c.text};
+      font-family: ${fontFamily}, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       display: flex;
       flex-direction: column;
       justify-content: center;
@@ -99,18 +114,18 @@ export class HyperFramesAdapter implements VideoRendererAdapter {
       font-weight: 700;
       line-height: 1.2;
       margin-bottom: 24px;
-      color: ${brand.colors.text_primary};
+      color: ${c.text};
     }
     .highlight {
-      color: ${brand.colors.primary};
+      color: ${c.primary};
     }
     .badge {
       display: inline-block;
       padding: 8px 16px;
       border-radius: ${brand.motion_preferences.border_radius}px;
-      background-color: ${brand.colors.primary};
-      color: ${brand.colors.background};
-      font-size: ${brand.type_scale.caption || 16}px;
+      background-color: ${c.primary};
+      color: ${c.background};
+      font-size: ${Number(brand.type_scale.caption || 16)}px;
       font-weight: 600;
       margin-bottom: 20px;
       text-transform: uppercase;
@@ -129,9 +144,9 @@ export class HyperFramesAdapter implements VideoRendererAdapter {
 <body>
   <div id="composition" data-total-duration="${totalDurationSeconds}">
     ${scenePlan.scenes.map((s, idx) => `
-      <div id="scene-${s.scene_id}" class="scene ${idx === 0 ? 'active' : ''}" data-duration="${s.duration_seconds}">
+      <div id="scene-${escapeHtml(s.scene_id)}" class="scene ${idx === 0 ? 'active' : ''}" data-duration="${s.duration_seconds}">
         <div class="card">
-          <div class="badge">${brand.name} • ${s.visual_recipe}</div>
+          <div class="badge">${escapeHtml(brand.name)} • ${escapeHtml(s.visual_recipe)}</div>
           <h1 class="headline">${escapeHtml(s.copy_text)}</h1>
         </div>
       </div>
@@ -140,7 +155,7 @@ export class HyperFramesAdapter implements VideoRendererAdapter {
 
   <script>
     window.__videoMeta = {
-      fps: 30,
+      fps: ${fps},
       duration: ${totalDurationSeconds},
       width: ${width},
       height: ${height},
@@ -204,11 +219,14 @@ export class HyperFramesAdapter implements VideoRendererAdapter {
     if (currentLine.trim()) lines.push(currentLine.trim());
 
     const textYStart = cardY + 140;
+    const bg = safeCssColor(brand.colors.background);
+    const primary = safeCssColor(brand.colors.primary);
+    const textColor = safeCssColor(brand.colors.text_primary);
 
     return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
   <defs>
     <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="${brand.colors.background}"/>
+      <stop offset="0%" stop-color="${bg}"/>
       <stop offset="100%" stop-color="#020617"/>
     </linearGradient>
     <linearGradient id="cardGrad" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -222,11 +240,11 @@ export class HyperFramesAdapter implements VideoRendererAdapter {
 
   <!-- Card Backdrop -->
   <rect x="${cardX}" y="${cardY}" width="${cardWidth}" height="${cardHeight}" rx="24" ry="24"
-        fill="url(#cardGrad)" stroke="${brand.colors.primary}" stroke-width="2"/>
+        fill="url(#cardGrad)" stroke="${primary}" stroke-width="2"/>
 
   <!-- Brand Badge -->
-  <rect x="${cardX + 40}" y="${cardY + 40}" width="180" height="36" rx="8" ry="8" fill="${brand.colors.primary}"/>
-  <text x="${cardX + 130}" y="${cardY + 63}" font-family="-apple-system, BlinkMacSystemFont, Arial, sans-serif" font-size="14" font-weight="bold" fill="${brand.colors.background}" text-anchor="middle">
+  <rect x="${cardX + 40}" y="${cardY + 40}" width="180" height="36" rx="8" ry="8" fill="${primary}"/>
+  <text x="${cardX + 130}" y="${cardY + 63}" font-family="-apple-system, BlinkMacSystemFont, Arial, sans-serif" font-size="14" font-weight="bold" fill="${bg}" text-anchor="middle">
     ${escapeHtml(brand.name.toUpperCase())}
   </text>
 
@@ -240,7 +258,7 @@ export class HyperFramesAdapter implements VideoRendererAdapter {
     <text x="${width / 2}" y="${textYStart + (i * (fontSize + 12))}"
           font-family="-apple-system, BlinkMacSystemFont, Arial, Helvetica, sans-serif"
           font-size="${fontSize}" font-weight="700"
-          fill="${brand.colors.text_primary}" text-anchor="middle">
+          fill="${textColor}" text-anchor="middle">
       ${escapeHtml(line)}
     </text>
   `).join('')}
@@ -248,8 +266,8 @@ export class HyperFramesAdapter implements VideoRendererAdapter {
   <!-- Footer claim indicator -->
   <text x="${width / 2}" y="${cardY + cardHeight - 35}"
         font-family="-apple-system, BlinkMacSystemFont, Arial, sans-serif"
-        font-size="${subSize}" fill="${brand.colors.primary}" text-anchor="middle">
-    ${scene.claims_refs.length > 0 ? `✓ ${scene.claims_refs.join(', ')}` : ''}
+        font-size="${subSize}" fill="${primary}" text-anchor="middle">
+    ${scene.claims_refs.length > 0 ? `✓ ${escapeHtml(scene.claims_refs.join(', '))}` : ''}
   </text>
 </svg>`;
   }
@@ -274,21 +292,11 @@ export class HyperFramesAdapter implements VideoRendererAdapter {
     const svgContent = this.generateSceneSvg(targetScene, context.brand, settings.width, settings.height);
     const svgPath = path.join(outputDir, `temp_still_${frameNumber}.svg`);
     await fs.writeFile(svgPath, svgContent, 'utf-8');
-
-    // Use sips or Chrome to render SVG to PNG
     try {
-      await execFileAsync('sips', ['-s', 'format', 'png', svgPath, '--out', stillPath]);
-    } catch {
-      // Fallback using Chrome headless
-      await execFileAsync('/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', [
-        '--headless=new',
-        `--screenshot=${stillPath}`,
-        `--window-size=${settings.width},${settings.height}`,
-        svgPath
-      ]);
+      rasterizeSvg(svgPath, stillPath, settings.width, settings.height);
+    } finally {
+      await fs.rm(svgPath, { force: true });
     }
-
-    try { await fs.unlink(svgPath); } catch {}
     return stillPath;
   }
 
@@ -311,116 +319,95 @@ export class HyperFramesAdapter implements VideoRendererAdapter {
     const segmentPaths: string[] = [];
     const tempFiles: string[] = [];
 
-    const isTransparent = settings.transparent || settings.format === 'mov_prores';
+    if (settings.transparent && settings.format === 'mp4') {
+      throw new Error('HyperFrames: transparent output requires webm or mov_prores; H.264 mp4 cannot carry alpha.');
+    }
     const isProRes = settings.format === 'mov_prores';
     const isWebM = settings.format === 'webm';
+    const isTransparent = settings.transparent;
     const fileExt = isProRes ? 'mov' : isWebM ? 'webm' : 'mp4';
-
-    for (let i = 0; i < context.scenePlan.scenes.length; i++) {
-      const scene = context.scenePlan.scenes[i];
-      logs.push(`[HyperFrames] Rendering scene ${i + 1}/${context.scenePlan.scenes.length}: ${scene.scene_id} (${scene.duration_seconds}s)`);
-
-      const svgContent = this.generateSceneSvg(scene, context.brand, settings.width, settings.height, isTransparent);
-      const svgPath = path.join(outputDir, `scene_${i}.svg`);
-      const pngPath = path.join(outputDir, `scene_${i}.png`);
-      const segPath = path.join(outputDir, `segment_${i}.${fileExt}`);
-
-      await fs.writeFile(svgPath, svgContent, 'utf-8');
-      tempFiles.push(svgPath);
-
-      // Render SVG to PNG
-      try {
-        await execFileAsync('sips', ['-s', 'format', 'png', svgPath, '--out', pngPath]);
-      } catch {
-        await execFileAsync('/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', [
-          '--headless=new',
-          `--screenshot=${pngPath}`,
-          `--window-size=${settings.width},${settings.height}`,
-          svgPath
-        ]);
-      }
-      tempFiles.push(pngPath);
-
-      // Encode segment using ffmpeg based on target format and alpha capability
-      let segArgs: string[];
-      if (isProRes) {
-        segArgs = [
-          '-y',
-          '-loop', '1',
-          '-i', pngPath,
-          '-f', 'lavfi',
-          '-i', `anullsrc=r=${settings.audio_sample_rate}:cl=stereo`,
-          '-t', scene.duration_seconds.toString(),
-          '-c:v', 'prores_ks',
-          '-profile:v', '4', // ProRes 4444
-          '-pix_fmt', 'yuva444p10le',
-          '-r', settings.fps.toString(),
-          '-c:a', 'pcm_s16le',
-          segPath
-        ];
-      } else if (isWebM && isTransparent) {
-        segArgs = [
-          '-y',
-          '-loop', '1',
-          '-i', pngPath,
-          '-f', 'lavfi',
-          '-i', `anullsrc=r=${settings.audio_sample_rate}:cl=stereo`,
-          '-t', scene.duration_seconds.toString(),
-          '-c:v', 'libvpx-vp9',
-          '-pix_fmt', 'yuva420p',
-          '-r', settings.fps.toString(),
-          '-c:a', 'libopus',
-          segPath
-        ];
-      } else {
-        segArgs = [
-          '-y',
-          '-loop', '1',
-          '-i', pngPath,
-          '-f', 'lavfi',
-          '-i', `anullsrc=r=${settings.audio_sample_rate}:cl=stereo`,
-          '-t', scene.duration_seconds.toString(),
-          '-vf', `scale=${settings.width}:${settings.height},format=yuv420p`,
-          '-c:v', 'libx264',
-          '-colorspace', 'bt709',
-          '-color_primaries', 'bt709',
-          '-color_trc', 'bt709',
-          '-color_range', 'tv',
-          '-r', settings.fps.toString(),
-          '-c:a', 'aac',
-          '-b:a', '192k',
-          segPath
-        ];
-      }
-
-      await execFileAsync('ffmpeg', segArgs);
-      segmentPaths.push(segPath);
-      tempFiles.push(segPath);
+    const fps = settings.fps;
+    const planFps = scenePlanFps(context.scenePlan);
+    if (planFps !== fps) {
+      logs.push(`[HyperFrames] Note: scene plan is authored at ${planFps}fps; encoding at requested ${fps}fps.`);
     }
 
-    // 3. Concatenate segments
-    const concatListPath = path.join(outputDir, 'concat_list.txt');
-    const concatContent = segmentPaths.map(p => `file '${path.resolve(p)}'`).join('\n');
-    await fs.writeFile(concatListPath, concatContent, 'utf-8');
-    tempFiles.push(concatListPath);
-
+    const audioIn = ['-f', 'lavfi', '-i', `anullsrc=r=${settings.audio_sample_rate}:cl=stereo`];
     const finalOutputPath = path.join(outputDir, `final_output_${runId}.${fileExt}`);
 
-    const concatArgs = [
-      '-y',
-      '-f', 'concat',
-      '-safe', '0',
-      '-i', concatListPath,
-      '-c', 'copy',
-      finalOutputPath
-    ];
+    try {
+      for (let i = 0; i < context.scenePlan.scenes.length; i++) {
+        const scene = context.scenePlan.scenes[i];
+        logs.push(`[HyperFrames] Rendering scene ${i + 1}/${context.scenePlan.scenes.length}: ${scene.scene_id} (${scene.duration_seconds}s)`);
 
-    await execFileAsync('ffmpeg', concatArgs);
-    logs.push(`[HyperFrames] Successfully assembled final video: ${finalOutputPath}`);
+        const svgContent = this.generateSceneSvg(scene, context.brand, settings.width, settings.height, isTransparent);
+        const svgPath = path.join(outputDir, `scene_${i}.svg`);
+        const pngPath = path.join(outputDir, `scene_${i}.png`);
+        const segPath = path.join(outputDir, `segment_${i}.${fileExt}`);
 
-    // Clean up temporary segment files
-    for (const f of tempFiles) {
-      try { await fs.unlink(f); } catch {}
+        await fs.writeFile(svgPath, svgContent, 'utf-8');
+        tempFiles.push(svgPath);
+        tempFiles.push(pngPath);
+        rasterizeSvg(svgPath, pngPath, settings.width, settings.height);
+
+        const common = ['-y', '-loop', '1', '-framerate', String(fps), '-i', pngPath, ...audioIn, '-t', scene.duration_seconds.toString()];
+        const scale = `scale=${settings.width}:${settings.height}`;
+        let segArgs: string[];
+        if (isProRes) {
+          segArgs = [
+            ...common,
+            '-vf', `${scale},format=${isTransparent ? 'yuva444p10le' : 'yuv422p10le'}`,
+            '-c:v', 'prores_ks',
+            '-profile:v', isTransparent ? '4' : '3', // 4 = ProRes 4444 (alpha), 3 = ProRes 422 HQ
+            '-r', String(fps),
+            '-c:a', 'pcm_s16le',
+            segPath
+          ];
+        } else if (isWebM) {
+          // WebM always uses VP9 + Opus; alpha plane only when transparency is requested.
+          segArgs = [
+            ...common,
+            '-vf', `${scale},format=${isTransparent ? 'yuva420p' : 'yuv420p'}`,
+            '-c:v', 'libvpx-vp9',
+            '-b:v', '0', '-crf', '32',
+            '-r', String(fps),
+            '-c:a', 'libopus',
+            '-b:a', '128k',
+            segPath
+          ];
+        } else {
+          segArgs = [
+            ...common,
+            // Convert with the BT.709 matrix and tag the frames explicitly; without setparams
+            // ffmpeg drops the transfer tag for sRGB PNG input.
+            '-vf', `${scale}:out_color_matrix=bt709:out_range=tv,format=yuv420p,setparams=color_primaries=bt709:color_trc=bt709:colorspace=bt709:range=tv`,
+            '-c:v', 'libx264',
+            '-colorspace', 'bt709',
+            '-color_primaries', 'bt709',
+            '-color_trc', 'bt709',
+            '-color_range', 'tv',
+            '-r', String(fps),
+            '-c:a', 'aac',
+            '-b:a', '192k',
+            segPath
+          ];
+        }
+
+        tempFiles.push(segPath);
+        await execFileAsync('ffmpeg', segArgs, { maxBuffer: 64 * 1024 * 1024 });
+        segmentPaths.push(segPath);
+      }
+
+      // 3. Concatenate segments
+      const concatListPath = path.join(outputDir, 'concat_list.txt');
+      tempFiles.push(concatListPath);
+      await fs.writeFile(concatListPath, segmentPaths.map(concatListLine).join('\n'), 'utf-8');
+
+      await execFileAsync('ffmpeg', ['-y', '-f', 'concat', '-safe', '0', '-i', concatListPath, '-c', 'copy', finalOutputPath], { maxBuffer: 64 * 1024 * 1024 });
+      logs.push(`[HyperFrames] Successfully assembled final video: ${finalOutputPath}`);
+    } finally {
+      // Always clean up intermediate files, also when a scene fails.
+      await Promise.all(tempFiles.map(f => fs.rm(f, { force: true })));
     }
 
     // 4. Measure output and calculate hash
@@ -450,8 +437,25 @@ export class HyperFramesAdapter implements VideoRendererAdapter {
   }
 }
 
+/** Serializes a value for safe embedding inside an inline <script> block. */
+function jsonForScript(value: unknown): string {
+  return JSON.stringify(value)
+    .replace(/</g, '\\u003c')
+    .replace(/>/g, '\\u003e')
+    .replace(/&/g, '\\u0026')
+    .replace(/\u2028/g, '\\u2028')
+    .replace(/\u2029/g, '\\u2029');
+}
+
+/** Produces a quoted CSS font-family value from an untrusted family name. */
+function cssFontFamily(family: string | undefined): string {
+  if (!family) return 'system-ui';
+  const cleaned = family.replace(/[^\p{L}\p{N} _-]/gu, '').trim();
+  return cleaned ? `"${cleaned}"` : 'system-ui';
+}
+
 function escapeHtml(str: string): string {
-  return str
+  return String(str)
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')

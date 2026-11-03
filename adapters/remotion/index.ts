@@ -26,15 +26,18 @@ export class RemotionProfileAdapter implements VideoRendererAdapter {
     preview: true
   };
 
+  /** Whether this adapter can actually render. Profile-only adapters must never be selected for a render. */
+  readonly renderable = false;
+
   async validate(context: ProjectContext): Promise<{ valid: boolean; errors: string[] }> {
-    const errors: string[] = [];
+    // renderVideo/renderStill always throw, so this profile can never be valid for a render.
+    const errors: string[] = [
+      'Remotion is a profile-only adapter: rendering is not implemented. Use the hyperframes engine.'
+    ];
     if (!context.brief.budgets || context.brief.budgets.compute_budget_usd < 5) {
       errors.push('Remotion profile requires minimum compute budget of $5.00 for isolated container worker.');
     }
-    return {
-      valid: errors.length === 0,
-      errors
-    };
+    return { valid: false, errors };
   }
 
   async renderStill(context: ProjectContext, frameNumber: number, options: RenderOptions): Promise<string> {

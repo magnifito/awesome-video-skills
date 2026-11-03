@@ -1,6 +1,6 @@
-import { execSync } from 'node:child_process';
 import path from 'node:path';
 import fs from 'node:fs';
+import { runFfmpeg, hasAudio, safeColor } from './proc.js';
 
 export interface WaveformOptions {
   width?: number;
@@ -29,11 +29,14 @@ export class AudioWaveformVisualizer {
     const width = options.width ?? 1200;
     const height = options.height ?? 240;
     const rawColor = options.colorHex ?? '#2563EB';
-    const colorFormatted = rawColor.startsWith('#')
-      ? '0x' + rawColor.slice(1)
-      : rawColor.startsWith('0x')
-      ? rawColor
-      : '0x' + rawColor;
+    for (const [k, v] of [['width', width], ['height', height]] as const) {
+      if (!Number.isInteger(v) || v <= 0 || v > 8192) throw new Error(`${k} must be an integer in [1, 8192], got ${v}`);
+    }
+    // Validate before it reaches the filter graph; bare hex like "2563EB" is accepted as 0x-prefixed.
+    const normalized = /^[0-9a-fA-F]{6}([0-9a-fA-F]{2})?$/.test(rawColor) ? `0x${rawColor}` : rawColor;
+    const checked = safeColor(normalized);
+    const colorFormatted = checked.startsWith('#') ? `0x${checked.slice(1)}` : checked;
+    if (!hasAudio(mediaPath)) throw new Error(`No audio stream in ${mediaPath}`);
 
     const outPath = options.outputPath ?? path.join(
       path.dirname(mediaPath),
@@ -47,15 +50,7 @@ export class AudioWaveformVisualizer {
 
     const filter = `aformat=channel_layouts=mono,showwavespic=s=${width}x${height}:colors=${colorFormatted}`;
 
-    const cmd = [
-      'ffmpeg -y',
-      `-i "${mediaPath}"`,
-      `-filter_complex "${filter}"`,
-      '-frames:v 1',
-      `"${outPath}"`
-    ].join(' ');
-
-    execSync(cmd, { stdio: 'pipe' });
+    runFfmpeg(['-i', mediaPath, '-filter_complex', filter, '-frames:v', '1', '-update', '1', outPath]);
 
     if (!fs.existsSync(outPath)) {
       throw new Error(`Failed to generate waveform image at: ${outPath}`);

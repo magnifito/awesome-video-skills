@@ -1,6 +1,7 @@
-import { execSync } from 'node:child_process';
 import path from 'node:path';
 import fs from 'node:fs';
+import crypto from 'node:crypto';
+import { runFfmpeg, probe, rasterizeSvg, escapeXml } from './proc.js';
 
 export interface TitleOptions {
   titleText: string;
@@ -22,16 +23,30 @@ export interface TitleResult {
   height: number;
 }
 
+/** Accepts #hex, rgb()/rgba() and plain named colors; rejects anything that could break out of an SVG attribute. */
+function svgColor(input: string): string {
+  const c = input.trim();
+  if (
+    /^#[0-9a-fA-F]{3,8}$/.test(c) ||
+    /^rgba?\(\s*\d{1,3}\s*,\s*\d{1,3}\s*,\s*\d{1,3}\s*(,\s*(0|1|0?\.\d+)\s*)?\)$/.test(c) ||
+    /^[a-zA-Z]{3,20}$/.test(c)
+  ) {
+    return c;
+  }
+  throw new Error(`Invalid color value: ${JSON.stringify(input)}`);
+}
+
 export class TitleBurner {
   /**
-   * Generates a title card SVG overlay.
+   * Generates a title card SVG overlay. All user text is XML-escaped.
    */
   static generateTitleSvg(width: number, height: number, options: TitleOptions): string {
     const position = options.position ?? 'center';
-    const font = options.fontFamily ?? 'Inter, sans-serif';
-    const titleColor = options.titleColor ?? '#FFFFFF';
-    const subColor = options.subtitleColor ?? '#94A3B8';
-    const bgColor = options.backgroundColor ?? 'rgba(15, 23, 42, 0.85)';
+    if (!['top', 'center', 'bottom'].includes(position)) throw new Error(`Unsupported title position: ${String(position)}`);
+    const font = escapeXml(options.fontFamily ?? 'Inter, sans-serif');
+    const titleColor = svgColor(options.titleColor ?? '#FFFFFF');
+    const subColor = svgColor(options.subtitleColor ?? '#94A3B8');
+    const bgColor = svgColor(options.backgroundColor ?? 'rgba(15, 23, 42, 0.85)');
 
     let cardY = height / 2 - 80;
     if (position === 'top') cardY = 100;
@@ -52,33 +67,27 @@ export class TitleBurner {
     </filter>
   </defs>
   <rect x="${cardX}" y="${cardY}" width="${cardW}" height="${cardH}" rx="16" fill="${bgColor}" filter="url(#shadow)" stroke="rgba(255, 255, 255, 0.12)" stroke-width="1.5" />
-  <text x="${textCenterX}" y="${titleY}" text-anchor="middle" font-family="${font}" font-size="36" font-weight="700" fill="${titleColor}" letter-spacing="-0.5">${options.titleText}</text>
-  ${options.subtitleText ? `<text x="${textCenterX}" y="${subY}" text-anchor="middle" font-family="${font}" font-size="20" font-weight="500" fill="${subColor}">${options.subtitleText}</text>` : ''}
+  <text x="${textCenterX}" y="${titleY}" text-anchor="middle" font-family="${font}" font-size="36" font-weight="700" fill="${titleColor}" letter-spacing="-0.5">${escapeXml(options.titleText)}</text>
+  ${options.subtitleText ? `<text x="${textCenterX}" y="${subY}" text-anchor="middle" font-family="${font}" font-size="20" font-weight="500" fill="${subColor}">${escapeXml(options.subtitleText)}</text>` : ''}
 </svg>`;
   }
 
   /**
-   * Burns high-resolution typographic title card onto video frames.
+   * Burns a high-resolution typographic title card onto video frames.
    */
   static burnTitle(videoPath: string, options: TitleOptions): TitleResult {
     if (!fs.existsSync(videoPath)) {
       throw new Error(`Video file not found: ${videoPath}`);
     }
-
-    let w = 1920;
-    let h = 1080;
-    try {
-      const probeDims = execSync(`ffprobe -v error -select_streams v:0 -show_entries stream=width,height -of csv=s=x:p=0 "${videoPath}"`, {
-        encoding: 'utf8'
-      }).trim();
-      const parts = probeDims.split('x').map(Number);
-      if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
-        w = parts[0];
-        h = parts[1];
-      }
-    } catch {
-      // fallback
+    if (!options.titleText || !options.titleText.trim()) {
+      throw new Error('titleText must not be empty');
     }
+
+    const info = probe(videoPath);
+    if (!info.hasVideo) throw new Error(`No video stream in ${videoPath}`);
+    // Use the displayed (rotation-corrected) size: that is the frame the overlay lands on.
+    const w = info.displayWidth;
+    const h = info.displayHeight;
 
     const position = options.position ?? 'center';
     const outPath = options.outputPath ?? path.join(
@@ -92,24 +101,22 @@ export class TitleBurner {
     }
 
     const svgContent = this.generateTitleSvg(w, h, options);
-    const svgPath = path.join(parentDir, `tmp-title-${Date.now()}.svg`);
-    const pngPath = path.join(parentDir, `tmp-title-${Date.now()}.png`);
-
+    const tag = `${Date.now()}-${crypto.randomBytes(4).toString('hex')}`;
+    const svgPath = path.join(parentDir, `tmp-title-${tag}.svg`);
+    const pngPath = path.join(parentDir, `tmp-title-${tag}.png`);
     fs.writeFileSync(svgPath, svgContent, 'utf8');
-    execSync(`sips -s format png "${svgPath}" --out "${pngPath}"`, { stdio: 'pipe' });
-
-    const cmd = [
-      'ffmpeg -y',
-      `-i "${videoPath}"`,
-      `-i "${pngPath}"`,
-      '-filter_complex "[0:v][1:v]overlay=0:0"',
-      '-c:v libx264 -preset fast -crf 20 -pix_fmt yuv420p',
-      '-c:a copy',
-      `"${outPath}"`
-    ].join(' ');
 
     try {
-      execSync(cmd, { stdio: 'pipe' });
+      rasterizeSvg(svgPath, pngPath, w, h);
+      runFfmpeg([
+        '-i', videoPath,
+        '-i', pngPath,
+        '-filter_complex', `[1:v]scale=${w}:${h},format=rgba[t];[0:v][t]overlay=0:0:format=auto[outv]`,
+        '-map', '[outv]', '-map', '0:a?',
+        '-c:v', 'libx264', '-preset', 'fast', '-crf', '20', '-pix_fmt', 'yuv420p',
+        '-c:a', 'copy',
+        outPath,
+      ]);
     } finally {
       if (fs.existsSync(svgPath)) fs.unlinkSync(svgPath);
       if (fs.existsSync(pngPath)) fs.unlinkSync(pngPath);
@@ -129,4 +136,3 @@ export class TitleBurner {
     };
   }
 }
-

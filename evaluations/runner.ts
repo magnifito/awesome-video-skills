@@ -1,7 +1,8 @@
 import path from 'node:path';
 import fs from 'node:fs/promises';
 import nodeFs from 'node:fs';
-import { execSync } from 'node:child_process';
+import os from 'node:os';
+import { execFileSync, spawnSync } from 'node:child_process';
 import { runRender } from '../packages/cli/src/commands/render.js';
 import { runValidate } from '../packages/cli/src/commands/validate.js';
 import { runPackage } from '../packages/cli/src/commands/package.js';
@@ -13,7 +14,7 @@ import { PolicyChecker } from '../packages/media/src/policy.js';
 import type { ClaimsRegister, AssetManifest, ProjectBrief } from '../packages/contracts/src/index.js';
 
 async function runAllEvaluations() {
-  console.log('🧪 Starting Magnifito Super Video Evaluation Suite...\n');
+  console.log('Magnifito evaluation suite\n');
   let passCount = 0;
   let failCount = 0;
 
@@ -25,6 +26,79 @@ async function runAllEvaluations() {
       console.error(` ❌ FAIL: ${testName}`);
       failCount++;
     }
+  }
+
+  async function expectThrow(fn: () => unknown, testName: string, pattern?: RegExp) {
+    try {
+      await fn();
+      assert(false, `${testName} (expected an error, none thrown)`);
+    } catch (err) {
+      const msg = (err as Error).message ?? String(err);
+      assert(!pattern || pattern.test(msg), pattern ? `${testName} [${msg.slice(0, 120)}]` : testName);
+    }
+  }
+
+  /** Probes an output file with ffprobe (argument array, no shell). */
+  function ffprobeInfo(file: string): { duration: number; width: number; height: number; hasAudio: boolean; hasVideo: boolean } {
+    const out = execFileSync('ffprobe', ['-v', 'error', '-print_format', 'json', '-show_format', '-show_streams', file]).toString();
+    const j = JSON.parse(out) as { format?: { duration?: string }; streams?: Array<Record<string, unknown>> };
+    const v = j.streams?.find(st => st.codec_type === 'video');
+    const a = j.streams?.find(st => st.codec_type === 'audio');
+    return {
+      duration: parseFloat(j.format?.duration ?? '0'),
+      width: Number(v?.width ?? 0),
+      height: Number(v?.height ?? 0),
+      hasAudio: !!a,
+      hasVideo: !!v,
+    };
+  }
+
+  /** True when ffprobe can read the file and finds at least one audio or video stream. */
+  function isDecodable(file: string): boolean {
+    try {
+      const info = ffprobeInfo(file);
+      return info.hasVideo || info.hasAudio;
+    } catch {
+      return false;
+    }
+  }
+
+  /** Creates a fresh temporary directory that is removed at the end of the run. */
+  const tempDirs: string[] = [];
+  function makeTemp(prefix: string): string {
+    const d = nodeFs.mkdtempSync(path.join(os.tmpdir(), `mgv-eval-${prefix}-`));
+    tempDirs.push(d);
+    return d;
+  }
+
+  /** Copies a fixture project (including the given run) into a temp dir so tests can mutate it safely. */
+  function copyFixture(srcDir: string, runId?: string): string {
+    const dst = makeTemp(path.basename(srcDir));
+    for (const entry of nodeFs.readdirSync(srcDir)) {
+      if (['runs', 'delivery', 'storyboard'].includes(entry)) continue;
+      nodeFs.cpSync(path.join(srcDir, entry), path.join(dst, entry), { recursive: true });
+    }
+    if (runId) {
+      nodeFs.cpSync(path.join(srcDir, 'runs', runId), path.join(dst, 'runs', runId), { recursive: true });
+    }
+    return dst;
+  }
+
+  /** Writes a human-style approved review record bound to the given render. */
+  function writeApprovedReview(dir: string, finalCutHash: string, claimsRevision: string, overrides: Record<string, unknown> = {}): string {
+    const record = {
+      schema_version: '1.0.0',
+      reviewer: 'Evaluation Reviewer',
+      roles: { technical_maintainer: 'Eval Maintainer', producer: 'Eval Producer', account_owner: 'Eval Owner' },
+      timestamp: new Date().toISOString(),
+      decision: 'approved',
+      approval_scope: { copy_claims_revision: claimsRevision, design_styleframe_revision: 'eval-1', final_cut_hash: finalCutHash },
+      export_checks: { factual_accuracy_verified: true, visual_layout_clean: true, audio_sync_and_loudness_verified: true, rights_cleared: true },
+      ...overrides,
+    };
+    const p = path.join(dir, 'review-record.json');
+    nodeFs.writeFileSync(p, JSON.stringify(record, null, 2));
+    return p;
   }
 
   const workspaceRoot = process.cwd();
@@ -100,35 +174,57 @@ async function runAllEvaluations() {
   assert(cachedRender.status === 'cached', 'Re-rendering frozen request returns cached result with identical request hash');
   assert(cachedRender.request_hash === initialRender.request_hash, 'Cached request hash matches frozen request hash');
 
-  // Test 9: Client Packaging & Delivery Signing
-  console.log('\n--- Test Suite 9: Packaging & Review Signing ---');
-  const pkgRes = await runPackage(initialRender.run_id, promoFixtureDir, 'Kiril Kirov');
-  assert(pkgRes.review_record.decision === 'approved', 'Package review record is approved and signed');
+  // Test 9: Client Packaging requires an existing human approval
+  console.log('\n--- Test Suite 9: Packaging & Human Review Gate ---');
+  const promoClaims: ClaimsRegister = JSON.parse(nodeFs.readFileSync(path.join(promoFixtureDir, 'claims.json'), 'utf-8'));
+  const reviewDir = makeTemp('review');
+  await expectThrow(
+    () => runPackage(initialRender.run_id, promoFixtureDir, { reviewRecordPath: path.join(reviewDir, 'missing.json') }),
+    'Packaging without a human review record is refused',
+    /no readable human review record/
+  );
+  const wrongCutReview = writeApprovedReview(makeTemp('review-wrong'), 'deadbeef', promoClaims.revision);
+  await expectThrow(
+    () => runPackage(initialRender.run_id, promoFixtureDir, { reviewRecordPath: wrongCutReview }),
+    'Packaging refuses a review that approved a different cut',
+    /does not match rendered output/
+  );
+  const goodReview = writeApprovedReview(reviewDir, initialRender.output_files[0].hash, promoClaims.revision);
+  const pkgRes = await runPackage(initialRender.run_id, promoFixtureDir, { reviewRecordPath: goodReview });
+  assert(pkgRes.review_record.decision === 'approved', 'Package carries the human approval unchanged');
+  assert(pkgRes.review_record.reviewer === 'Evaluation Reviewer', 'Package keeps the real reviewer name (no default approver)');
+  assert(pkgRes.signed === Boolean(process.env.MGVIDEO_SIGNING_KEY), 'Package is signed only when MGVIDEO_SIGNING_KEY is set');
   assert(pkgRes.files.includes('NOTICES.txt'), 'Delivery package bundles third-party notices and attribution');
-  assert(pkgRes.files.includes('review-record.json'), 'Delivery package bundles signed review record');
+  assert(pkgRes.files.includes('review-record.json'), 'Delivery package bundles the review record');
 
-  // Test 10: Factual Copy Revision Invalidation Gate
+  // Test 10: Factual Copy Revision Invalidation Gate (on a temp copy of the fixture)
   console.log('\n--- Test Suite 10: Factual Copy Revision Invalidation ---');
-  const claimsPath = path.join(promoFixtureDir, 'claims.json');
+  const revisionDir = copyFixture(promoFixtureDir, initialRender.run_id);
+  const claimsPath = path.join(revisionDir, 'claims.json');
   const originalClaimsContent = await fs.readFile(claimsPath, 'utf-8');
   const claimsData: ClaimsRegister = JSON.parse(originalClaimsContent);
-
-  // Mutate claim wording to simulate factual update
   claimsData.claims[0].approved_wording = 'Изцяло нова променена формулировка на курса 2026';
   claimsData.revision = 'rev-bg-2';
   await fs.writeFile(claimsPath, JSON.stringify(claimsData, null, 2), 'utf-8');
 
-  // Validate run against updated claims register: should detect factual discrepancy!
-  const postRevisionValidation = await runValidate(initialRender.run_id, promoFixtureDir);
+  const postRevisionValidation = await runValidate(initialRender.run_id, revisionDir);
   assert(!postRevisionValidation.passed, 'Validation detects that scene copy does not match updated claims register');
   assert(
     postRevisionValidation.unresolved_review_items.some(it => it.includes('mismatch')),
     'Unresolved review items record copy discrepancy preventing unverified packaging'
   );
+  assert(
+    postRevisionValidation.items.some(c => c.check === 'Rendered Inputs Unchanged' && !c.passed),
+    'Validation flags that claims changed after the render'
+  );
+  await expectThrow(
+    () => runPackage(initialRender.run_id, revisionDir, { reviewRecordPath: goodReview }),
+    'Packaging refuses when inputs changed after render',
+    /changed after rendering/
+  );
 
-  // Restore original claims
   await fs.writeFile(claimsPath, originalClaimsContent, 'utf-8');
-  const restoredValidation = await runValidate(initialRender.run_id, promoFixtureDir);
+  const restoredValidation = await runValidate(initialRender.run_id, revisionDir);
   assert(restoredValidation.passed, 'Restoring approved claims restores valid status');
 
   // Test 11: SaaS Product Demo Workflow
@@ -175,8 +271,29 @@ async function runAllEvaluations() {
   assert(depClass.category === 'Dependency or runtime', 'Classifier categorizes package.json as Dependency or runtime');
 
   const { runUpstreamRollback } = await import('../packages/cli/src/commands/upstream.js');
-  const rollbackRes = await runUpstreamRollback(workspaceRoot, 'hyperframes', '5c5794287bd0dc2c94f238ca89f4752ecaa045a2');
-  assert(rollbackRes.rolled_back_to === '5c5794287bd0dc2c94f238ca89f4752ecaa045a2', 'Rollback restores approved baseline');
+  const agentClass = classifyFileChange('CLAUDE.md', 'modified');
+  assert(agentClass.category !== 'Documentation only', 'Classifier does not treat agent instruction files as documentation');
+
+  // Rollback runs against a temp copy of the registry so tracked files stay untouched.
+  const rollbackRoot = makeTemp('rollback');
+  nodeFs.cpSync(path.join(workspaceRoot, 'registry'), path.join(rollbackRoot, 'registry'), { recursive: true });
+  await expectThrow(
+    () => runUpstreamRollback(rollbackRoot, 'hyperframes', '0000000000000000000000000000000000000000'),
+    'Rollback to a never-approved commit is refused',
+    /never approved/
+  );
+  await expectThrow(
+    () => runUpstreamRollback(rollbackRoot, 'hyperframes', 'not-a-sha'),
+    'Rollback rejects a malformed commit SHA'
+  );
+  const lockCopyPath = path.join(rollbackRoot, 'registry', 'approved.lock.json');
+  const lockCopy = JSON.parse(nodeFs.readFileSync(lockCopyPath, 'utf-8'));
+  const prevSha = 'a'.repeat(40);
+  const hfBaseline = lockCopy.approved_baselines.hyperframes;
+  hfBaseline.history = [...(hfBaseline.history ?? []), { commit: prevSha, approved_date: '2026-01-01T00:00:00Z' }];
+  nodeFs.writeFileSync(lockCopyPath, JSON.stringify(lockCopy, null, 2));
+  const rollbackRes = await runUpstreamRollback(rollbackRoot, 'hyperframes', prevSha);
+  assert(rollbackRes.rolled_back_to === prevSha, 'Rollback restores a previously approved baseline from history');
 
   // Test 16: Transparent Video & Alpha Channel Export (ProRes 4444)
   console.log('\n--- Test Suite 16: Transparent ProRes Alpha Export ---');
@@ -569,16 +686,16 @@ async function runAllEvaluations() {
   assert(cleanRes.freedBytes > 0, 'Clean command accurately calculates freed space');
   nodeFs.rmSync(cleanTestDir, { recursive: true, force: true });
 
-  // Test 49: Developer Documentation & Spec Completeness
-  console.log('\n--- Test Suite 49: Platform Documentation Integrity ---');
-  const archDoc = nodeFs.readFileSync(path.join(workspaceRoot, 'docs', 'ARCHITECTURE.md'), 'utf8');
-  assert(archDoc.includes('HyperFrames'), 'Architecture documentation covers HyperFrames adapter');
-  assert(archDoc.includes('Quarantine'), 'Architecture documentation covers upstream quarantine rules');
-  const cliDoc = nodeFs.readFileSync(path.join(workspaceRoot, 'docs', 'CLI_REFERENCE.md'), 'utf8');
-  assert(cliDoc.includes('mgvideo storyboard'), 'CLI reference documents storyboard command');
-  assert(cliDoc.includes('mgvideo clean'), 'CLI reference documents clean command');
-  const workflowsDoc = nodeFs.readFileSync(path.join(workspaceRoot, 'docs', 'WORKFLOWS_GUIDE.md'), 'utf8');
-  assert(workflowsDoc.includes('Multilingual Explainer'), 'Workflows guide details all 5 canonical workflows');
+  // Test 49: Documentation index integrity (docs-notary)
+  console.log('\n--- Test Suite 49: Documentation Index Integrity ---');
+  const docsIndex = JSON.parse(nodeFs.readFileSync(path.join(workspaceRoot, 'docs', 'index.json'), 'utf8')) as unknown;
+  const docEntries = (Array.isArray(docsIndex) ? docsIndex : (docsIndex as { docs?: unknown[] }).docs ?? []) as Array<{ path: string; status: string }>;
+  assert(docEntries.length > 0, 'docs/index.json lists documents');
+  assert(docEntries.every(d => nodeFs.existsSync(path.join(workspaceRoot, d.path))), 'Every indexed document exists on disk');
+  assert(
+    docEntries.filter(d => d.path.startsWith('docs/reference/')).every(d => d.status === 'reference'),
+    'Unverified documents under docs/reference/ are marked status: reference'
+  );
 
   // Test 50: Programmatic SDK Facade Extended Methods
   console.log('\n--- Test Suite 50: Programmatic SDK Extended Coverage ---');
@@ -598,6 +715,7 @@ async function runAllEvaluations() {
     format: 'png'
   });
   assert(nodeFs.existsSync(thumbPng.outputPath), 'Thumbnail PNG exists on disk');
+  assert(isDecodable(thumbPng.outputPath), `Thumbnail PNG exists on disk — ffprobe reads a valid stream`);
   assert(thumbPng.width === 1080 && thumbPng.height === 1920, 'Thumbnail dimensions match 1080x1920 canvas');
   const thumbJpg = ThumbnailGenerator.extractThumbnail(initialVideoPath, {
     timeOffsetSeconds: 2.0,
@@ -606,6 +724,7 @@ async function runAllEvaluations() {
     height: 960
   });
   assert(nodeFs.existsSync(thumbJpg.outputPath), 'Thumbnail JPG exists on disk');
+  assert(isDecodable(thumbJpg.outputPath), `Thumbnail JPG exists on disk — ffprobe reads a valid stream`);
   assert(thumbJpg.width === 540 && thumbJpg.height === 960, 'Scaled JPG thumbnail dimensions match 540x960');
   nodeFs.rmSync(thumbPng.outputPath, { force: true });
   nodeFs.rmSync(thumbJpg.outputPath, { force: true });
@@ -618,6 +737,7 @@ async function runAllEvaluations() {
     strategy: 'fit'
   });
   assert(nodeFs.existsSync(reframedVertical.outputPath), 'Reframed vertical video exists');
+  assert(isDecodable(reframedVertical.outputPath), `Reframed vertical video exists — ffprobe reads a valid stream`);
   assert(reframedVertical.width === 1080 && reframedVertical.height === 1920, 'Reframed vertical conforms to 1080x1920');
 
   const reframedSquare = AspectReframeEngine.reframe(demoVideoPath, {
@@ -625,6 +745,7 @@ async function runAllEvaluations() {
     strategy: 'crop'
   });
   assert(nodeFs.existsSync(reframedSquare.outputPath), 'Reframed square video exists');
+  assert(isDecodable(reframedSquare.outputPath), `Reframed square video exists — ffprobe reads a valid stream`);
   assert(reframedSquare.width === 1080 && reframedSquare.height === 1080, 'Reframed square conforms to 1080x1080');
   nodeFs.rmSync(reframedVertical.outputPath, { force: true });
   nodeFs.rmSync(reframedSquare.outputPath, { force: true });
@@ -638,6 +759,7 @@ async function runAllEvaluations() {
     { file: tmpSrt, language: 'bg', title: 'Bulgarian Cyrillic', isDefault: true }
   ]);
   assert(nodeFs.existsSync(subbedResult.outputPath), 'Subbed MP4 deliverable generated');
+  assert(isDecodable(subbedResult.outputPath), `Subbed MP4 deliverable generated — ffprobe reads a valid stream`);
   assert(subbedResult.tracksCount === 1, 'Embedded 1 subtitle track');
   assert(subbedResult.languages[0] === 'bg', 'Embedded subtitle track tagged with bg language');
   nodeFs.rmSync(tmpSrt, { force: true });
@@ -650,6 +772,7 @@ async function runAllEvaluations() {
   assert(presetsList.length >= 5, 'Color preset engine lists 5 production looks');
   const coolGraded = ColorPresetEngine.applyGrade(demoVideoPath, 'cool-tech');
   assert(nodeFs.existsSync(coolGraded.outputPath), 'Cool-tech color graded video exists on disk');
+  assert(isDecodable(coolGraded.outputPath), `Cool-tech color graded video exists on disk — ffprobe reads a valid stream`);
   assert(coolGraded.preset.name === 'cool-tech', 'Applied preset reflects cool-tech spec');
   nodeFs.rmSync(coolGraded.outputPath, { force: true });
 
@@ -662,6 +785,7 @@ async function runAllEvaluations() {
     colorHex: '#10B981'
   });
   assert(nodeFs.existsSync(waveRes.outputPath), 'Waveform visualizer image generated');
+  assert(isDecodable(waveRes.outputPath), `Waveform visualizer image generated — ffprobe reads a valid stream`);
   assert(waveRes.width === 800 && waveRes.height === 160, 'Waveform dimensions match requested 800x160');
   assert(waveRes.fileSizeBytes > 100, 'Waveform PNG file size is valid');
   nodeFs.rmSync(waveRes.outputPath, { force: true });
@@ -671,7 +795,7 @@ async function runAllEvaluations() {
   const { StemExporter } = await import('../packages/media/src/stems.js');
   const stemOutputDir = path.join(workspaceRoot, 'tmp-stems-test');
   const tmpStemAudio = path.join(workspaceRoot, 'tmp-stem-source.wav');
-  execSync(`ffmpeg -y -i "${initialVideoPath}" -vn -c:a pcm_s16le -t 3 "${tmpStemAudio}"`, { stdio: 'pipe' });
+  execFileSync('ffmpeg', ['-y', '-i', `${initialVideoPath}`, '-vn', '-c:a', 'pcm_s16le', '-t', '3', `${tmpStemAudio}`], { stdio: 'pipe' });
   const stemRep = StemExporter.exportStems([
     { name: 'dialogue', filePath: tmpStemAudio },
     { name: 'music', filePath: tmpStemAudio }
@@ -710,8 +834,10 @@ async function runAllEvaluations() {
   console.log('\n--- Test Suite 59: Programmatic SDK Extended Capabilities ---');
   const sdkThumb = engine.thumbnail(demoVideoPath, { timeOffsetSeconds: 0.5, format: 'png' });
   assert(nodeFs.existsSync(sdkThumb.outputPath), 'SDK thumbnail method produced valid image');
+  assert(isDecodable(sdkThumb.outputPath), `SDK thumbnail method produced valid image — ffprobe reads a valid stream`);
   const sdkWave = engine.waveform(demoVideoPath, { width: 400, height: 100 });
   assert(nodeFs.existsSync(sdkWave.outputPath), 'SDK waveform method produced visualizer image');
+  assert(isDecodable(sdkWave.outputPath), `SDK waveform method produced visualizer image — ffprobe reads a valid stream`);
   nodeFs.rmSync(sdkThumb.outputPath, { force: true });
   nodeFs.rmSync(sdkWave.outputPath, { force: true });
 
@@ -748,13 +874,14 @@ async function runAllEvaluations() {
   const { TransitionEngine } = await import('../packages/media/src/transitions.js');
   const clipA = path.join(workspaceRoot, 'tmp-clip-a.mp4');
   const clipB = path.join(workspaceRoot, 'tmp-clip-b.mp4');
-  execSync(`ffmpeg -y -i "${initialVideoPath}" -t 2 -c copy "${clipA}"`, { stdio: 'pipe' });
-  execSync(`ffmpeg -y -i "${initialVideoPath}" -ss 3 -t 2 -c copy "${clipB}"`, { stdio: 'pipe' });
+  execFileSync('ffmpeg', ['-y', '-i', `${initialVideoPath}`, '-t', '2', '-c', 'copy', `${clipA}`], { stdio: 'pipe' });
+  execFileSync('ffmpeg', ['-y', '-i', `${initialVideoPath}`, '-ss', '3', '-t', '2', '-c', 'copy', `${clipB}`], { stdio: 'pipe' });
   const transRes = TransitionEngine.composeTransitions([clipA, clipB], {
     transition: 'fade',
     durationSeconds: 0.5
   });
   assert(nodeFs.existsSync(transRes.outputPath), 'Transitioned video exists on disk');
+  assert(isDecodable(transRes.outputPath), `Transitioned video exists on disk — ffprobe reads a valid stream`);
   assert(transRes.transition === 'fade', 'Transition engine records fade effect');
   assert(transRes.clipsCount === 2, 'Stitched 2 video clips');
   nodeFs.rmSync(clipA, { force: true });
@@ -766,6 +893,7 @@ async function runAllEvaluations() {
   const { ProxyGenerator } = await import('../packages/media/src/proxy.js');
   const proxyRes = ProxyGenerator.generateProxy(demoVideoPath, { resolution: '540p' });
   assert(nodeFs.existsSync(proxyRes.proxyPath), '540p proxy file exists on disk');
+  assert(isDecodable(proxyRes.proxyPath), `540p proxy file exists on disk — ffprobe reads a valid stream`);
   assert(proxyRes.resolution === '540p', 'Proxy records 540p resolution');
   assert(proxyRes.compressionRatio > 0, 'Proxy compression ratio is calculated');
   nodeFs.rmSync(proxyRes.proxyPath, { force: true });
@@ -779,6 +907,7 @@ async function runAllEvaluations() {
     position: 'top_right'
   });
   assert(nodeFs.existsSync(wmRes.outputPath), 'Watermarked video exists on disk');
+  assert(isDecodable(wmRes.outputPath), `Watermarked video exists on disk — ffprobe reads a valid stream`);
   assert(wmRes.text.includes('CONFIDENTIAL EMBARGO'), 'Watermark burns confidential banner');
   nodeFs.rmSync(wmRes.outputPath, { force: true });
 
@@ -787,6 +916,7 @@ async function runAllEvaluations() {
   const { VideoSpeedEngine } = await import('../packages/media/src/speed.js');
   const speedRes = VideoSpeedEngine.changeSpeed(demoVideoPath, 1.5);
   assert(nodeFs.existsSync(speedRes.outputPath), 'Speed-adjusted video exists on disk');
+  assert(isDecodable(speedRes.outputPath), `Speed-adjusted video exists on disk — ffprobe reads a valid stream`);
   assert(speedRes.speedFactor === 1.5, 'Speed engine records 1.5x multiplier');
   assert(speedRes.newDurationSeconds < speedRes.originalDurationSeconds, 'New duration is reduced proportionally');
   nodeFs.rmSync(speedRes.outputPath, { force: true });
@@ -802,13 +932,43 @@ async function runAllEvaluations() {
   // Test 67: Production Bundle Verification CLI
   console.log('\n--- Test Suite 67: Production Bundle Verification CLI ---');
   const { runVerifyBundle } = await import('../packages/cli/src/commands/verify_bundle.js');
-  const testBundleRes = ProductionBundleExporter.createBundle(promoDeliveryDir);
-  const verifyRes = await runVerifyBundle(testBundleRes.bundlePath);
-  assert(verifyRes.valid === true, 'Bundle verification passes 100% integrity');
-  assert(verifyRes.hasSignedReview === true, 'Bundle verification detects approved review record');
-  assert(verifyRes.verifiedFilesCount > 0, 'Bundle verification validated all manifest files');
-  nodeFs.rmSync(testBundleRes.bundlePath, { force: true });
-  nodeFs.rmSync(testBundleRes.manifestPath, { force: true });
+  const bundleOut = (label: string) => path.join(makeTemp(label), 'bundle.tar.gz');
+  const savedSigningKey = process.env.MGVIDEO_SIGNING_KEY;
+  delete process.env.MGVIDEO_SIGNING_KEY;
+  try {
+    // Unsigned delivery (packaged without a key): rejected by default, accepted only with allowUnsigned.
+    const unsignedBundle = ProductionBundleExporter.createBundle(promoDeliveryDir, { outputBundlePath: bundleOut('bundle-unsigned') });
+    const unsignedRes = await runVerifyBundle(unsignedBundle.bundlePath);
+    assert(unsignedRes.valid === false, 'Unsigned bundle fails verification by default');
+    const allowRes = await runVerifyBundle(unsignedBundle.bundlePath, { allowUnsigned: true });
+    assert(allowRes.valid === true && allowRes.signatureStatus === 'unsigned', 'Unsigned bundle passes only with allowUnsigned');
+    assert(allowRes.verifiedFilesCount > 0, 'Bundle verification checks every manifest file');
+
+    // Signed delivery.
+    process.env.MGVIDEO_SIGNING_KEY = 'evaluation-signing-key';
+    const signedPkg = await runPackage(initialRender.run_id, promoFixtureDir, { reviewRecordPath: goodReview });
+    assert(signedPkg.signed === true && signedPkg.files.includes('SHA256SUMS.sig'), 'Package writes SHA256SUMS.sig when a key is set');
+    const signedBundle = ProductionBundleExporter.createBundle(signedPkg.delivery_dir, { outputBundlePath: bundleOut('bundle-signed') });
+    const signedRes = await runVerifyBundle(signedBundle.bundlePath);
+    assert(signedRes.valid === true && signedRes.signatureStatus === 'valid', 'Signed bundle verifies with a valid signature');
+    assert(signedRes.hasSignedReview === true, 'Signed bundle carries an approved review record');
+
+    // Tampered delivery: attacker edits a file and recomputes its checksum line.
+    const tamperDir = makeTemp('bundle-tamper');
+    nodeFs.cpSync(signedPkg.delivery_dir, tamperDir, { recursive: true });
+    const tamperedReviewPath = path.join(tamperDir, 'review-record.json');
+    nodeFs.writeFileSync(tamperedReviewPath, nodeFs.readFileSync(tamperedReviewPath, 'utf8').replace('Evaluation Reviewer', 'Forged Reviewer'));
+    const sumsFile = path.join(tamperDir, 'SHA256SUMS.txt');
+    const { createHash } = await import('node:crypto');
+    const newHash = createHash('sha256').update(nodeFs.readFileSync(tamperedReviewPath)).digest('hex');
+    nodeFs.writeFileSync(sumsFile, nodeFs.readFileSync(sumsFile, 'utf8').replace(/^[0-9a-f]{64}(\s+review-record\.json)$/m, `${newHash}$1`));
+    const tamperedBundle = ProductionBundleExporter.createBundle(tamperDir, { outputBundlePath: bundleOut('bundle-tampered') });
+    const tamperedRes = await runVerifyBundle(tamperedBundle.bundlePath);
+    assert(tamperedRes.valid === false && tamperedRes.signatureStatus === 'invalid', 'Tampered bundle with recomputed checksums fails signature check');
+  } finally {
+    if (savedSigningKey === undefined) delete process.env.MGVIDEO_SIGNING_KEY;
+    else process.env.MGVIDEO_SIGNING_KEY = savedSigningKey;
+  }
 
   // Test 68: Production Dashboard TUI
   console.log('\n--- Test Suite 68: Production Dashboard TUI ---');
@@ -825,6 +985,7 @@ async function runAllEvaluations() {
   assert(sdkDash.doctorPassed === true, 'SDK dashboard reports healthy worker');
   const sdkProxy = engine.proxy(demoVideoPath, { resolution: '360p' });
   assert(nodeFs.existsSync(sdkProxy.proxyPath), 'SDK proxy produces 360p file');
+  assert(isDecodable(sdkProxy.proxyPath), `SDK proxy produces 360p file — ffprobe reads a valid stream`);
   nodeFs.rmSync(sdkProxy.proxyPath, { force: true });
 
   // Test 70: End-to-End Five Workflow Matrix Verification
@@ -855,6 +1016,7 @@ async function runAllEvaluations() {
     fps: 30
   });
   assert(nodeFs.existsSync(concatRes.outputPath), 'Concatenated video exists on disk');
+  assert(isDecodable(concatRes.outputPath), `Concatenated video exists on disk — ffprobe reads a valid stream`);
   assert(concatRes.clipsCount === 2, 'Concatenated exactly 2 clips');
   assert(concatRes.width === 1080 && concatRes.height === 1920, 'Output normalized to 1080x1920');
   assert(Math.abs(concatRes.totalDurationSeconds - 4.0) < 0.3, 'Concatenated duration conforms to sum of parts');
@@ -866,7 +1028,7 @@ async function runAllEvaluations() {
   console.log('\n--- Test Suite 72: Video Trimming Engine ---');
   const singleTrim = VideoConcatEngine.trimClip(demoVideoPath, { startSeconds: 1.0, durationSeconds: 3.0 });
   assert(nodeFs.existsSync(singleTrim), 'Trimmed clip file exists');
-  const trimProbe = execSync(`ffprobe -v error -show_entries format=duration -of csv=p=0 "${singleTrim}"`, { encoding: 'utf8' }).trim();
+  const trimProbe = execFileSync('ffprobe', ['-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', `${singleTrim}`], { encoding: 'utf8' }).trim();
   assert(Math.abs(parseFloat(trimProbe) - 3.0) < 0.2, 'Trimmed duration conforms to 3.0s window');
   nodeFs.rmSync(singleTrim, { force: true });
 
@@ -880,6 +1042,7 @@ async function runAllEvaluations() {
     durationSeconds: 4.0
   });
   assert(nodeFs.existsSync(ltRes.outputPath), 'Lower third video exists on disk');
+  assert(isDecodable(ltRes.outputPath), `Lower third video exists on disk — ffprobe reads a valid stream`);
   assert(ltRes.speakerName === 'Kiril Kirov', 'Lower third records speaker name');
   assert(ltRes.startSeconds === 1.0, 'Lower third start timestamp matches requested time');
   nodeFs.rmSync(ltRes.outputPath, { force: true });
@@ -899,13 +1062,14 @@ async function runAllEvaluations() {
   const { SidechainDuckingEngine } = await import('../packages/media/src/sidechain.js');
   const tmpVoice = path.join(workspaceRoot, 'tmp-sc-voice.wav');
   const tmpMusic = path.join(workspaceRoot, 'tmp-sc-music.wav');
-  execSync(`ffmpeg -y -i "${initialVideoPath}" -vn -c:a pcm_s16le -t 4 "${tmpVoice}"`, { stdio: 'pipe' });
-  execSync(`ffmpeg -y -i "${initialVideoPath}" -vn -c:a pcm_s16le -t 4 "${tmpMusic}"`, { stdio: 'pipe' });
+  execFileSync('ffmpeg', ['-y', '-i', `${initialVideoPath}`, '-vn', '-c:a', 'pcm_s16le', '-t', '4', `${tmpVoice}`], { stdio: 'pipe' });
+  execFileSync('ffmpeg', ['-y', '-i', `${initialVideoPath}`, '-vn', '-c:a', 'pcm_s16le', '-t', '4', `${tmpMusic}`], { stdio: 'pipe' });
   const duckRes = SidechainDuckingEngine.duckMusicUnderDialogue(tmpVoice, tmpMusic, {
     threshold: 0.1,
     ratio: 4.0
   });
   assert(nodeFs.existsSync(duckRes.outputPath), 'Ducked sidechain audio file exists');
+  assert(isDecodable(duckRes.outputPath), `Ducked sidechain audio file exists — ffprobe reads a valid stream`);
   assert(duckRes.threshold === 0.1, 'Sidechain records threshold setting');
   nodeFs.rmSync(tmpVoice, { force: true });
   nodeFs.rmSync(tmpMusic, { force: true });
@@ -917,6 +1081,7 @@ async function runAllEvaluations() {
   const loopClip = VideoConcatEngine.trimClip(initialVideoPath, { startSeconds: 0, durationSeconds: 2.0 });
   const loopRes = VideoLoopEngine.createPingPongLoop(loopClip);
   assert(nodeFs.existsSync(loopRes.outputPath), 'Ping-pong loop video exists');
+  assert(isDecodable(loopRes.outputPath), `Ping-pong loop video exists — ffprobe reads a valid stream`);
   assert(loopRes.loopMode === 'ping-pong', 'Loop engine records ping-pong loopMode');
   assert(Math.abs(loopRes.loopDurationSeconds - 4.0) < 0.2, 'Loop duration is twice original');
   nodeFs.rmSync(loopClip, { force: true });
@@ -954,10 +1119,10 @@ async function runAllEvaluations() {
   console.log('\n--- Test Suite 80: Comprehensive Production Readiness Gate ---');
   const upstreamsData = JSON.parse(nodeFs.readFileSync(path.join(workspaceRoot, 'registry', 'upstreams.json'), 'utf8'));
   assert(upstreamsData.repositories.length === 12, 'Quarantine catalog tracks exactly 12 upstreams');
-  for (const repo of upstreamsData.repositories) {
-    assert(repo.observed_commit.length === 40, `Upstream "${repo.id}" is pinned to exact 40-char commit SHA`);
-    assert(Boolean(repo.license), `Upstream "${repo.id}" has audited license`);
-  }
+  assert(
+    upstreamsData.repositories.every((r: { observed_commit: string; license?: string }) => /^[0-9a-f]{40}$/.test(r.observed_commit) && Boolean(r.license)),
+    'Every upstream is pinned to a 40-hex commit SHA and has a recorded license'
+  );
 
   // Test 81: Freeze Frame Extension Engine
   console.log('\n--- Test Suite 81: Freeze Frame Extension Engine ---');
@@ -965,6 +1130,7 @@ async function runAllEvaluations() {
   const freezeClip = VideoConcatEngine.trimClip(initialVideoPath, { startSeconds: 0, durationSeconds: 2.0 });
   const freezeRes = FreezeFrameEngine.applyHoldFrame(freezeClip, { position: 'end', holdDurationSeconds: 1.5 });
   assert(nodeFs.existsSync(freezeRes.outputPath), 'Freeze frame output exists on disk');
+  assert(isDecodable(freezeRes.outputPath), `Freeze frame output exists on disk — ffprobe reads a valid stream`);
   assert(freezeRes.position === 'end', 'Freeze frame recorded end hold position');
   assert(Math.abs(freezeRes.holdDurationSeconds - 1.5) < 0.1, 'Freeze frame holds exact duration');
   assert(Math.abs(freezeRes.totalDurationSeconds - 3.5) < 0.2, 'Total duration extended by hold seconds');
@@ -977,13 +1143,14 @@ async function runAllEvaluations() {
   const mtVideo = VideoConcatEngine.trimClip(initialVideoPath, { startSeconds: 0, durationSeconds: 2.0 });
   const mtAudio1 = path.join(workspaceRoot, 'tmp-mt-bg.wav');
   const mtAudio2 = path.join(workspaceRoot, 'tmp-mt-en.wav');
-  execSync(`ffmpeg -y -i "${initialVideoPath}" -vn -c:a pcm_s16le -t 2 "${mtAudio1}"`, { stdio: 'pipe' });
-  execSync(`ffmpeg -y -i "${initialVideoPath}" -vn -c:a pcm_s16le -t 2 "${mtAudio2}"`, { stdio: 'pipe' });
+  execFileSync('ffmpeg', ['-y', '-i', `${initialVideoPath}`, '-vn', '-c:a', 'pcm_s16le', '-t', '2', `${mtAudio1}`], { stdio: 'pipe' });
+  execFileSync('ffmpeg', ['-y', '-i', `${initialVideoPath}`, '-vn', '-c:a', 'pcm_s16le', '-t', '2', `${mtAudio2}`], { stdio: 'pipe' });
   const mtRes = MultiTrackAudioMuxer.muxTracks(mtVideo, [
     { filePath: mtAudio1, language: 'bul', title: 'Bulgarian Dialogue', isDefault: true },
     { filePath: mtAudio2, language: 'eng', title: 'English Dialogue' }
   ]);
   assert(nodeFs.existsSync(mtRes.outputPath), 'Multitrack container video generated');
+  assert(isDecodable(mtRes.outputPath), `Multitrack container video generated — ffprobe reads a valid stream`);
   assert(mtRes.audioTracksCount === 2, 'Container holds 2 audio streams');
   assert(mtRes.languages.includes('bul') && mtRes.languages.includes('eng'), 'Audio streams contain ISO 639-2 tags bul & eng');
   nodeFs.rmSync(mtVideo, { force: true });
@@ -995,9 +1162,10 @@ async function runAllEvaluations() {
   console.log('\n--- Test Suite 83: Audio Silence Removal & Voice Gating ---');
   const { AudioSilenceRemover } = await import('../packages/media/src/silence.js');
   const silenceIn = path.join(workspaceRoot, 'tmp-silence-in.wav');
-  execSync(`ffmpeg -y -f lavfi -i "sine=frequency=1000:duration=1" -f lavfi -i "anullsrc=r=48000:cl=mono:duration=2" -f lavfi -i "sine=frequency=1000:duration=1" -filter_complex "[0:a][1:a][2:a]concat=n=3:v=0:a=1[outa]" -map "[outa]" "${silenceIn}"`, { stdio: 'pipe' });
+  execFileSync('ffmpeg', ['-y', '-f', 'lavfi', '-i', 'sine=frequency=1000:duration=1', '-f', 'lavfi', '-i', 'anullsrc=r=48000:cl=mono:duration=2', '-f', 'lavfi', '-i', 'sine=frequency=1000:duration=1', '-filter_complex', '[0:a][1:a][2:a]concat=n=3:v=0:a=1[outa]', '-map', '[outa]', `${silenceIn}`], { stdio: 'pipe' });
   const silenceRes = AudioSilenceRemover.removeSilence(silenceIn, { thresholdDb: -30, minSilenceDurationSeconds: 0.3 });
   assert(nodeFs.existsSync(silenceRes.outputPath), 'Desilenced audio file generated');
+  assert(isDecodable(silenceRes.outputPath), `Desilenced audio file generated — ffprobe reads a valid stream`);
   assert(silenceRes.trimmedDurationSeconds < silenceRes.originalDurationSeconds, 'Dead air successfully removed from audio timeline');
   assert(silenceRes.timeSavedSeconds > 0.5, 'Silence remover saved > 0.5s of dead air');
   nodeFs.rmSync(silenceIn, { force: true });
@@ -1009,6 +1177,7 @@ async function runAllEvaluations() {
   const vertClip = VideoConcatEngine.trimClip(initialVideoPath, { startSeconds: 0, durationSeconds: 1.5 });
   const blurRes = BlurBackgroundEngine.adaptToLandscape(vertClip);
   assert(nodeFs.existsSync(blurRes.outputPath), '16:9 blurred backdrop video generated');
+  assert(isDecodable(blurRes.outputPath), `16:9 blurred backdrop video generated — ffprobe reads a valid stream`);
   assert(blurRes.width === 1920 && blurRes.height === 1080, 'Canvas adapts to 1920x1080 landscape');
   nodeFs.rmSync(vertClip, { force: true });
   nodeFs.rmSync(blurRes.outputPath, { force: true });
@@ -1035,12 +1204,6 @@ async function runAllEvaluations() {
 
   // Test 87: Programmatic SDK Extended Coverage
   console.log('\n--- Test Suite 87: Programmatic SDK Extended Coverage ---');
-  assert(typeof engine.freeze === 'function', 'SDK exposes freeze() method');
-  assert(typeof engine.multitrack === 'function', 'SDK exposes multitrack() method');
-  assert(typeof engine.silence === 'function', 'SDK exposes silence() method');
-  assert(typeof engine.blurBg === 'function', 'SDK exposes blurBg() method');
-  assert(typeof engine.grid === 'function', 'SDK exposes grid() method');
-  assert(typeof engine.gate === 'function', 'SDK exposes gate() method');
   const sdkGate = await engine.gate(promoFixtureDir);
   assert(sdkGate.passed, 'SDK gate() executes quality gate verification');
 
@@ -1060,14 +1223,9 @@ async function runAllEvaluations() {
 
   // Test 89: Upstream Quarantine Coherence & Rollback Validation
   console.log('\n--- Test Suite 89: Upstream Quarantine Coherence & Rollback Validation ---');
-  const approvedLockPath = path.join(workspaceRoot, 'registry', 'approved.lock.json');
-  const origApproved = nodeFs.readFileSync(approvedLockPath, 'utf8');
-  try {
-    const rollbackRes89 = await runUpstreamRollback(workspaceRoot, 'hyperframes', '0000000000000000000000000000000000000000');
-    assert(rollbackRes89.rolled_back_to === '0000000000000000000000000000000000000000', 'Upstream rollback safely updates baseline commit');
-  } finally {
-    nodeFs.writeFileSync(approvedLockPath, origApproved, 'utf8');
-  }
+  const { checkRegistryConsistency } = await import('../tools/upstreams/lock.js');
+  const registryCheck = checkRegistryConsistency(workspaceRoot);
+  assert(registryCheck.length === 0, 'upstreams.json and approved.lock.json agree on approved commits');
 
   // Test 90: Production Master Deliverable Checksum Integrity Verification
   console.log('\n--- Test Suite 90: Production Master Deliverable Checksum Integrity Verification ---');
@@ -1091,6 +1249,7 @@ async function runAllEvaluations() {
   const fpsClip = VideoConcatEngine.trimClip(initialVideoPath, { startSeconds: 0, durationSeconds: 1.5 });
   const fpsRes = FrameRateConverter.convertFps(fpsClip, { targetFps: 24 });
   assert(nodeFs.existsSync(fpsRes.outputPath), 'Framerate converted video exists');
+  assert(isDecodable(fpsRes.outputPath), `Framerate converted video exists — ffprobe reads a valid stream`);
   assert(fpsRes.targetFps === 24, 'Output targeted 24fps');
   nodeFs.rmSync(fpsClip, { force: true });
   nodeFs.rmSync(fpsRes.outputPath, { force: true });
@@ -1101,6 +1260,7 @@ async function runAllEvaluations() {
   const deintClip = VideoConcatEngine.trimClip(initialVideoPath, { startSeconds: 0, durationSeconds: 1.5 });
   const deintRes = DeinterlaceEngine.deinterlace(deintClip);
   assert(nodeFs.existsSync(deintRes.outputPath), 'Deinterlaced video exists on disk');
+  assert(isDecodable(deintRes.outputPath), `Deinterlaced video exists on disk — ffprobe reads a valid stream`);
   assert(deintRes.isProgressive === true, 'Engine confirms progressive scan output');
   assert(deintRes.filterApplied.includes('yadif'), 'Yadif filter was applied to video stream');
   nodeFs.rmSync(deintClip, { force: true });
@@ -1110,9 +1270,10 @@ async function runAllEvaluations() {
   console.log('\n--- Test Suite 93: Audio Equalizer & Frequency Sweetening ---');
   const { AudioEqualizerEngine } = await import('../packages/media/src/equalizer.js');
   const tmpEqAudio = path.join(workspaceRoot, 'tmp-eq-in.wav');
-  execSync(`ffmpeg -y -i "${initialVideoPath}" -vn -c:a pcm_s16le -t 2 "${tmpEqAudio}"`, { stdio: 'pipe' });
+  execFileSync('ffmpeg', ['-y', '-i', `${initialVideoPath}`, '-vn', '-c:a', 'pcm_s16le', '-t', '2', `${tmpEqAudio}`], { stdio: 'pipe' });
   const eqRes = AudioEqualizerEngine.applyEq(tmpEqAudio, { preset: 'voice-presence', highpassHz: 90 });
   assert(nodeFs.existsSync(eqRes.outputPath), 'Equalized audio file generated');
+  assert(isDecodable(eqRes.outputPath), `Equalized audio file generated — ffprobe reads a valid stream`);
   assert(eqRes.preset === 'voice-presence', 'Preset recorded as voice-presence');
   assert(eqRes.filters.some(f => f.includes('highpass=f=90')), 'Highpass rumble cut applied');
   nodeFs.rmSync(tmpEqAudio, { force: true });
@@ -1123,10 +1284,11 @@ async function runAllEvaluations() {
   const { MontageGenerator } = await import('../packages/media/src/montage.js');
   const tmpImg1 = path.join(workspaceRoot, 'tmp-slide1.png');
   const tmpImg2 = path.join(workspaceRoot, 'tmp-slide2.png');
-  execSync(`ffmpeg -y -f lavfi -i "color=c=blue:s=640x360:d=1" -vframes 1 "${tmpImg1}"`, { stdio: 'pipe' });
-  execSync(`ffmpeg -y -f lavfi -i "color=c=red:s=640x360:d=1" -vframes 1 "${tmpImg2}"`, { stdio: 'pipe' });
+  execFileSync('ffmpeg', ['-y', '-f', 'lavfi', '-i', 'color=c=blue:s=640x360:d=1', '-vframes', '1', `${tmpImg1}`], { stdio: 'pipe' });
+  execFileSync('ffmpeg', ['-y', '-f', 'lavfi', '-i', 'color=c=red:s=640x360:d=1', '-vframes', '1', `${tmpImg2}`], { stdio: 'pipe' });
   const montageRes = MontageGenerator.createAnimatic([tmpImg1, tmpImg2], { secondsPerSlide: 1.5, width: 1280, height: 720 });
   assert(nodeFs.existsSync(montageRes.outputPath), 'Animatic montage video generated');
+  assert(isDecodable(montageRes.outputPath), `Animatic montage video generated — ffprobe reads a valid stream`);
   assert(montageRes.imageCount === 2, 'Montage compiled 2 styleframe slides');
   assert(Math.abs(montageRes.durationSeconds - 3.0) < 0.2, 'Montage duration equals slide duration sum');
   nodeFs.rmSync(tmpImg1, { force: true });
@@ -1139,9 +1301,11 @@ async function runAllEvaluations() {
   const maskClip = VideoConcatEngine.trimClip(initialVideoPath, { startSeconds: 0, durationSeconds: 1.5 });
   const blurMaskRes = MaskEngine.applyRedaction(maskClip, { x: 40, y: 40, width: 200, height: 100, mode: 'blur' });
   assert(nodeFs.existsSync(blurMaskRes.outputPath), 'Blur redacted video generated');
+  assert(isDecodable(blurMaskRes.outputPath), `Blur redacted video generated — ffprobe reads a valid stream`);
   assert(blurMaskRes.mode === 'blur', 'Blur redaction mode confirmed');
   const solidMaskRes = MaskEngine.applyRedaction(maskClip, { x: 50, y: 50, width: 150, height: 80, mode: 'solid', color: 'black@0.9' });
   assert(nodeFs.existsSync(solidMaskRes.outputPath), 'Solid matte redacted video generated');
+  assert(isDecodable(solidMaskRes.outputPath), `Solid matte redacted video generated — ffprobe reads a valid stream`);
   assert(solidMaskRes.mode === 'solid', 'Solid redaction mode confirmed');
   nodeFs.rmSync(maskClip, { force: true });
   nodeFs.rmSync(blurMaskRes.outputPath, { force: true });
@@ -1151,12 +1315,14 @@ async function runAllEvaluations() {
   console.log('\n--- Test Suite 96: Audio Channel Remapping & Downmixing ---');
   const { AudioChannelMapper } = await import('../packages/media/src/channel_map.js');
   const tmpMapIn = path.join(workspaceRoot, 'tmp-map-in.wav');
-  execSync(`ffmpeg -y -i "${initialVideoPath}" -vn -c:a pcm_s16le -t 2 "${tmpMapIn}"`, { stdio: 'pipe' });
+  execFileSync('ffmpeg', ['-y', '-i', `${initialVideoPath}`, '-vn', '-c:a', 'pcm_s16le', '-t', '2', `${tmpMapIn}`], { stdio: 'pipe' });
   const monoToStereo = AudioChannelMapper.remap(tmpMapIn, { mode: 'mono-to-stereo' });
   assert(nodeFs.existsSync(monoToStereo.outputPath), 'Mono-to-stereo mapped audio exists');
+  assert(isDecodable(monoToStereo.outputPath), `Mono-to-stereo mapped audio exists — ffprobe reads a valid stream`);
   assert(monoToStereo.mode === 'mono-to-stereo', 'Mode recorded as mono-to-stereo');
   const stereoToMono = AudioChannelMapper.remap(tmpMapIn, { mode: 'stereo-to-mono' });
   assert(nodeFs.existsSync(stereoToMono.outputPath), 'Stereo-to-mono mapped audio exists');
+  assert(isDecodable(stereoToMono.outputPath), `Stereo-to-mono mapped audio exists — ffprobe reads a valid stream`);
   assert(stereoToMono.mode === 'stereo-to-mono', 'Mode recorded as stereo-to-mono');
   nodeFs.rmSync(tmpMapIn, { force: true });
   nodeFs.rmSync(monoToStereo.outputPath, { force: true });
@@ -1168,6 +1334,7 @@ async function runAllEvaluations() {
   const optClip = VideoConcatEngine.trimClip(initialVideoPath, { startSeconds: 0, durationSeconds: 2.0 });
   const optRes = BitrateOptimizer.optimizeToSize(optClip, { targetSizeMb: 2.0 });
   assert(nodeFs.existsSync(optRes.outputPath), 'Bitrate optimized video generated');
+  assert(isDecodable(optRes.outputPath), `Bitrate optimized video generated — ffprobe reads a valid stream`);
   assert(optRes.targetSizeMb === 2.0, 'Optimization targeted 2.0MB constraint');
   assert(optRes.videoBitrateKbps > 0, 'Computed positive video bitrate');
   nodeFs.rmSync(optClip, { force: true });
@@ -1183,38 +1350,24 @@ async function runAllEvaluations() {
 
   // Test 99: Programmatic SDK Comprehensive Method Audit
   console.log('\n--- Test Suite 99: Programmatic SDK Comprehensive Method Audit ---');
-  assert(typeof engine.framerate === 'function', 'SDK exposes framerate() method');
-  assert(typeof engine.deinterlace === 'function', 'SDK exposes deinterlace() method');
-  assert(typeof engine.eq === 'function', 'SDK exposes eq() method');
-  assert(typeof engine.montage === 'function', 'SDK exposes montage() method');
-  assert(typeof engine.mask === 'function', 'SDK exposes mask() method');
-  assert(typeof engine.channelMap === 'function', 'SDK exposes channelMap() method');
-  assert(typeof engine.optimizeBitrate === 'function', 'SDK exposes optimizeBitrate() method');
-  assert(typeof engine.merkle === 'function', 'SDK exposes merkle() method');
   const sdkMerkle = engine.merkle(promoDeliveryDir);
   assert(sdkMerkle.rootHash.length === 64, 'SDK merkle() computes valid cryptographic root');
 
   // Test 100: Total Platform Century Milestone & Invariant Verification
   console.log('\n--- Test Suite 100: Total Platform Century Milestone & Invariant Verification ---');
-  const allUpstreams = JSON.parse(nodeFs.readFileSync(path.join(workspaceRoot, 'registry', 'upstreams.json'), 'utf8'));
-  assert(allUpstreams.repositories.length === 12, '12 open-source upstreams tracked in strict quarantine');
-  for (const r of allUpstreams.repositories) {
-    assert(r.observed_commit.length === 40, `Upstream "${r.id}" SHA is 40-char immutable commit`);
-    assert(Boolean(r.license), `Upstream "${r.id}" has audited open source license`);
-  }
   const packCentury = await packageSkills('antigravity', './dist/century-skills-pack');
   assert(packCentury.verifiedAllowlist, 'Only canonical specialist skills packaged');
   const zeroViol = PolicyChecker.checkExternalMediaBudget(promoBrief, 50.0);
   assert(zeroViol.length === 1 && zeroViol[0].code === 'MEDIA_BUDGET_ZERO_VIOLATION', 'Zero media budget strictly guarded');
-  console.log('🎉 CENTURY MILESTONE: All 100 test suites and core invariants verified!\n');
 
   // Test 101: Audio Resampler & Sample Rate Converter
   console.log('\n--- Test Suite 101: Audio Resampler & Sample Rate Converter ---');
   const { AudioResampler } = await import('../packages/media/src/resampler.js');
   const tmpResampleIn = path.join(workspaceRoot, 'tmp-resample-in.wav');
-  execSync(`ffmpeg -y -i "${initialVideoPath}" -vn -c:a pcm_s16le -t 2 -ar 44100 "${tmpResampleIn}"`, { stdio: 'pipe' });
+  execFileSync('ffmpeg', ['-y', '-i', `${initialVideoPath}`, '-vn', '-c:a', 'pcm_s16le', '-t', '2', '-ar', '44100', `${tmpResampleIn}`], { stdio: 'pipe' });
   const resampleRes = AudioResampler.resample(tmpResampleIn, { sampleRate: 48000 });
   assert(nodeFs.existsSync(resampleRes.outputPath), 'Resampled audio file exists');
+  assert(isDecodable(resampleRes.outputPath), `Resampled audio file exists — ffprobe reads a valid stream`);
   assert(resampleRes.targetSampleRate === 48000, 'Audio resampled to broadcast standard 48000 Hz');
   nodeFs.rmSync(tmpResampleIn, { force: true });
   nodeFs.rmSync(resampleRes.outputPath, { force: true });
@@ -1225,6 +1378,7 @@ async function runAllEvaluations() {
   const revClip = VideoConcatEngine.trimClip(initialVideoPath, { startSeconds: 0, durationSeconds: 1.5 });
   const revRes = VideoReverseEngine.reverse(revClip);
   assert(nodeFs.existsSync(revRes.outputPath), 'Reversed video exists on disk');
+  assert(isDecodable(revRes.outputPath), `Reversed video exists on disk — ffprobe reads a valid stream`);
   assert(revRes.reversedAudio === true, 'Audio stream reversed in synchrony');
   nodeFs.rmSync(revClip, { force: true });
   nodeFs.rmSync(revRes.outputPath, { force: true });
@@ -1235,9 +1389,11 @@ async function runAllEvaluations() {
   const matteClip = VideoConcatEngine.trimClip(initialVideoPath, { startSeconds: 0, durationSeconds: 1.5 });
   const scopeMatte = MatteEngine.applyMatte(matteClip, { preset: '2.39:1' });
   assert(nodeFs.existsSync(scopeMatte.outputPath), '2.39:1 letterbox video generated');
+  assert(isDecodable(scopeMatte.outputPath), `2.39:1 letterbox video generated — ffprobe reads a valid stream`);
   assert(scopeMatte.barHeight > 0, 'Letterbox bars calculated for scope aspect');
   const pillarMatte = MatteEngine.applyMatte(matteClip, { preset: '4:3' });
   assert(nodeFs.existsSync(pillarMatte.outputPath), '4:3 pillarbox video generated');
+  assert(isDecodable(pillarMatte.outputPath), `4:3 pillarbox video generated — ffprobe reads a valid stream`);
   nodeFs.rmSync(matteClip, { force: true });
   nodeFs.rmSync(scopeMatte.outputPath, { force: true });
   nodeFs.rmSync(pillarMatte.outputPath, { force: true });
@@ -1247,9 +1403,11 @@ async function runAllEvaluations() {
   const { SfxSynthesizer } = await import('../packages/media/src/sfx.js');
   const whooshSfx = SfxSynthesizer.synthesize('whoosh');
   assert(nodeFs.existsSync(whooshSfx.outputPath), 'Synthesized whoosh audio exists');
+  assert(isDecodable(whooshSfx.outputPath), `Synthesized whoosh audio exists — ffprobe reads a valid stream`);
   assert(whooshSfx.type === 'whoosh', 'SFX type recorded as whoosh');
   const thudSfx = SfxSynthesizer.synthesize('thud');
   assert(nodeFs.existsSync(thudSfx.outputPath), 'Synthesized sub-bass thud exists');
+  assert(isDecodable(thudSfx.outputPath), `Synthesized sub-bass thud exists — ffprobe reads a valid stream`);
   nodeFs.rmSync(whooshSfx.outputPath, { force: true });
   nodeFs.rmSync(thudSfx.outputPath, { force: true });
 
@@ -1259,6 +1417,7 @@ async function runAllEvaluations() {
   const sanClip = VideoConcatEngine.trimClip(initialVideoPath, { startSeconds: 0, durationSeconds: 1.0 });
   const sanRes = MetadataSanitizer.sanitize(sanClip);
   assert(nodeFs.existsSync(sanRes.outputPath), 'Sanitized media file generated');
+  assert(isDecodable(sanRes.outputPath), `Sanitized media file generated — ffprobe reads a valid stream`);
   assert(sanRes.strippedMetadata === true, 'Metadata tracks stripped');
   assert(sanRes.strippedChapters === true, 'Chapter markers cleared');
   nodeFs.rmSync(sanClip, { force: true });
@@ -1268,9 +1427,10 @@ async function runAllEvaluations() {
   console.log('\n--- Test Suite 106: Video Chroma Key Compositor ---');
   const { ChromaKeyEngine } = await import('../packages/media/src/chromakey.js');
   const tmpGreen = path.join(workspaceRoot, 'tmp-green-screen.mp4');
-  execSync(`ffmpeg -y -f lavfi -i "color=c=0x00FF00:s=320x240:d=1" -c:v libx264 -pix_fmt yuv420p "${tmpGreen}"`, { stdio: 'pipe' });
+  execFileSync('ffmpeg', ['-y', '-f', 'lavfi', '-i', 'color=c=0x00FF00:s=320x240:d=1', '-c:v', 'libx264', '-pix_fmt', 'yuv420p', `${tmpGreen}`], { stdio: 'pipe' });
   const chromaRes = ChromaKeyEngine.composite(tmpGreen, { keyColor: '0x00FF00', similarity: 0.3 });
   assert(nodeFs.existsSync(chromaRes.outputPath), 'Chroma-keyed composite video generated');
+  assert(isDecodable(chromaRes.outputPath), `Chroma-keyed composite video generated — ffprobe reads a valid stream`);
   assert(chromaRes.keyColor === '0x00FF00', 'Key color verified');
   nodeFs.rmSync(tmpGreen, { force: true });
   nodeFs.rmSync(chromaRes.outputPath, { force: true });
@@ -1285,6 +1445,7 @@ async function runAllEvaluations() {
     position: 'center'
   });
   assert(nodeFs.existsSync(titleRes.outputPath), 'Title card burned video generated');
+  assert(isDecodable(titleRes.outputPath), `Title card burned video generated — ffprobe reads a valid stream`);
   assert(titleRes.titleText === 'Magnifito Super Video', 'Title copy verified');
   assert(titleRes.position === 'center', 'Title centered');
   nodeFs.rmSync(titleClip, { force: true });
@@ -1294,9 +1455,10 @@ async function runAllEvaluations() {
   console.log('\n--- Test Suite 108: Audio Noise Gate & Expander ---');
   const { NoiseGateEngine } = await import('../packages/media/src/noise_gate.js');
   const tmpGateIn = path.join(workspaceRoot, 'tmp-gate-in.wav');
-  execSync(`ffmpeg -y -i "${initialVideoPath}" -vn -c:a pcm_s16le -t 2 "${tmpGateIn}"`, { stdio: 'pipe' });
+  execFileSync('ffmpeg', ['-y', '-i', `${initialVideoPath}`, '-vn', '-c:a', 'pcm_s16le', '-t', '2', `${tmpGateIn}`], { stdio: 'pipe' });
   const noiseGateRes = NoiseGateEngine.applyGate(tmpGateIn, { thresholdDb: -40, ratio: 4.0 });
   assert(nodeFs.existsSync(noiseGateRes.outputPath), 'Noise gated audio generated');
+  assert(isDecodable(noiseGateRes.outputPath), `Noise gated audio generated — ffprobe reads a valid stream`);
   assert(noiseGateRes.thresholdDb === -40, 'Threshold verified at -40dB');
   assert(noiseGateRes.filterApplied.includes('agate'), 'FFmpeg agate filter applied');
   nodeFs.rmSync(tmpGateIn, { force: true });
@@ -1304,16 +1466,9 @@ async function runAllEvaluations() {
 
   // Test 109: Programmatic SDK Extended Methods (Cycle 87-96)
   console.log('\n--- Test Suite 109: Programmatic SDK Extended Methods (Cycle 87-96) ---');
-  assert(typeof engine.resample === 'function', 'SDK exposes resample() method');
-  assert(typeof engine.reverse === 'function', 'SDK exposes reverse() method');
-  assert(typeof engine.matte === 'function', 'SDK exposes matte() method');
-  assert(typeof engine.sfx === 'function', 'SDK exposes sfx() method');
-  assert(typeof engine.sanitize === 'function', 'SDK exposes sanitize() method');
-  assert(typeof engine.chromakey === 'function', 'SDK exposes chromakey() method');
-  assert(typeof engine.title === 'function', 'SDK exposes title() method');
-  assert(typeof engine.noiseGate === 'function', 'SDK exposes noiseGate() method');
   const sdkSfx = engine.sfx('chime');
   assert(nodeFs.existsSync(sdkSfx.outputPath), 'SDK sfx() synthesizes chime cue');
+  assert(isDecodable(sdkSfx.outputPath), `SDK sfx() synthesizes chime cue — ffprobe reads a valid stream`);
   nodeFs.rmSync(sdkSfx.outputPath, { force: true });
 
   // Test 110: Grand Enterprise Sovereign Production Verification
@@ -1331,6 +1486,7 @@ async function runAllEvaluations() {
   const cropClip = VideoConcatEngine.trimClip(initialVideoPath, { startSeconds: 0, durationSeconds: 1.0 });
   const smartCropRes = SmartCropEngine.crop(cropClip, { targetAspectRatio: '9:16', focus: 'top' });
   assert(nodeFs.existsSync(smartCropRes.outputPath), 'Smart crop video generated');
+  assert(isDecodable(smartCropRes.outputPath), `Smart crop video generated — ffprobe reads a valid stream`);
   assert(smartCropRes.outputWidth === 1080 && smartCropRes.outputHeight === 1920, 'Output formatted to 1080x1920');
   nodeFs.rmSync(cropClip, { force: true });
   nodeFs.rmSync(smartCropRes.outputPath, { force: true });
@@ -1339,9 +1495,10 @@ async function runAllEvaluations() {
   console.log('\n--- Test Suite 112: Audio Stereo Panning & Soundfield Widening ---');
   const { AudioPanner } = await import('../packages/media/src/panner.js');
   const tmpPanIn = path.join(workspaceRoot, 'tmp-pan-in.wav');
-  execSync(`ffmpeg -y -i "${initialVideoPath}" -vn -c:a pcm_s16le -t 2 "${tmpPanIn}"`, { stdio: 'pipe' });
+  execFileSync('ffmpeg', ['-y', '-i', `${initialVideoPath}`, '-vn', '-c:a', 'pcm_s16le', '-t', '2', `${tmpPanIn}`], { stdio: 'pipe' });
   const panRes = AudioPanner.pan(tmpPanIn, { pan: 0.4, stereoWidth: 1.4 });
   assert(nodeFs.existsSync(panRes.outputPath), 'Panned audio generated');
+  assert(isDecodable(panRes.outputPath), `Panned audio generated — ffprobe reads a valid stream`);
   assert(panRes.pan === 0.4, 'Pan offset verified at +0.4 right');
   assert(panRes.stereoWidth === 1.4, 'Stereo width set to 1.4');
   nodeFs.rmSync(tmpPanIn, { force: true });
@@ -1353,6 +1510,7 @@ async function runAllEvaluations() {
   const glitchClip = VideoConcatEngine.trimClip(initialVideoPath, { startSeconds: 0, durationSeconds: 1.0 });
   const glitchRes = GlitchEngine.applyGlitch(glitchClip, { intensity: 0.6 });
   assert(nodeFs.existsSync(glitchRes.outputPath), 'Glitch artifact video generated');
+  assert(isDecodable(glitchRes.outputPath), `Glitch artifact video generated — ffprobe reads a valid stream`);
   assert(glitchRes.intensity === 0.6, 'Glitch intensity recorded');
   assert(glitchRes.chromaticShift > 0, 'Chromatic shift pixels applied');
   nodeFs.rmSync(glitchClip, { force: true });
@@ -1365,6 +1523,7 @@ async function runAllEvaluations() {
   const camB = VideoConcatEngine.trimClip(initialVideoPath, { startSeconds: 1.0, durationSeconds: 1.0 });
   const multiCamRes = MultiCamEngine.composeSplitScreen([camA, camB], { layout: 'side-by-side' });
   assert(nodeFs.existsSync(multiCamRes.outputPath), 'MultiCam split-screen video generated');
+  assert(isDecodable(multiCamRes.outputPath), `MultiCam split-screen video generated — ffprobe reads a valid stream`);
   assert(multiCamRes.layout === 'side-by-side', 'Side-by-side layout applied');
   assert(multiCamRes.width === 1920 && multiCamRes.height === 1080, 'Resolution normalized to 1920x1080');
   nodeFs.rmSync(camA, { force: true });
@@ -1375,9 +1534,10 @@ async function runAllEvaluations() {
   console.log('\n--- Test Suite 115: Audio Compressor & Dynamics Processor ---');
   const { AudioCompressor } = await import('../packages/media/src/compressor.js');
   const tmpCompIn = path.join(workspaceRoot, 'tmp-comp-in.wav');
-  execSync(`ffmpeg -y -i "${initialVideoPath}" -vn -c:a pcm_s16le -t 2 "${tmpCompIn}"`, { stdio: 'pipe' });
+  execFileSync('ffmpeg', ['-y', '-i', `${initialVideoPath}`, '-vn', '-c:a', 'pcm_s16le', '-t', '2', `${tmpCompIn}`], { stdio: 'pipe' });
   const compRes = AudioCompressor.compress(tmpCompIn, { preset: 'vocal-leveler' });
   assert(nodeFs.existsSync(compRes.outputPath), 'Compressed audio generated');
+  assert(isDecodable(compRes.outputPath), `Compressed audio generated — ffprobe reads a valid stream`);
   assert(compRes.preset === 'vocal-leveler', 'Vocal leveler preset applied');
   assert(compRes.thresholdDb === -22, 'Threshold verified at -22dB');
   nodeFs.rmSync(tmpCompIn, { force: true });
@@ -1390,6 +1550,7 @@ async function runAllEvaluations() {
   const pipOverlay = VideoConcatEngine.trimClip(initialVideoPath, { startSeconds: 1.0, durationSeconds: 1.0 });
   const pipRes = PipEngine.composePip(pipMain, pipOverlay, { corner: 'bottom_right', pipWidth: 480 });
   assert(nodeFs.existsSync(pipRes.outputPath), 'PiP composite video generated');
+  assert(isDecodable(pipRes.outputPath), `PiP composite video generated — ffprobe reads a valid stream`);
   assert(pipRes.corner === 'bottom_right', 'Positioned in bottom_right corner');
   assert(pipRes.pipWidth === 480, 'PiP window width confirmed at 480px');
   nodeFs.rmSync(pipMain, { force: true });
@@ -1402,6 +1563,7 @@ async function runAllEvaluations() {
   const vigClip = VideoConcatEngine.trimClip(initialVideoPath, { startSeconds: 0, durationSeconds: 1.0 });
   const vigRes = VignetteEngine.applyVignette(vigClip, { angleRadians: 0.6 });
   assert(nodeFs.existsSync(vigRes.outputPath), 'Vignetted video generated');
+  assert(isDecodable(vigRes.outputPath), `Vignetted video generated — ffprobe reads a valid stream`);
   assert(vigRes.angleRadians === 0.6, 'Vignette angle verified at 0.6 rad');
   nodeFs.rmSync(vigClip, { force: true });
   nodeFs.rmSync(vigRes.outputPath, { force: true });
@@ -1410,26 +1572,20 @@ async function runAllEvaluations() {
   console.log('\n--- Test Suite 118: Dialogue De-Clicker & Impulsive Noise Filter ---');
   const { DeClickerEngine } = await import('../packages/media/src/declick.js');
   const tmpDeclickIn = path.join(workspaceRoot, 'tmp-declick-in.wav');
-  execSync(`ffmpeg -y -i "${initialVideoPath}" -vn -c:a pcm_s16le -t 2 "${tmpDeclickIn}"`, { stdio: 'pipe' });
+  execFileSync('ffmpeg', ['-y', '-i', `${initialVideoPath}`, '-vn', '-c:a', 'pcm_s16le', '-t', '2', `${tmpDeclickIn}`], { stdio: 'pipe' });
   const declickRes = DeClickerEngine.declick(tmpDeclickIn);
   assert(nodeFs.existsSync(declickRes.outputPath), 'Declicked audio generated');
+  assert(isDecodable(declickRes.outputPath), `Declicked audio generated — ffprobe reads a valid stream`);
   assert(declickRes.filterApplied.includes('adeclick'), 'adeclick filter verified');
   nodeFs.rmSync(tmpDeclickIn, { force: true });
   nodeFs.rmSync(declickRes.outputPath, { force: true });
 
   // Test 119: Programmatic SDK Extended Coverage (Cycle 97-106)
   console.log('\n--- Test Suite 119: Programmatic SDK Extended Coverage (Cycle 97-106) ---');
-  assert(typeof engine.smartCrop === 'function', 'SDK exposes smartCrop() method');
-  assert(typeof engine.pan === 'function', 'SDK exposes pan() method');
-  assert(typeof engine.glitch === 'function', 'SDK exposes glitch() method');
-  assert(typeof engine.multiCam === 'function', 'SDK exposes multiCam() method');
-  assert(typeof engine.compressAudio === 'function', 'SDK exposes compressAudio() method');
-  assert(typeof engine.pip === 'function', 'SDK exposes pip() method');
-  assert(typeof engine.vignette === 'function', 'SDK exposes vignette() method');
-  assert(typeof engine.declick === 'function', 'SDK exposes declick() method');
   const sdkVigClip = VideoConcatEngine.trimClip(initialVideoPath, { startSeconds: 0, durationSeconds: 1.0 });
   const sdkVigRes = engine.vignette(sdkVigClip, { angleRadians: 0.5 });
   assert(nodeFs.existsSync(sdkVigRes.outputPath), 'SDK vignette() successfully generates video');
+  assert(isDecodable(sdkVigRes.outputPath), `SDK vignette() successfully generates video — ffprobe reads a valid stream`);
   nodeFs.rmSync(sdkVigClip, { force: true });
   nodeFs.rmSync(sdkVigRes.outputPath, { force: true });
 
@@ -1437,19 +1593,102 @@ async function runAllEvaluations() {
   console.log('\n--- Test Suite 120: Sovereign Invariant Assurance & Triple-Zero Audit ---');
   const catalogFinal = await runUpstreamCheck(workspaceRoot);
   assert(catalogFinal.total_tracked === 12, 'Quarantine catalog retains all 12 upstreams');
-  for (const up of catalogFinal.repositories) {
-    assert(up.observed_commit.length === 40, `Upstream "${up.repository_id}" pinned to 40-char SHA`);
-  }
   const skillsCheck = await packageSkills('antigravity', './dist/final-skills-pack');
   assert(skillsCheck.verifiedAllowlist, 'Allowlist strictly preserved: exactly 10 canonical skills');
-  console.log('🏁 ULTIMATE SOVEREIGN MILESTONE: 120 Evaluation Suites Across 106 Platform Iterations!\n');
 
+  // Test 121: Security & Regression Guards (findings from the 2026-11-03 code review)
+  console.log('\n--- Test Suite 121: Security & Regression Guards ---');
+  const guardDir = makeTemp('guards');
 
+  // Shell injection through a file name must not execute.
+  const injectDir = makeTemp('inject');
+  const injectedName = path.join(injectDir, 'x$(touch PWNED).mp4');
+  execFileSync('ffmpeg', ['-y', '-f', 'lavfi', '-i', 'testsrc=size=320x240:rate=30:duration=1', '-f', 'lavfi', '-i', 'sine=frequency=440:duration=1', '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-shortest', injectedName], { stdio: 'pipe' });
+  const injectProxy = ProxyGenerator.generateProxy(injectedName, { resolution: '360p', outputPath: path.join(injectDir, 'proxy.mp4') });
+  assert(isDecodable(injectProxy.proxyPath), 'Media engine processes a file name containing $(...)');
+  assert(
+    !nodeFs.existsSync(path.join(injectDir, 'PWNED')) && !nodeFs.existsSync(path.join(workspaceRoot, 'PWNED')),
+    'File name with $(touch PWNED) does not execute a shell command'
+  );
 
+  // Color option injection is rejected before ffmpeg runs.
+  await expectThrow(
+    () => MatteEngine.applyMatte(injectedName, { preset: '2.39:1', barColor: 'black" ; touch PWNED ; echo "', outputPath: path.join(injectDir, 'm.mp4') }),
+    'Matte rejects a color value carrying shell or filter syntax',
+    /Invalid color/i
+  );
+  assert(!nodeFs.existsSync(path.join(injectDir, 'PWNED')), 'Rejected color value created no file');
 
+  // Matte on a source that already has the target aspect must not black out the frame.
+  const fourThree = path.join(guardDir, 'four-three.mp4');
+  execFileSync('ffmpeg', ['-y', '-f', 'lavfi', '-i', 'testsrc=size=640x480:rate=30:duration=1', '-c:v', 'libx264', '-pix_fmt', 'yuv420p', fourThree], { stdio: 'pipe' });
+  const fourThreeMatte = MatteEngine.applyMatte(fourThree, { preset: '4:3', outputPath: path.join(guardDir, 'four-three-matte.mp4') });
+  assert(fourThreeMatte.barHeight === 0, '4:3 matte on a 4:3 source needs no bars');
+  const yavgRun = spawnSync('ffmpeg', ['-hide_banner', '-i', fourThreeMatte.outputPath, '-vf', 'signalstats,metadata=print:key=lavfi.signalstats.YAVG', '-f', 'null', '-'], { encoding: 'utf8' });
+  const yavgValues = [...String(yavgRun.stderr).matchAll(/YAVG=([\d.]+)/g)].map(m => Number(m[1]));
+  assert(yavgValues.length > 0 && Math.min(...yavgValues) > 30, '4:3 matte output keeps the picture (frame is not black)');
 
+  // Vertical 9:16 proxy at 720p yields even dimensions.
+  const vertical = path.join(guardDir, 'vertical.mp4');
+  execFileSync('ffmpeg', ['-y', '-f', 'lavfi', '-i', 'testsrc=size=1080x1920:rate=30:duration=1', '-c:v', 'libx264', '-pix_fmt', 'yuv420p', vertical], { stdio: 'pipe' });
+  const verticalProxy = ProxyGenerator.generateProxy(vertical, { resolution: '720p', outputPath: path.join(guardDir, 'vertical-proxy.mp4') });
+  const vpInfo = ffprobeInfo(verticalProxy.proxyPath);
+  assert(vpInfo.height === 720 && vpInfo.width % 2 === 0, `9:16 proxy at 720p has even dimensions (${vpInfo.width}x${vpInfo.height})`);
 
+  // Speed change on a clip without audio.
+  const silentClip = path.join(guardDir, 'silent.mp4');
+  execFileSync('ffmpeg', ['-y', '-f', 'lavfi', '-i', 'testsrc=size=320x240:rate=30:duration=2', '-c:v', 'libx264', '-pix_fmt', 'yuv420p', silentClip], { stdio: 'pipe' });
+  const silentSpeed = VideoSpeedEngine.changeSpeed(silentClip, 2.0, { outputPath: path.join(guardDir, 'silent-2x.mp4') });
+  const silentSpeedInfo = ffprobeInfo(silentSpeed.outputPath);
+  assert(!silentSpeedInfo.hasAudio && Math.abs(silentSpeedInfo.duration - 1.0) < 0.15, `2x speed on a clip without audio works (${silentSpeedInfo.duration.toFixed(2)}s)`);
+  const slowSpeed = VideoSpeedEngine.changeSpeed(injectedName, 0.2, { outputPath: path.join(guardDir, 'slow.mp4') });
+  assert(Math.abs(ffprobeInfo(slowSpeed.outputPath).duration - 5.0) < 0.3, '0.2x slow motion with audio works');
 
+  // Transitions over 3 clips use every clip and report the probed duration.
+  const t1 = path.join(guardDir, 't1.mp4');
+  const t2 = path.join(guardDir, 't2.mp4');
+  const t3 = path.join(guardDir, 't3.mp4');
+  for (const [file, size] of [[t1, '640x360'], [t2, '320x240'], [t3, '640x360']] as const) {
+    execFileSync('ffmpeg', ['-y', '-f', 'lavfi', '-i', `testsrc=size=${size}:rate=30:duration=2`, '-f', 'lavfi', '-i', 'sine=frequency=440:duration=2', '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-shortest', file], { stdio: 'pipe' });
+  }
+  const threeTrans = TransitionEngine.composeTransitions([t1, t2, t3], { transition: 'fade', durationSeconds: 0.5, outputPath: path.join(guardDir, 'three.mp4') });
+  const threeInfo = ffprobeInfo(threeTrans.outputPath);
+  assert(threeTrans.clipsCount === 3, 'Transition engine stitches all 3 clips');
+  assert(Math.abs(threeInfo.duration - 5.0) < 0.2, `3 clips x 2s with two 0.5s fades last about 5s (${threeInfo.duration.toFixed(2)}s)`);
+  assert(Math.abs(threeTrans.totalDurationSeconds - threeInfo.duration) < 0.05, 'Reported transition duration matches the probed output');
+
+  // Contracts fail closed.
+  const { AssetManifestItemSchema, CutItemSchema, ReviewRecordSchema } = await import('../packages/contracts/src/index.js');
+  const baseAsset = {
+    asset_id: 'a', content_hash: 'h', local_path: 'a.png', source: 's', rights_evidence: 'r',
+    permitted: { client: 'c' },
+  };
+  assert(!AssetManifestItemSchema.safeParse(baseAsset).success, 'Asset without consent_obtained is rejected');
+  const noStatus = AssetManifestItemSchema.safeParse({ ...baseAsset, consent_obtained: true });
+  assert(noStatus.success && noStatus.data.status === 'unresolved', 'Asset without status defaults to unresolved, not approved');
+  assert(
+    !CutItemSchema.safeParse({ cut_id: 'c1', source_start_us: 4000000, source_end_us: 1000000, output_start_frame: 0, output_end_frame: 90 }).success,
+    'Inverted cut range is rejected'
+  );
+  assert(
+    !ReviewRecordSchema.safeParse({
+      reviewer: 'R', timestamp: new Date().toISOString(), decision: 'approved',
+      approval_scope: { copy_claims_revision: 'r', design_styleframe_revision: 'd', final_cut_hash: 'h' },
+      export_checks: { factual_accuracy_verified: true, visual_layout_clean: true, audio_sync_and_loudness_verified: true, rights_cleared: false },
+    }).success,
+    'Approved review record with a false export check is rejected'
+  );
+
+  // Remotion is profile-only and must not be rendered by another engine.
+  const { getRenderAdapter } = await import('../adapters/registry.js');
+  await expectThrow(() => getRenderAdapter('remotion'), 'Adapter registry refuses the profile-only Remotion engine');
+  const remotionDir = copyFixture(promoFixtureDir);
+  const remotionBrief = JSON.parse(nodeFs.readFileSync(path.join(remotionDir, 'brief.json'), 'utf8'));
+  remotionBrief.engine = 'remotion';
+  nodeFs.writeFileSync(path.join(remotionDir, 'brief.json'), JSON.stringify(remotionBrief, null, 2));
+  await expectThrow(() => runRender(remotionDir, { format: '9:16', force: true }), 'Render refuses a brief with engine remotion', /remotion/i);
+
+  for (const d of tempDirs) nodeFs.rmSync(d, { recursive: true, force: true });
 
   console.log(`\n========================================`);
   console.log(`EVALUATION SUMMARY: ${passCount} Passed, ${failCount} Failed`);

@@ -1,6 +1,10 @@
 import { z } from 'zod';
 import crypto from 'node:crypto';
 
+/** Accepts any string that parses to a valid date (ISO date or datetime). */
+const dateString = (label: string) =>
+  z.string().refine(v => !Number.isNaN(new Date(v).getTime()), { message: `${label} must be a valid ISO-8601 date` });
+
 /**
  * 1. Project Brief Contract
  * Essential fields: project_id, client_id, workflow, objective, audience, language, duration, formats, engine, timing_authority, agent/compute/media budgets
@@ -87,7 +91,7 @@ export const ClaimItemSchema = z.object({
   approved_wording: z.string().min(1),
   evidence_source: z.string().min(1),
   owner: z.string().min(1),
-  expiry: z.string().optional(),
+  expiry: dateString('expiry').optional(),
   locale: z.string().min(2).default('en'),
   tags: z.array(z.string()).optional()
 });
@@ -111,16 +115,22 @@ export const AssetManifestItemSchema = z.object({
   local_path: z.string().min(1),
   source: z.string().min(1),
   rights_evidence: z.string().min(1),
-  consent_obtained: z.boolean().default(true),
+  // Fail closed: consent must be stated explicitly for every asset.
+  consent_obtained: z.boolean(),
   permitted: z.object({
     client: z.string(),
     channels: z.array(z.string()).default(['all']),
     territories: z.array(z.string()).default(['worldwide'])
   }),
-  validity_until: z.string().optional(),
+  validity_until: dateString('validity_until').optional(),
   attribution_required: z.boolean().default(false),
   attribution_text: z.string().optional(),
-  status: z.enum(['approved', 'restricted', 'expired', 'unresolved']).default('approved')
+  // Fail closed: an asset without an explicit status is treated as unresolved.
+  status: z.enum(['approved', 'restricted', 'expired', 'unresolved']).default('unresolved')
+}).superRefine((a, ctx) => {
+  if (a.attribution_required && !a.attribution_text) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['attribution_text'], message: 'attribution_text is required when attribution_required is true' });
+  }
 });
 
 export const AssetManifestSchema = z.object({
@@ -141,7 +151,7 @@ export const TranscriptWordSchema = z.object({
   end_ms: z.number().nonnegative(),
   confidence: z.number().min(0).max(1).default(1.0),
   speaker: z.string().default('Speaker 1')
-});
+}).refine(w => w.end_ms >= w.start_ms, { message: 'end_ms must be >= start_ms', path: ['end_ms'] });
 
 export const TranscriptSchema = z.object({
   schema_version: z.literal('1.0.0').default('1.0.0'),
@@ -167,6 +177,13 @@ export const CutItemSchema = z.object({
   output_end_frame: z.number().int().nonnegative(),
   speed_factor: z.number().positive().default(1.0),
   reason: z.string().default('pacing')
+}).superRefine((c, ctx) => {
+  if (c.source_end_us <= c.source_start_us) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['source_end_us'], message: 'source_end_us must be greater than source_start_us' });
+  }
+  if (c.output_end_frame <= c.output_start_frame) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['output_end_frame'], message: 'output_end_frame must be greater than output_start_frame' });
+  }
 });
 
 export const EditDecisionListSchema = z.object({
@@ -179,6 +196,21 @@ export const EditDecisionListSchema = z.object({
     denominator: z.number().int().positive()
   }).default({ numerator: 30, denominator: 1 }),
   cuts: z.array(CutItemSchema)
+}).superRefine((edl, ctx) => {
+  const ids = new Set<string>();
+  edl.cuts.forEach((c, i) => {
+    if (ids.has(c.cut_id)) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['cuts', i, 'cut_id'], message: `Duplicate cut_id ${c.cut_id}` });
+    }
+    ids.add(c.cut_id);
+    if (c.source_end_us > edl.source_duration_us) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['cuts', i, 'source_end_us'], message: 'Cut extends beyond source_duration_us' });
+    }
+    const prev = edl.cuts[i - 1];
+    if (prev && c.output_start_frame < prev.output_end_frame) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['cuts', i, 'output_start_frame'], message: 'Output ranges must be ordered and non-overlapping' });
+    }
+  });
 });
 
 export type CutItem = z.infer<typeof CutItemSchema>;
@@ -203,6 +235,17 @@ export const ScenePlanItemSchema = z.object({
     start_frame: z.number().int().nonnegative(),
     volume: z.number().min(0).max(1).default(1.0)
   })).default([])
+}).superRefine((s, ctx) => {
+  // duration_frames / duration_seconds must imply a plausible frame rate (1..240 fps).
+  const fps = s.duration_frames / s.duration_seconds;
+  if (fps < 1 || fps > 240) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['duration_frames'], message: `duration_frames and duration_seconds imply ${fps.toFixed(2)} fps` });
+  }
+  s.audio_events.forEach((e, i) => {
+    if (e.start_frame >= s.duration_frames) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['audio_events', i, 'start_frame'], message: 'Audio event starts after scene end' });
+    }
+  });
 });
 
 export const ScenePlanSchema = z.object({
@@ -211,7 +254,44 @@ export const ScenePlanSchema = z.object({
   renderer: z.enum(['hyperframes', 'html', 'remotion']).default('hyperframes'),
   timing_authority: z.enum(['speech', 'music', 'template', 'manual']).default('speech'),
   scenes: z.array(ScenePlanItemSchema).min(1)
+}).superRefine((plan, ctx) => {
+  const ids = new Set<string>();
+  plan.scenes.forEach((s, i) => {
+    if (ids.has(s.scene_id)) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['scenes', i, 'scene_id'], message: `Duplicate scene_id ${s.scene_id}` });
+    }
+    ids.add(s.scene_id);
+  });
+  // All scenes must share one frame rate.
+  const rates = plan.scenes.map(s => s.duration_frames / s.duration_seconds);
+  const r0 = rates[0];
+  rates.forEach((r, i) => {
+    if (Math.abs(r - r0) > 0.5) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['scenes', i, 'duration_frames'], message: 'Scenes use inconsistent frame rates' });
+    }
+  });
 });
+
+/** Frame rate implied by a scene plan (rounded to nearest integer). */
+export function scenePlanFps(plan: ScenePlan): number {
+  const s = plan.scenes[0];
+  return Math.round(s.duration_frames / s.duration_seconds);
+}
+
+/**
+ * Cross-contract checks that a single schema cannot express. Returns a list of problems (empty = consistent).
+ */
+export function checkPlanAgainstBrief(plan: ScenePlan, brief: ProjectBrief, toleranceSeconds = 0.5): string[] {
+  const problems: string[] = [];
+  const total = plan.scenes.reduce((acc, s) => acc + s.duration_seconds, 0);
+  if (Math.abs(total - brief.duration_seconds) > toleranceSeconds) {
+    problems.push(`Scene durations sum to ${total.toFixed(2)}s but brief requires ${brief.duration_seconds}s`);
+  }
+  if (plan.renderer !== brief.engine) {
+    problems.push(`Scene plan renderer '${plan.renderer}' does not match brief engine '${brief.engine}'`);
+  }
+  return problems;
+}
 
 export type ScenePlanItem = z.infer<typeof ScenePlanItemSchema>;
 export type ScenePlan = z.infer<typeof ScenePlanSchema>;
@@ -230,6 +310,13 @@ export const RenderSettingsSchema = z.object({
   audio_channels: z.number().int().default(2),
   target_loudness_lufs: z.number().default(-16),
   true_peak_ceiling_db: z.number().default(-1.0)
+}).superRefine((s, ctx) => {
+  if (s.transparent && s.format === 'mp4') {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['transparent'], message: 'mp4 (H.264) cannot carry alpha; use webm or mov_prores for transparent output' });
+  }
+  if (s.width % 2 !== 0 || s.height % 2 !== 0) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['width'], message: 'width and height must be even for 4:2:0 encoders' });
+  }
 });
 
 export const RenderRequestSchema = z.object({
@@ -330,14 +417,11 @@ export type RenderResult = z.infer<typeof RenderResultSchema>;
 export const ReviewRecordSchema = z.object({
   schema_version: z.literal('1.0.0').default('1.0.0'),
   reviewer: z.string().min(1),
+  // Reviewer roles must be named by the humans who reviewed; never defaulted.
   roles: z.object({
-    technical_maintainer: z.string().default('Kiril Kirov'),
-    producer: z.string().default('Kiril Kirov'),
-    account_owner: z.string().default('Kiril Kirov')
-  }).default({
-    technical_maintainer: 'Kiril Kirov',
-    producer: 'Kiril Kirov',
-    account_owner: 'Kiril Kirov'
+    technical_maintainer: z.string().min(1),
+    producer: z.string().min(1),
+    account_owner: z.string().min(1)
   }),
   timestamp: z.string().datetime(),
   decision: z.enum(['approved', 'changes_requested', 'rejected']),
@@ -357,6 +441,18 @@ export const ReviewRecordSchema = z.object({
     within_budget: z.boolean()
   }).optional(),
   notes: z.string().optional()
+}).superRefine((r, ctx) => {
+  // An approval is only valid when every export check passed.
+  if (r.decision === 'approved') {
+    for (const [k, v] of Object.entries(r.export_checks)) {
+      if (!v) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['export_checks', k], message: `Cannot approve while ${k} is false` });
+      }
+    }
+    if (r.cost_summary && !r.cost_summary.within_budget) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['cost_summary', 'within_budget'], message: 'Cannot approve an over-budget run' });
+    }
+  }
 });
 
 export type ReviewRecord = z.infer<typeof ReviewRecordSchema>;

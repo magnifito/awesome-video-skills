@@ -1,4 +1,4 @@
-import { execSync } from 'node:child_process';
+import { runFfmpeg, probe, requirePositive } from './proc.js';
 import path from 'node:path';
 import fs from 'node:fs';
 
@@ -29,15 +29,13 @@ export class FreezeFrameEngine {
     const position = options.position ?? 'end';
     const holdSec = options.holdDurationSeconds ?? 2.0;
 
-    let origDuration = 5.0;
-    try {
-      const probeOut = execSync(`ffprobe -v error -show_entries format=duration -of csv=p=0 "${videoPath}"`, {
-        encoding: 'utf8'
-      }).trim();
-      origDuration = parseFloat(probeOut) || 5.0;
-    } catch {
-      // fallback
+    requirePositive(holdSec, 'holdDurationSeconds');
+    if (position !== 'end' && position !== 'start') {
+      throw new Error(`position must be "start" or "end", got ${JSON.stringify(position)}`);
     }
+    const info = probe(videoPath);
+    if (!info.hasVideo) throw new Error(`No video stream in ${videoPath}`);
+    const origDuration = info.durationSeconds;
 
     const totalDuration = origDuration + holdSec;
     const outPath = options.outputPath ?? path.join(
@@ -56,21 +54,38 @@ export class FreezeFrameEngine {
 
     if (position === 'start') {
       videoFilter = `tpad=start_mode=clone:start_duration=${holdSec.toFixed(2)}`;
-      audioFilter = `adelay=${Math.round(holdSec * 1000)}|${Math.round(holdSec * 1000)}`;
+      // all=1 delays every channel (a "X|X" list only covers the first two, desyncing 5.1).
+      audioFilter = `adelay=delays=${Math.round(holdSec * 1000)}:all=1`;
     }
 
-    const cmd = [
-      'ffmpeg -y',
-      `-i "${videoPath}"`,
-      `-filter_complex "[0:v]${videoFilter}[outv];[0:a]${audioFilter}[outa]"`,
-      '-map "[outv]"',
-      '-map "[outa]"',
-      '-c:v libx264 -preset fast -crf 20 -pix_fmt yuv420p',
-      '-c:a aac -b:a 192k',
-      `"${outPath}"`
-    ].join(' ');
+    // Clips without audio get a silent track covering the full output duration.
+    const audioGraph = info.hasAudio
+      ? `[0:a]${audioFilter}[outa]`
+      : `anullsrc=r=48000:cl=stereo,atrim=duration=${totalDuration.toFixed(3)}[outa]`;
 
-    execSync(cmd, { stdio: 'pipe' });
+    runFfmpeg([
+      '-i',
+      videoPath,
+      '-filter_complex',
+      `[0:v]${videoFilter}[outv];${audioGraph}`,
+      '-map',
+      '[outv]',
+      '-map',
+      '[outa]',
+      '-c:v',
+      'libx264',
+      '-preset',
+      'fast',
+      '-crf',
+      '20',
+      '-pix_fmt',
+      'yuv420p',
+      '-c:a',
+      'aac',
+      '-b:a',
+      '192k',
+      outPath
+    ]);
 
     if (!fs.existsSync(outPath)) {
       throw new Error(`Failed to generate freeze frame video at: ${outPath}`);

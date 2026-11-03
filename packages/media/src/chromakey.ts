@@ -1,6 +1,6 @@
-import { execSync } from 'node:child_process';
 import path from 'node:path';
 import fs from 'node:fs';
+import { runFfmpeg, probe, safeColor } from './proc.js';
 
 export interface ChromaKeyOptions {
   keyColor?: string; // hex or name, default "0x00FF00"
@@ -19,83 +19,76 @@ export interface ChromaKeyResult {
   blend: number;
 }
 
+const IMAGE_EXTENSIONS = new Set(['.png', '.jpg', '.jpeg', '.webp', '.bmp', '.tif', '.tiff', '.gif']);
+
 export class ChromaKeyEngine {
   /**
-   * Keys out green or blue screen background and composites foreground onto a background plate.
+   * Keys out a green or blue screen background and composites the foreground onto a background plate.
    */
   static composite(videoPath: string, options: ChromaKeyOptions = {}): ChromaKeyResult {
     if (!fs.existsSync(videoPath)) {
       throw new Error(`Foreground video not found: ${videoPath}`);
     }
 
-    const keyColor = options.keyColor ?? '0x00FF00';
+    const keyColor = safeColor(options.keyColor ?? '0x00FF00');
     const similarity = options.similarity ?? 0.25;
     const blend = options.blend ?? 0.1;
+    if (!(similarity >= 0.01 && similarity <= 1)) throw new Error(`similarity must be in [0.01, 1], got ${similarity}`);
+    if (!(blend >= 0 && blend <= 1)) throw new Error(`blend must be in [0, 1], got ${blend}`);
 
-    let w = 1920;
-    let h = 1080;
-    let duration = 5.0;
-    try {
-      const probeDims = execSync(`ffprobe -v error -select_streams v:0 -show_entries stream=width,height -of csv=s=x:p=0 "${videoPath}"`, {
-        encoding: 'utf8'
-      }).trim();
-      const parts = probeDims.split('x').map(Number);
-      if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
-        w = parts[0];
-        h = parts[1];
-      }
-
-      const probeDur = execSync(`ffprobe -v error -show_entries format=duration -of csv=p=0 "${videoPath}"`, {
-        encoding: 'utf8'
-      }).trim();
-      duration = parseFloat(probeDur) || 5.0;
-    } catch {
-      // fallback
-    }
+    const info = probe(videoPath);
+    if (!info.hasVideo) throw new Error(`Foreground has no video stream: ${videoPath}`);
+    const w = info.displayWidth;
+    const h = info.displayHeight;
+    const fps = info.fps > 0 ? info.fps : 30;
 
     const outPath = options.outputPath ?? path.join(
       path.dirname(videoPath),
       `${path.basename(videoPath, path.extname(videoPath))}-chromakeyed.mp4`
     );
 
-    const parentDir = path.dirname(outPath);
-    if (!fs.existsSync(parentDir)) {
-      fs.mkdirSync(parentDir, { recursive: true });
-    }
+    fs.mkdirSync(path.dirname(outPath), { recursive: true });
 
-    let cmd = '';
-    if (options.backgroundPath && fs.existsSync(options.backgroundPath)) {
+    const key = `[0:v]colorkey=${keyColor}:${similarity.toFixed(2)}:${blend.toFixed(2)}[fg]`;
+    const encode = [
+      '-map', '[outv]',
+      '-map', '0:a?',
+      '-c:v', 'libx264', '-preset', 'fast', '-crf', '20', '-pix_fmt', 'yuv420p',
+      '-c:a', 'copy',
+      // The output always runs exactly as long as the foreground clip.
+      '-t', info.durationSeconds.toFixed(3),
+      outPath
+    ];
+
+    if (options.backgroundPath) {
+      if (!fs.existsSync(options.backgroundPath)) {
+        throw new Error(`Background plate not found: ${options.backgroundPath}`);
+      }
       const bg = options.backgroundPath;
-      const filter = `[0:v]colorkey=${keyColor}:${similarity.toFixed(2)}:${blend.toFixed(2)}[fg];[1:v]scale=${w}:${h}[bg];[bg][fg]overlay=0:0:shortest=1[outv]`;
-      cmd = [
-        'ffmpeg -y',
-        `-i "${videoPath}"`,
-        `-i "${bg}"`,
-        `-filter_complex "${filter}"`,
-        '-map "[outv]"',
-        '-map "0:a?"',
-        '-shortest',
-        '-c:v libx264 -preset fast -crf 20 -pix_fmt yuv420p',
-        '-c:a copy',
-        `"${outPath}"`
-      ].join(' ');
+      const isImage = IMAGE_EXTENSIONS.has(path.extname(bg).toLowerCase());
+      // Fill the frame without distortion, match the foreground frame rate, and
+      // keep the foreground (main timeline) driving the output length.
+      const filter = [
+        key,
+        `[1:v]scale=${w}:${h}:force_original_aspect_ratio=increase,crop=${w}:${h},fps=${fps},setsar=1[bg]`,
+        '[bg][fg]overlay=0:0:eof_action=pass[outv]'
+      ].join(';');
+      runFfmpeg([
+        '-i', videoPath,
+        ...(isImage ? ['-loop', '1', '-framerate', String(fps)] : ['-stream_loop', '-1']),
+        '-i', bg,
+        '-filter_complex', filter,
+        ...encode
+      ]);
     } else {
-      const bgColor = options.backgroundColor ?? '0x1E293B';
-      const filter = `[0:v]colorkey=${keyColor}:${similarity.toFixed(2)}:${blend.toFixed(2)}[fg];color=c=${bgColor}:s=${w}x${h}:d=${duration.toFixed(2)}[bg];[bg][fg]overlay=0:0:shortest=1[outv]`;
-      cmd = [
-        'ffmpeg -y',
-        `-i "${videoPath}"`,
-        `-filter_complex "${filter}"`,
-        '-map "[outv]"',
-        '-map "0:a?"',
-        '-shortest',
-        '-c:v libx264 -preset fast -crf 20 -pix_fmt yuv420p',
-        '-c:a copy',
-        `"${outPath}"`
-      ].join(' ');
+      const bgColor = safeColor(options.backgroundColor ?? '0x1E293B');
+      const filter = [
+        key,
+        `color=c=${bgColor}:s=${w}x${h}:r=${fps}:d=${info.durationSeconds.toFixed(3)}[bg]`,
+        '[bg][fg]overlay=0:0:shortest=1[outv]'
+      ].join(';');
+      runFfmpeg(['-i', videoPath, '-filter_complex', filter, ...encode]);
     }
-
-    execSync(cmd, { stdio: 'pipe' });
 
     if (!fs.existsSync(outPath)) {
       throw new Error(`Failed to composite chromakey video at: ${outPath}`);
@@ -110,4 +103,3 @@ export class ChromaKeyEngine {
     };
   }
 }
-

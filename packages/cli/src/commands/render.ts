@@ -22,7 +22,41 @@ import {
 import { HyperFramesAdapter } from '../../../../adapters/hyperframes/index.js';
 import { HtmlSeekableAdapter } from '../../../../adapters/html/index.js';
 import { PolicyChecker } from '../../../media/src/policy.js';
+import type { VideoRendererAdapter } from '../../../../adapters/interface.js';
 import { runPlan } from './plan.js';
+import { findWorkspaceRoot, readApprovedLock, sha256File } from './_shared.js';
+
+export const RENDER_FORMATS = ['16:9', '9:16', '1:1'] as const;
+export const RENDER_CODECS = ['mp4', 'webm', 'mov_prores'] as const;
+
+/**
+ * Explicit adapter registry. Engines without a renderable adapter throw instead of
+ * silently falling back to another renderer, so provenance always names the real engine.
+ */
+function selectAdapter(engine: ProjectBrief['engine']): VideoRendererAdapter {
+  switch (engine) {
+    case 'hyperframes':
+      return new HyperFramesAdapter();
+    case 'html':
+      return new HtmlSeekableAdapter();
+    case 'remotion':
+      throw new Error(
+        "Engine 'remotion' is a profile-only adapter and cannot render. Set brief.engine to 'hyperframes' or 'html'."
+      );
+    default:
+      throw new Error(`Unknown render engine: ${String(engine)}`);
+  }
+}
+
+/** Reads the approved HyperFrames source lock from registry/approved.lock.json. */
+function readApprovedSourceLock(): string {
+  const lock = readApprovedLock(findWorkspaceRoot());
+  const commit = lock.approved_baselines.hyperframes?.approved_commit;
+  if (!commit) {
+    throw new Error('No approved hyperframes baseline in registry/approved.lock.json; cannot stamp render provenance.');
+  }
+  return commit;
+}
 
 export interface RenderCliOptions {
   format?: '16:9' | '9:16' | '1:1';
@@ -62,9 +96,39 @@ export async function runRender(projectDir: string, options?: RenderCliOptions):
   if (assetViolations.length > 0) {
     throw new Error(`Asset policy violations: ${assetViolations.map(v => v.message).join('; ')}`);
   }
+  const referencedClaims = [...new Set(scenePlan.scenes.flatMap(sc => sc.claims_refs ?? []))];
+  const claimViolations = PolicyChecker.checkClaims(referencedClaims, claims, brief.language);
+  // Approved wording must appear verbatim in every scene that references a claim.
+  for (const sc of scenePlan.scenes) {
+    for (const ref of sc.claims_refs ?? []) {
+      const claim = claims.claims.find(c => c.claim_id === ref);
+      if (claim && !sc.copy_text.includes(claim.approved_wording)) {
+        claimViolations.push({
+          code: 'CLAIM_WORDING_MODIFIED',
+          category: 'claims',
+          message: `Scene '${sc.scene_id}' does not contain the approved wording of claim '${ref}'`,
+          item_id: ref
+        });
+      }
+    }
+  }
+  if (claimViolations.length > 0) {
+    throw new Error(`Claim policy violations: ${claimViolations.map(v => v.message).join('; ')}`);
+  }
+
+  // Validate requested format and codec
+  const format = options?.format || brief.formats[0];
+  if (!(RENDER_FORMATS as readonly string[]).includes(format)) {
+    throw new Error(`Unsupported format '${format}'. Allowed: ${RENDER_FORMATS.join(', ')}`);
+  }
+  if (options?.codec && !(RENDER_CODECS as readonly string[]).includes(options.codec)) {
+    throw new Error(`Unsupported codec '${options.codec}'. Allowed: ${RENDER_CODECS.join(', ')}`);
+  }
+
+  // Resolve the adapter before doing any work so unsupported engines fail fast
+  const adapter = selectAdapter(brief.engine);
 
   // Determine dimensions
-  const format = options?.format || brief.formats[0];
   let width = 1920;
   let height = 1080;
   if (format === '9:16') {
@@ -96,7 +160,7 @@ export async function runRender(projectDir: string, options?: RenderCliOptions):
   };
 
   const toolkitVersion = '0.1.0';
-  const approvedSourceLock = '5c5794287bd0dc2c94f238ca89f4752ecaa045a2';
+  const approvedSourceLock = readApprovedSourceLock();
   const requestHash = computeCanonicalRenderHash(
     toolkitVersion,
     approvedSourceLock,
@@ -113,9 +177,9 @@ export async function runRender(projectDir: string, options?: RenderCliOptions):
     try {
       const cachedResultPath = path.join(cacheDir, 'render-result.json');
       const cachedData = JSON.parse(await fs.readFile(cachedResultPath, 'utf-8'));
-      // Verify cached output file actually exists
-      if (cachedData.output_files?.[0]?.path) {
-        await fs.access(cachedData.output_files[0].path);
+      // Reuse the cache only when the cached output still exists and matches its recorded hash
+      const cachedFile = cachedData.output_files?.[0];
+      if (cachedFile?.path && cachedFile.hash && sha256File(cachedFile.path) === cachedFile.hash) {
         return {
           ...cachedData,
           status: 'cached'
@@ -139,9 +203,6 @@ export async function runRender(projectDir: string, options?: RenderCliOptions):
   };
 
   await fs.writeFile(path.join(runDir, 'render-request.json'), JSON.stringify(renderRequest, null, 2), 'utf-8');
-
-  // Select adapter
-  const adapter = brief.engine === 'html' ? new HtmlSeekableAdapter() : new HyperFramesAdapter();
 
   const validation = await adapter.validate({
     projectDir,
@@ -180,9 +241,10 @@ export async function runRender(projectDir: string, options?: RenderCliOptions):
     ],
     measurements: renderOutput.measurements,
     logs: renderOutput.logs,
+    // Pre-render adapter and policy validation; post-render checks are recorded by `mgvideo validate`.
     validation_results: {
-      passed: true,
-      failures: []
+      passed: validation.valid,
+      failures: validation.errors
     }
   };
 

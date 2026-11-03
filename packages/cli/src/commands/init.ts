@@ -8,6 +8,7 @@ import type {
   AssetManifest,
   ProjectLock
 } from '../../../contracts/src/index.js';
+import { findWorkspaceRoot, readApprovedLock } from './_shared.js';
 
 export async function runInit(projectDir: string, options: {
   projectId?: string;
@@ -15,8 +16,28 @@ export async function runInit(projectDir: string, options: {
   workflow?: ProjectBrief['workflow'];
   language?: string;
   duration?: number;
+  /** Overwrite existing project contracts. Without it, init refuses to touch an existing project. */
+  force?: boolean;
 }): Promise<{ projectDir: string; filesCreated: string[] }> {
   await fs.mkdir(projectDir, { recursive: true });
+
+  const contractFiles = ['brief.json', 'brand.json', 'claims.json', 'assets.json', 'project.lock.json'];
+  if (!options.force) {
+    const existing: string[] = [];
+    for (const f of contractFiles) {
+      try {
+        await fs.access(path.join(projectDir, f));
+        existing.push(f);
+      } catch {
+        // File does not exist; nothing to protect.
+      }
+    }
+    if (existing.length > 0) {
+      throw new Error(
+        `Refusing to overwrite existing project files in ${projectDir}: ${existing.join(', ')}. Pass --force to replace them.`
+      );
+    }
+  }
 
   const projectId = options.projectId || path.basename(projectDir);
   const clientId = options.clientId || 'magnifito-internal';
@@ -138,7 +159,7 @@ export async function runInit(projectDir: string, options: {
     project_id: projectId,
     created_at: new Date().toISOString(),
     toolkit_version: '0.1.0',
-    approved_source_baseline: '5c5794287bd0dc2c94f238ca89f4752ecaa045a2',
+    approved_source_baseline: readApprovedLock(findWorkspaceRoot()).approved_baselines.hyperframes?.approved_commit ?? 'unapproved',
     pinned_renderer: 'hyperframes',
     input_hashes: {
       'brief.json': briefHash,

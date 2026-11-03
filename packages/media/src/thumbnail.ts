@@ -1,6 +1,7 @@
-import { execSync } from 'node:child_process';
 import path from 'node:path';
 import fs from 'node:fs';
+import { runFfmpeg, probe } from './proc.js';
+import { probeImage } from './visual_diff.js';
 
 export interface ThumbnailOptions {
   timeOffsetSeconds?: number;
@@ -21,7 +22,7 @@ export interface ThumbnailResult {
 
 export class ThumbnailGenerator {
   /**
-   * Extract a still thumbnail from a video file at a given time offset.
+   * Extracts a still thumbnail from a video file at a time offset.
    */
   static extractThumbnail(videoPath: string, options: ThumbnailOptions = {}): ThumbnailResult {
     if (!fs.existsSync(videoPath)) {
@@ -29,22 +30,36 @@ export class ThumbnailGenerator {
     }
 
     const timeOffset = options.timeOffsetSeconds ?? 1.0;
+    if (!Number.isFinite(timeOffset) || timeOffset < 0) {
+      throw new Error(`timeOffsetSeconds must be >= 0, got ${timeOffset}`);
+    }
+    for (const [k, v] of [['width', options.width], ['height', options.height]] as const) {
+      if (v !== undefined && (!Number.isInteger(v) || v <= 0)) throw new Error(`${k} must be a positive integer, got ${v}`);
+    }
     const format = options.format ?? 'png';
-    const ext = (format === 'jpg' || format === 'jpeg') ? 'jpg' : 'png';
+    if (!['png', 'jpg', 'jpeg'].includes(format)) throw new Error(`Unsupported thumbnail format: ${String(format)}`);
+    const isJpeg = format === 'jpg' || format === 'jpeg';
+    const ext = isJpeg ? 'jpg' : 'png';
 
+    const info = probe(videoPath);
+    if (!info.hasVideo) throw new Error(`No video stream in ${videoPath}`);
+    if (timeOffset >= info.durationSeconds) {
+      throw new Error(`timeOffsetSeconds ${timeOffset} is beyond the video duration ${info.durationSeconds.toFixed(3)}s`);
+    }
+
+    // Include the source basename so thumbnails of different videos in one folder do not collide.
     const outPath = options.outputPath ?? path.join(
       path.dirname(videoPath),
-      `thumbnail-${timeOffset}s.${ext}`
+      `${path.basename(videoPath, path.extname(videoPath))}-thumbnail-${timeOffset}s.${ext}`
     );
 
-    // Build scale filter if dimensions requested
-    let filterClause = '';
+    let vf: string | null = null;
     if (options.width && options.height) {
-      filterClause = `-vf "scale=${options.width}:${options.height}:force_original_aspect_ratio=decrease,pad=${options.width}:${options.height}:(ow-iw)/2:(oh-ih)/2:color=black"`;
+      vf = `scale=${options.width}:${options.height}:force_original_aspect_ratio=decrease,pad=${options.width}:${options.height}:(ow-iw)/2:(oh-ih)/2:color=black`;
     } else if (options.width) {
-      filterClause = `-vf "scale=${options.width}:-1"`;
+      vf = `scale=${options.width}:-1`;
     } else if (options.height) {
-      filterClause = `-vf "scale=-1:${options.height}"`;
+      vf = `scale=-1:${options.height}`;
     }
 
     const parentDir = path.dirname(outPath);
@@ -52,50 +67,31 @@ export class ThumbnailGenerator {
       fs.mkdirSync(parentDir, { recursive: true });
     }
 
-    const codecArgs = (format === 'jpg' || format === 'jpeg') ? '-c:v mjpeg -q:v 2' : '-c:v png';
-
-    // Fast seek before input, accurate frame grab
-    const cmd = [
-      'ffmpeg -y',
-      `-ss ${timeOffset.toFixed(3)}`,
-      `-i "${videoPath}"`,
-      filterClause,
-      '-vframes 1',
-      codecArgs,
-      `"${outPath}"`
-    ].filter(Boolean).join(' ');
-
-    execSync(cmd, { stdio: 'pipe' });
+    // Fast seek before input, then grab one frame.
+    runFfmpeg([
+      '-ss', timeOffset.toFixed(3),
+      '-i', videoPath,
+      ...(vf ? ['-vf', vf] : []),
+      '-frames:v', '1',
+      ...(isJpeg ? ['-c:v', 'mjpeg', '-q:v', '2'] : ['-c:v', 'png']),
+      '-update', '1',
+      outPath,
+    ]);
 
     if (!fs.existsSync(outPath)) {
       throw new Error(`Failed to generate thumbnail at: ${outPath}`);
     }
 
     const stat = fs.statSync(outPath);
-
-    // Probe dimensions of generated thumbnail
-    let width = options.width ?? 0;
-    let height = options.height ?? 0;
-    try {
-      const probeCmd = `ffprobe -v error -select_streams v:0 -show_entries stream=width,height -of csv=s=x:p=0 "${outPath}"`;
-      const probeOut = execSync(probeCmd, { encoding: 'utf8' }).trim();
-      const parts = probeOut.split('x').map(Number);
-      if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
-        width = parts[0];
-        height = parts[1];
-      }
-    } catch {
-      // fallback
-    }
+    const out = probeImage(outPath);
 
     return {
       outputPath: outPath,
       format,
-      width,
-      height,
+      width: out.width,
+      height: out.height,
       fileSizeBytes: stat.size,
       timeOffsetSeconds: timeOffset
     };
   }
 }
-

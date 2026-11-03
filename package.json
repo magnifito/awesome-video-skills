@@ -14,10 +14,16 @@
     "build": "tsc",
     "doctor": "node dist/packages/cli/src/bin/mgvideo.js doctor",
     "catalog": "node dist/packages/cli/src/bin/mgvideo.js catalog",
-    "test": "npx tsx evaluations/runner.ts",
+    "test": "tsx evaluations/runner.ts",
     "lint": "tsc --noEmit",
     "upstream:check": "node dist/packages/cli/src/bin/mgvideo.js upstream check",
-    "package:skills": "node --loader ts-node/esm tools/packaging/packager.ts"
+    "package:skills": "tsx tools/packaging/packager.ts",
+    "registry:check": "tsx tools/upstreams/lock.ts",
+    "upstream:remote": "tsx tools/upstreams/remote_check.ts",
+    "lint:docs": "docs-notary check",
+    "lint:docs:advisory": "docs-notary advisory",
+    "gen:docs-index": "docs-notary gen",
+    "docs:impact": "docs-notary impact"
   },
   "engines": {
     "node": ">=22.0.0"
@@ -27,6 +33,7 @@
     "zod": "^3.24.2"
   },
   "devDependencies": {
+    "@puralex/docs-notary": "^1.5.2",
     "@types/node": "^22.13.9",
     "tsx": "^4.19.3",
     "typescript": "^5.8.2"

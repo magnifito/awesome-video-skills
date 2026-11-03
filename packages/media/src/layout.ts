@@ -25,6 +25,12 @@ export const PLATFORM_SAFE_ZONES: Record<string, SafeZoneBoundary> = {
     rightPercent: 0.10,
     leftPercent: 0.05
   },
+  square_feed: {
+    topPercent: 0.08,
+    bottomPercent: 0.12,
+    rightPercent: 0.06,
+    leftPercent: 0.06
+  },
   standard_landscape: {
     topPercent: 0.05,
     bottomPercent: 0.05,
@@ -48,10 +54,20 @@ export class LayoutAuditor {
     elementRect: Rect,
     canvasWidth: number,
     canvasHeight: number,
-    format: '9:16' | '16:9' | '1:1' = '9:16'
+    format: '9:16' | '16:9' | '1:1' = '9:16',
+    platform?: keyof typeof PLATFORM_SAFE_ZONES
   ): SafeZoneViolation[] {
     const violations: SafeZoneViolation[] = [];
-    const zone = format === '9:16' ? PLATFORM_SAFE_ZONES.tiktok_vertical : PLATFORM_SAFE_ZONES.standard_landscape;
+    const defaultZoneByFormat: Record<'9:16' | '16:9' | '1:1', string> = {
+      '9:16': 'tiktok_vertical',
+      '16:9': 'standard_landscape',
+      '1:1': 'square_feed'
+    };
+    const zoneKey = platform ?? defaultZoneByFormat[format];
+    const zone = PLATFORM_SAFE_ZONES[zoneKey];
+    if (!zone) {
+      throw new Error(`Unknown safe zone platform/format: ${String(zoneKey)}`);
+    }
 
     const minX = canvasWidth * zone.leftPercent;
     const maxX = canvasWidth * (1.0 - zone.rightPercent);
@@ -71,6 +87,14 @@ export class LayoutAuditor {
         element_id: elementId,
         reason: `Element encroaches bottom safe margin (${Math.round(canvasHeight - maxY)}px)`,
         encroachment_px: Math.round(elementRect.y + elementRect.height - maxY)
+      });
+    }
+
+    if (elementRect.x < minX) {
+      violations.push({
+        element_id: elementId,
+        reason: `Element encroaches left safe margin (${Math.round(minX)}px)`,
+        encroachment_px: Math.round(minX - elementRect.x)
       });
     }
 

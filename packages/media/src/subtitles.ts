@@ -14,8 +14,11 @@ export class SubtitleGenerator {
    * Format milliseconds into SRT timestamp format: HH:MM:SS,mmm
    */
   static formatSrtTimestamp(ms: number): string {
-    const totalSeconds = Math.floor(ms / 1000);
-    const millis = Math.floor(ms % 1000);
+    if (!Number.isFinite(ms) || ms < 0) throw new Error(`Subtitle timestamp must be >= 0 ms, got ${ms}`);
+    // Round to whole milliseconds first so float input (e.g. 0.3 s * 1000) does not truncate to 299.
+    const whole = Math.round(ms);
+    const totalSeconds = Math.floor(whole / 1000);
+    const millis = whole % 1000;
     const hours = Math.floor(totalSeconds / 3600);
     const minutes = Math.floor((totalSeconds % 3600) / 60);
     const seconds = totalSeconds % 60;
@@ -39,7 +42,7 @@ export class SubtitleGenerator {
 
     for (let i = 0; i < scenePlan.scenes.length; i++) {
       const scene = scenePlan.scenes[i];
-      const durationMs = scene.duration_seconds * 1000;
+      const durationMs = Math.round(scene.duration_seconds * 1000);
       cues.push({
         index: i + 1,
         start_ms: accumulatedMs,
@@ -78,13 +81,24 @@ export class SubtitleGenerator {
     return cues;
   }
 
+  /** Prevents cue text from forging a timing line or ending the cue early. */
+  static sanitizeCueText(text: string): string {
+    return text
+      .replace(/-->/g, '\u2192')
+      .replace(/\r\n?/g, '\n')
+      .split('\n')
+      .map(l => l.trim())
+      .filter(l => l.length > 0)
+      .join('\n');
+  }
+
   /**
    * Render SubRip (.srt) string.
    */
   static toSrt(cues: SubtitleCue[]): string {
     return cues
       .map(
-        c => `${c.index}\n${this.formatSrtTimestamp(c.start_ms)} --> ${this.formatSrtTimestamp(c.end_ms)}\n${c.text}\n`
+        c => `${c.index}\n${this.formatSrtTimestamp(c.start_ms)} --> ${this.formatSrtTimestamp(c.end_ms)}\n${this.sanitizeCueText(c.text)}\n`
       )
       .join('\n');
   }
@@ -96,7 +110,7 @@ export class SubtitleGenerator {
     const header = 'WEBVTT\n\n';
     const body = cues
       .map(
-        c => `${c.index}\n${this.formatVttTimestamp(c.start_ms)} --> ${this.formatVttTimestamp(c.end_ms)}\n${c.text}\n`
+        c => `${c.index}\n${this.formatVttTimestamp(c.start_ms)} --> ${this.formatVttTimestamp(c.end_ms)}\n${this.sanitizeCueText(c.text)}\n`
       )
       .join('\n');
     return header + body;
@@ -110,6 +124,9 @@ export class SubtitleGenerator {
     baseName: string,
     cues: SubtitleCue[]
   ): Promise<{ srtPath: string; vttPath: string }> {
+    if (!/^[A-Za-z0-9._-]+$/.test(baseName) || baseName.startsWith('.')) {
+      throw new Error(`Invalid subtitle base name: ${JSON.stringify(baseName)}`);
+    }
     await fs.mkdir(outputDir, { recursive: true });
 
     const srtPath = path.join(outputDir, `${baseName}.srt`);

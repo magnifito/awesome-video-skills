@@ -45,10 +45,14 @@ export class ColorSpaceConfigurator {
       const transfer = videoStream?.color_transfer as string | undefined;
       const range = videoStream?.color_range as string | undefined;
 
+      // Compliance requires explicit BT.709 tags (sRGB transfer is accepted for web
+      // graphics) and limited (tv) range. Untagged or "unspecified" streams are not
+      // compliant because players will guess and may pick BT.601.
       const isCompliant =
-        (colorSpace === 'bt709' || colorSpace === 'unspecified' || !colorSpace) &&
-        (primaries === 'bt709' || primaries === 'unspecified' || !primaries) &&
-        (transfer === 'bt709' || transfer === 'iec61966-2-1' || transfer === 'unspecified' || !transfer);
+        colorSpace === 'bt709' &&
+        primaries === 'bt709' &&
+        (transfer === 'bt709' || transfer === 'iec61966-2-1') &&
+        (range === 'tv' || range === undefined);
 
       return {
         color_space: colorSpace,

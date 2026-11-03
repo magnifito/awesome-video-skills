@@ -1,3 +1,9 @@
+---
+title: Magnifito Audio Engineering Standards
+kind: reference
+status: reference
+updated: 2026-11-03
+---
 # Magnifito Audio Engineering Standards
 
 The Magnifito platform adheres to broadcast television and streaming digital audio standards, guaranteeing clear vocal intelligibility, compliant loudness targets, and zero third-party licensing spend.

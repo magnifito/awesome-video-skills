@@ -22,6 +22,12 @@ export class TimelineMapper {
   private sampleRate: number;
 
   constructor(fps: RationalRate = { numerator: 30, denominator: 1 }, sampleRate = 48000) {
+    if (!Number.isInteger(fps.numerator) || !Number.isInteger(fps.denominator) || fps.numerator <= 0 || fps.denominator <= 0) {
+      throw new Error(`Frame rate must be a positive integer rational, got ${fps.numerator}/${fps.denominator}`);
+    }
+    if (!Number.isInteger(sampleRate) || sampleRate <= 0) {
+      throw new Error(`Sample rate must be a positive integer, got ${sampleRate}`);
+    }
     this.fpsNumerator = fps.numerator;
     this.fpsDenominator = fps.denominator;
     this.sampleRate = sampleRate;
@@ -82,9 +88,14 @@ export class TimelineMapper {
     }>
   ): number | null {
     for (const cut of cuts) {
+      if (!Number.isFinite(cut.speed_factor) || cut.speed_factor <= 0) {
+        throw new Error(`Cut speed_factor must be > 0, got ${cut.speed_factor}`);
+      }
       if (sourceUs >= cut.source_start_us && sourceUs < cut.source_end_us) {
         const offsetUs = (sourceUs - cut.source_start_us) / cut.speed_factor;
-        const offsetFrames = this.usToFrames(offsetUs);
+        // Floor, not round: a timestamp belongs to the frame interval [n, n+1) that contains it.
+        // Rounding would push the last microseconds of a cut onto output_end_frame (exclusive).
+        const offsetFrames = Math.floor((offsetUs / 1_000_000) * this.fpsNumerator / this.fpsDenominator);
         const mappedFrame = cut.output_start_frame + offsetFrames;
         if (mappedFrame < cut.output_end_frame) {
           return mappedFrame;

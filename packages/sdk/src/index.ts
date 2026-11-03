@@ -2,7 +2,7 @@ import path from 'node:path';
 import { runPlan } from '../../cli/src/commands/plan.js';
 import { runRender, type RenderCliOptions } from '../../cli/src/commands/render.js';
 import { runValidate, type ValidationReport } from '../../cli/src/commands/validate.js';
-import { runPackage, type PackageOutput } from '../../cli/src/commands/package.js';
+import { runPackage, type PackageOutput, type PackageOptions } from '../../cli/src/commands/package.js';
 import { generateDeliveryReport, type DeliveryReport } from '../../cli/src/commands/report.js';
 import { compareRenderOutputs, type DiffReport } from '../../cli/src/commands/diff.js';
 import { generateStoryboardContactSheet, type StoryboardResult } from '../../cli/src/commands/storyboard.js';
@@ -89,11 +89,11 @@ export class MagnifitoVideoEngine {
     return runValidate(runPathOrId, fullProjDir);
   }
 
-  async package(runPathOrId: string, projectDir?: string, reviewer = 'Kiril Kirov'): Promise<PackageOutput> {
+  async package(runPathOrId: string, projectDir?: string, options: PackageOptions = {}): Promise<PackageOutput> {
     const fullProjDir = projectDir
       ? (path.isAbsolute(projectDir) ? projectDir : path.resolve(this.workspaceRoot, projectDir))
       : undefined;
-    return runPackage(runPathOrId, fullProjDir, reviewer);
+    return runPackage(runPathOrId, fullProjDir, options);
   }
 
   async report(projectDir: string, runId?: string): Promise<{

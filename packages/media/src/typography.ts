@@ -58,17 +58,18 @@ export class TypographyFitter {
     const availableWidth = Math.max(100, options.cardWidth - (hPadding * 2));
     const availableHeight = Math.max(50, options.cardHeight - (vPadding * 2));
 
+    if (!(minFontSize > 0) || !(baseFontSize >= minFontSize)) {
+      throw new Error(`Font sizes must satisfy 0 < minFontSize <= baseFontSize (got ${minFontSize}, ${baseFontSize})`);
+    }
+
     let currentFontSize = baseFontSize;
-    let lines: string[] = [];
-    let fits = false;
 
     while (currentFontSize >= minFontSize) {
-      lines = this.wrapText(text, availableWidth, currentFontSize);
+      const lines = this.wrapText(text, availableWidth, currentFontSize);
       const lineHeight = Math.round(currentFontSize * lineHeightRatio);
       const totalTextHeight = lines.length * lineHeight;
 
       if (lines.length <= maxLines && totalTextHeight <= availableHeight) {
-        fits = true;
         return {
           lines,
           fontSize: currentFontSize,
@@ -78,16 +79,19 @@ export class TypographyFitter {
           fits: true
         };
       }
-      currentFontSize -= 2; // Step down font size
+      if (currentFontSize === minFontSize) break;
+      // Step down by 2, but always try minFontSize itself as the last candidate.
+      currentFontSize = Math.max(minFontSize, currentFontSize - 2);
     }
 
     // Minimum size reached
     const finalLineHeight = Math.round(minFontSize * lineHeightRatio);
+    const finalLines = this.wrapText(text, availableWidth, minFontSize).slice(0, maxLines);
     return {
-      lines: this.wrapText(text, availableWidth, minFontSize).slice(0, maxLines),
+      lines: finalLines,
       fontSize: minFontSize,
       lineHeight: finalLineHeight,
-      totalTextHeight: lines.length * finalLineHeight,
+      totalTextHeight: finalLines.length * finalLineHeight,
       scaleFactor: Math.round((minFontSize / baseFontSize) * 100) / 100,
       fits: false
     };

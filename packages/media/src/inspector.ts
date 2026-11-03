@@ -52,7 +52,7 @@ export async function inspectMedia(filePath: string): Promise<MediaProbeResult> 
     const pixFmt = videoStream?.pix_fmt as string | undefined;
 
     // Alpha channels: yuva420p, rgba, yuva444p, argb, bgra, etc.
-    const hasAlpha = pixFmt ? (pixFmt.includes('a') || pixFmt.includes('rgba') || pixFmt.includes('yuva')) : false;
+    const hasAlpha = pixFmt ? /^(yuva|rgba|bgra|argb|abgr|gbrap|ya\d|ayuv|vuya)/.test(pixFmt) : false;
 
     return {
       width,
@@ -82,21 +82,24 @@ export async function measureAudioLoudness(filePath: string): Promise<{ lufs: nu
     '-'
   ];
 
+  let stderr: string;
   try {
-    const { stderr } = await execFileAsync('ffmpeg', args);
-    
-    // Parse LUFS: "Integrated loudness:\n    I:         -15.4 LUFS"
-    const lufsMatch = stderr.match(/I:\s+([-\d.]+)\s+LUFS/);
-    const peakMatch = stderr.match(/Peak:\s+([-\d.]+)\s+dBFS/);
-
-    const lufs = lufsMatch ? parseFloat(lufsMatch[1]) : -16.0;
-    const peak = peakMatch ? parseFloat(peakMatch[1]) : -1.0;
-
-    return { lufs, true_peak_db: peak };
-  } catch {
-    // If no audio or filter fails, return standard reference values
-    return { lufs: -16.0, true_peak_db: -1.0 };
+    ({ stderr } = await execFileAsync('ffmpeg', args, { maxBuffer: 256 * 1024 * 1024 }));
+  } catch (error) {
+    // No audio stream, unreadable file, etc. Never report target values as if measured.
+    throw new Error(`Failed to measure loudness of ${filePath}: ${(error as Error).message.slice(-500)}`);
   }
+
+  // ebur128 logs one "I: ... LUFS" line per frame; only the final summary block is authoritative.
+  const summaryIdx = stderr.lastIndexOf('Summary:');
+  const summary = summaryIdx >= 0 ? stderr.slice(summaryIdx) : '';
+  const lufsMatch = summary.match(/Integrated loudness:\s*I:\s+(-?[\d.]+|-inf)\s+LUFS/);
+  const peakMatch = summary.match(/True peak:\s*Peak:\s+(-?[\d.]+|-inf)\s+dBFS/);
+  if (!lufsMatch || !peakMatch) {
+    throw new Error(`Failed to measure loudness of ${filePath}: ebur128 summary not found`);
+  }
+  const toNum = (v: string): number => (v === '-inf' ? -Infinity : parseFloat(v));
+  return { lufs: toNum(lufsMatch[1]), true_peak_db: toNum(peakMatch[1]) };
 }
 
 export interface VideoQualityMetrics {
@@ -123,21 +126,21 @@ export async function measureVideoQuality(
   ];
 
   try {
-    const { stderr } = await execFileAsync('ffmpeg', args);
+    const { stderr } = await execFileAsync('ffmpeg', args, { maxBuffer: 256 * 1024 * 1024 });
 
     // Parse SSIM: SSIM Y:1.000000 (...) U:... V:... All:1.000000 (...)
     const ssimMatch = stderr.match(/SSIM\s+Y:([\d.]+)\s+\([^)]+\)\s+U:([\d.]+)\s+\([^)]+\)\s+V:([\d.]+)\s+\([^)]+\)\s+All:([\d.]+)/);
-    const ssim_y = ssimMatch ? parseFloat(ssimMatch[1]) : 1.0;
-    const ssim_u = ssimMatch ? parseFloat(ssimMatch[2]) : 1.0;
-    const ssim_v = ssimMatch ? parseFloat(ssimMatch[3]) : 1.0;
-    const ssim_all = ssimMatch ? parseFloat(ssimMatch[4]) : 1.0;
-
     // Parse PSNR: PSNR y:... u:... v:... average:(inf|[\d.]+)
-    const psnrMatch = stderr.match(/average:(inf|[\d.]+)/);
-    let psnr_average: number | 'inf' = 'inf';
-    if (psnrMatch && psnrMatch[1] !== 'inf') {
-      psnr_average = parseFloat(psnrMatch[1]);
+    const psnrMatch = stderr.match(/PSNR[^\n]*average:(inf|[\d.]+)/);
+    if (!ssimMatch || !psnrMatch) {
+      // A failed comparison must never look like a perfect match.
+      throw new Error('ssim/psnr summary not found in ffmpeg output');
     }
+    const ssim_y = parseFloat(ssimMatch[1]);
+    const ssim_u = parseFloat(ssimMatch[2]);
+    const ssim_v = parseFloat(ssimMatch[3]);
+    const ssim_all = parseFloat(ssimMatch[4]);
+    const psnr_average: number | 'inf' = psnrMatch[1] === 'inf' ? 'inf' : parseFloat(psnrMatch[1]);
 
     return {
       ssim_all,

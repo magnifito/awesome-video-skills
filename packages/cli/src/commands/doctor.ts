@@ -1,8 +1,21 @@
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import fs from 'node:fs/promises';
+import { CHROME_CANDIDATES, findChrome } from '../../../media/src/proc.js';
 
 const execFileAsync = promisify(execFile);
+
+/** Returns the first binary from the list that is on PATH, or null. */
+async function firstOnPath(bins: string[]): Promise<string | null> {
+  for (const bin of bins) {
+    try {
+      await execFileAsync(process.platform === 'win32' ? 'where' : 'which', [bin]);
+      return bin;
+    } catch {
+      // Not on PATH; try the next candidate.
+    }
+  }
+  return null;
+}
 
 export interface HealthCheckItem {
   component: string;
@@ -70,51 +83,79 @@ export async function runDoctor(): Promise<{ passed: boolean; items: HealthCheck
     });
   }
 
-  // 3. Headless Chrome
-  const chromePaths = [
-    '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
-    '/Applications/Google Chrome Canary.app/Contents/MacOS/Google Chrome Canary',
-    '/usr/bin/google-chrome',
-    '/usr/bin/chromium'
-  ];
-  let chromeFound = false;
-  for (const cp of chromePaths) {
+  // 3. Headless Chrome (same lookup the renderers use)
+  const chromePath = findChrome();
+  if (chromePath) {
     try {
-      await fs.access(cp);
-      const { stdout: chromeOut } = await execFileAsync(cp, ['--version']);
+      const { stdout: chromeOut } = await execFileAsync(chromePath, ['--version']);
       items.push({
         component: 'Headless Browser (Chrome)',
         status: 'ok',
         version: chromeOut.trim(),
-        details: `Available at: ${cp}`
+        details: `Available at: ${chromePath}`
       });
-      chromeFound = true;
-      break;
-    } catch {}
-  }
-  if (!chromeFound) {
+    } catch (err) {
+      items.push({
+        component: 'Headless Browser (Chrome)',
+        status: 'warning',
+        details: `Found ${chromePath} but it failed to run: ${(err as Error).message}`
+      });
+    }
+  } else {
     items.push({
       component: 'Headless Browser (Chrome)',
       status: 'warning',
-      details: 'Chrome binary not found in standard paths; fallback renderer will be used.'
+      details: `Chrome not found (checked: ${CHROME_CANDIDATES.join(', ')}). Set CHROME_PATH to override.`
     });
   }
 
-  // 4. Cyrillic Typography & Font Checks
-  // Check system font availability for Bulgarian / Cyrillic glyphs
-  items.push({
-    component: 'Cyrillic Typography Subsystem',
-    status: 'ok',
-    version: 'Unicode 15.0',
-    details: 'System-ui and standard Cyrillic font mappings verified.'
-  });
+  // 4. SVG rasterizer (needed for title cards, lower thirds, overlays and renders)
+  const rasterizers = ['rsvg-convert', 'resvg', 'magick', 'convert', ...(process.platform === 'darwin' ? ['sips'] : [])];
+  const foundRasterizer = await firstOnPath(rasterizers);
+  items.push(
+    foundRasterizer || chromePath
+      ? {
+          component: 'SVG Rasterizer',
+          status: 'ok',
+          details: `Using ${foundRasterizer ?? `headless Chrome (${chromePath})`}.`
+        }
+      : {
+          component: 'SVG Rasterizer',
+          status: 'error',
+          details: 'No SVG rasterizer found. Install librsvg (rsvg-convert), resvg, ImageMagick, or Chrome.'
+        }
+  );
 
-  // 5. Zero-budget policy check
+  // 5. Cyrillic font coverage, checked with fontconfig when available
+  try {
+    const { stdout } = await execFileAsync('fc-list', [':lang=bg', 'family']);
+    const families = [...new Set(stdout.split('\n').map(l => l.split(',')[0].trim()).filter(Boolean))];
+    items.push(
+      families.length > 0
+        ? {
+            component: 'Cyrillic Typography Subsystem',
+            status: 'ok',
+            details: `${families.length} installed font families cover Bulgarian (e.g. ${families.slice(0, 3).join(', ')}).`
+          }
+        : {
+            component: 'Cyrillic Typography Subsystem',
+            status: 'warning',
+            details: 'fontconfig reports no installed fonts covering Bulgarian (fc-list :lang=bg).'
+          }
+    );
+  } catch {
+    items.push({
+      component: 'Cyrillic Typography Subsystem',
+      status: 'warning',
+      details: 'Not verified: fontconfig (fc-list) is not installed, so Cyrillic font coverage could not be checked.'
+    });
+  }
+
+  // 6. Budget policy: informational only. Enforcement happens per project in `mgvideo gate`.
   items.push({
     component: 'Cost & Media Policy Guard',
     status: 'ok',
-    version: '1.0.0',
-    details: 'Zero-budget external API protection enabled by default.'
+    details: 'Informational: no external media APIs are integrated; per-project budgets are enforced by `mgvideo gate`.'
   });
 
   const passed = items.every(i => i.status !== 'error');

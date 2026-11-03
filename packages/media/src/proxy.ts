@@ -1,7 +1,6 @@
-import { execSync } from 'node:child_process';
 import path from 'node:path';
 import fs from 'node:fs';
-import crypto from 'node:crypto';
+import { runFfmpeg } from './proc.js';
 
 export type ProxyResolution = '540p' | '720p' | '360p';
 
@@ -29,11 +28,16 @@ export class ProxyGenerator {
     }
 
     const resolution = options.resolution ?? '540p';
-    const scaleFilter = resolution === '360p'
-      ? 'scale=w=640:h=360:force_original_aspect_ratio=decrease'
-      : resolution === '720p'
-      ? 'scale=w=1280:h=720:force_original_aspect_ratio=decrease'
-      : 'scale=w=960:h=540:force_original_aspect_ratio=decrease';
+    const box: Record<ProxyResolution, [number, number]> = {
+      '360p': [640, 360],
+      '540p': [960, 540],
+      '720p': [1280, 720],
+    };
+    const dims = box[resolution];
+    if (!dims) throw new Error(`Unsupported proxy resolution: ${String(resolution)}`);
+    // The box is applied to the display orientation so 9:16 masters get a 9:16 proxy, and
+    // force_divisible_by=2 keeps both dimensions even (libx264 + yuv420p rejects odd sizes).
+    const scaleFilter = `scale=w=${dims[0]}:h=${dims[1]}:force_original_aspect_ratio=decrease:force_divisible_by=2`;
 
     const outPath = options.outputPath ?? path.join(
       path.dirname(videoPath),
@@ -45,16 +49,14 @@ export class ProxyGenerator {
       fs.mkdirSync(parentDir, { recursive: true });
     }
 
-    const cmd = [
-      'ffmpeg -y',
-      `-i "${videoPath}"`,
-      `-vf "${scaleFilter}"`,
-      '-c:v libx264 -preset ultrafast -crf 28 -pix_fmt yuv420p',
-      '-c:a aac -b:a 96k',
-      `"${outPath}"`
-    ].join(' ');
-
-    execSync(cmd, { stdio: 'pipe' });
+    runFfmpeg([
+      '-i', videoPath,
+      '-vf', scaleFilter,
+      '-map', '0:v:0', '-map', '0:a?',
+      '-c:v', 'libx264', '-preset', 'ultrafast', '-crf', '28', '-pix_fmt', 'yuv420p',
+      '-c:a', 'aac', '-b:a', '96k',
+      outPath,
+    ]);
 
     if (!fs.existsSync(outPath)) {
       throw new Error(`Failed to generate proxy video at: ${outPath}`);

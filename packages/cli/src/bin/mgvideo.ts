@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { Command } from 'commander';
+import { Argument, Command, Option } from 'commander';
 import path from 'node:path';
 import nodeFs from 'node:fs';
 import { runDoctor } from '../commands/doctor.js';
@@ -29,6 +29,10 @@ import { runNotify } from '../commands/notify.js';
 import { ProductionBundleExporter } from '../../../media/src/bundle.js';
 import { runDashboard } from '../commands/dashboard.js';
 import { runVerifyBundle } from '../commands/verify_bundle.js';
+import { resolveRunDir, resolveProjectDir, findWorkspaceRoot } from '../commands/_shared.js';
+import { RENDER_FORMATS, RENDER_CODECS } from '../commands/render.js';
+import { PIPELINE_EVENTS } from '../../../media/src/notifications.js';
+import { safeColor } from '../../../media/src/proc.js';
 import { ProxyGenerator } from '../../../media/src/proxy.js';
 import { SecurityWatermarker } from '../../../media/src/watermark.js';
 import { VideoSpeedEngine } from '../../../media/src/speed.js';
@@ -103,7 +107,7 @@ program
   .description('Show capabilities, source provenance, observed versions, and approved versions')
   .action(async () => {
     try {
-      const workspaceRoot = process.cwd();
+      const workspaceRoot = findWorkspaceRoot();
       const res = await runCatalog(workspaceRoot);
       console.log('\n📚 Magnifito Super Video Production Catalog');
       console.log(`Tracked Upstream Repositories: ${res.tracked_upstreams_count}`);
@@ -136,13 +140,15 @@ program
   .option('-w, --workflow <type>', 'Workflow type', 'branded-promo')
   .option('-l, --language <lang>', 'Primary language', 'bg')
   .option('-d, --duration <seconds>', 'Target duration in seconds', '15')
+  .option('--force', 'Overwrite existing brief, brand, claims, assets and lock files', false)
   .action(async (projectPath, opts) => {
     try {
       const targetDir = path.resolve(process.cwd(), projectPath);
       const res = await runInit(targetDir, {
         workflow: opts.workflow,
         language: opts.language,
-        duration: parseFloat(opts.duration)
+        duration: parseFloat(opts.duration),
+        force: opts.force
       });
       console.log(`\n✨ Initialized Magnifito video workspace at: ${res.projectDir}`);
       console.log('Created contracts:');
@@ -203,8 +209,8 @@ program
 program
   .command('render <project>')
   .description('Execute a frozen render request and write a separately identified run result')
-  .option('-f, --format <format>', 'Aspect ratio format (9:16, 16:9, 1:1)', '9:16')
-  .option('-c, --codec <codec>', 'Output container codec (mp4, webm, mov_prores)', 'mp4')
+  .addOption(new Option('-f, --format <format>', 'Aspect ratio format (defaults to the first format in brief.json)').choices([...RENDER_FORMATS]))
+  .addOption(new Option('-c, --codec <codec>', 'Output container codec').choices([...RENDER_CODECS]))
   .option('--transparent', 'Render with transparent background and alpha channel', false)
   .option('--force', 'Bypass cache and force re-rendering', false)
   .action(async (projectPath, opts) => {
@@ -223,7 +229,7 @@ program
       console.log(`Output: ${result.output_files[0]?.path}`);
       console.log(`Dimensions: ${result.measurements.width}x${result.measurements.height} @ ${result.measurements.fps}fps`);
       console.log(`Duration: ${result.measurements.duration_seconds}s | Audio: ${result.measurements.has_audio ? 'Yes' : 'No'}`);
-      console.log('\nNext step: run `mgvideo validate ' + result.run_id + '`\n');
+      console.log(`\nNext step: run \`mgvideo validate ${result.run_id} -p ${projectPath}\`\n`);
     } catch (err) {
       console.error('Render command failed:', err);
       process.exit(1);
@@ -262,10 +268,10 @@ program
   .command('package <run>')
   .description('Verify version-bound approvals and rights, then assemble the permitted client delivery')
   .option('-p, --project <project>', 'Project directory')
-  .option('-r, --reviewer <name>', 'Reviewer name', 'Kiril Kirov')
+  .option('-r, --review <path>', 'Human review record to verify (default: <project>/review-record.json)')
   .action(async (runPath, opts) => {
     try {
-      const pkg = await runPackage(runPath, opts.project, opts.reviewer);
+      const pkg = await runPackage(runPath, opts.project, { reviewRecordPath: opts.review });
       console.log(`\n📦 Assembled Client Delivery Package:`);
       console.log(`Destination: ${pkg.delivery_dir}`);
       console.log(`Package Hash: ${pkg.package_hash}`);
@@ -274,7 +280,11 @@ program
       for (const f of pkg.files) {
         console.log(` • ${f}`);
       }
-      console.log('\nDelivery complete and cryptographically bound to approved scope.\n');
+      console.log(
+        pkg.signed
+          ? '\nDelivery complete. SHA256SUMS.txt is signed (SHA256SUMS.sig) and bound to the approved cut.\n'
+          : '\nDelivery complete but UNSIGNED: set MGVIDEO_SIGNING_KEY to sign SHA256SUMS.txt.\n'
+      );
     } catch (err) {
       console.error('Package command failed:', err);
       process.exit(1);
@@ -289,15 +299,8 @@ program
   .action(async (runPath, opts) => {
     try {
       const fs = await import('node:fs/promises');
-      let runDir = runPath;
-      if (path.isAbsolute(runDir)) {
-        // Absolute
-      } else if (opts.project && !runPath.includes('/') && !runPath.includes('\\')) {
-        runDir = path.join(opts.project, 'runs', runPath);
-      } else {
-        runDir = path.resolve(process.cwd(), runPath);
-      }
-      const projDir = opts.project || path.resolve(runDir, '..', '..');
+      const runDir = resolveRunDir(runPath, opts.project);
+      const projDir = resolveProjectDir(runDir, opts.project);
 
       const brief = JSON.parse(await fs.readFile(path.join(projDir, 'brief.json'), 'utf-8'));
       const renderResult = JSON.parse(await fs.readFile(path.join(runDir, 'render-result.json'), 'utf-8'));
@@ -362,7 +365,7 @@ upstream
   .description('Detect source changes and produce a report without executing or promoting candidate code')
   .action(async () => {
     try {
-      const workspaceRoot = process.cwd();
+      const workspaceRoot = findWorkspaceRoot();
       const report = await runUpstreamCheck(workspaceRoot);
       console.log(`\n🛰️  Magnifito Upstream Tracking Report (${report.checked_at}):`);
       console.log(`Tracked repositories: ${report.total_tracked} | Candidates pending review: ${report.candidates_pending}\n`);
@@ -379,13 +382,13 @@ upstream
 
 upstream
   .command('propose <source>')
-  .description('Create or update the source candidate branch and record the exact proposed commit')
+  .description('Print a review proposal for the observed upstream commit (advisory only: no branch is created)')
   .action(async (sourceId) => {
     try {
-      const workspaceRoot = process.cwd();
+      const workspaceRoot = findWorkspaceRoot();
       const prop = await runUpstreamPropose(workspaceRoot, sourceId);
       console.log(`\n📝 Upstream Proposal for: ${prop.source_id}`);
-      console.log(`Candidate Branch: ${prop.candidate_branch}`);
+      console.log(`Suggested Branch (not created): ${prop.candidate_branch}`);
       console.log(`Frozen Commit SHA: ${prop.frozen_commit}`);
       console.log(`Affected Canonical Skills: ${prop.affected_skills.join(', ')}`);
       console.log(`License Status: ${prop.license_status}`);
@@ -399,10 +402,10 @@ upstream
 
 upstream
   .command('rollback <source> [commit]')
-  .description('Roll back an approved baseline in approved.lock.json to a prior commit or unset')
+  .description('Roll back an approved baseline in approved.lock.json to a previously approved commit (default: the most recent one)')
   .action(async (sourceId, commit) => {
     try {
-      const workspaceRoot = process.cwd();
+      const workspaceRoot = findWorkspaceRoot();
       const res = await runUpstreamRollback(workspaceRoot, sourceId, commit);
       console.log(`\n⏪ Upstream Rollback for: ${res.source_id}`);
       console.log(`Baseline set to: ${res.rolled_back_to}`);
@@ -426,8 +429,15 @@ program
       console.log(`Project: ${report.project_name} (${report.project_id})`);
       console.log(`Master Video: ${path.basename(report.deliverables.video_path)}`);
       console.log(`Resolution: ${report.deliverables.resolution} @ ${report.deliverables.fps}fps`);
-      console.log(`Loudness: ${report.deliverables.audio_lufs} LUFS (True Peak: ${report.deliverables.audio_true_peak_db} dBTP)`);
-      console.log(`Zero-Budget Spent: $${report.financials.external_media_spent_usd.toFixed(2)} USD (100% Policy Compliant)`);
+      console.log(
+        report.deliverables.audio_lufs === null
+          ? 'Loudness: not measured'
+          : `Loudness: ${report.deliverables.audio_lufs} LUFS (True Peak: ${report.deliverables.audio_true_peak_db} dBTP)`
+      );
+      console.log(`Review: ${report.governance.decision.toUpperCase()} (${report.governance.reviewer})`);
+      console.log(
+        `External Media Spent: $${report.financials.external_media_spent_usd.toFixed(2)} USD (${report.financials.zero_budget_compliant ? 'zero-budget brief' : 'brief allows media spend'})`
+      );
       console.log(`\nSaved delivery report to:`);
       console.log(` • Markdown : ${markdownPath}`);
       console.log('');
@@ -570,7 +580,7 @@ program
   .description('Purge temporary render caches, interim files, and older runs')
   .option('--all', 'Delete all runs and caches', false)
   .option('--cache-only', 'Delete only runs/cache without touching run folders', false)
-  .option('--keep-latest', 'Keep latest run and delete older runs', true)
+  .option('--keep-latest', 'Delete every run except the newest one', false)
   .action(async (projectPath, opts) => {
     try {
       const targetDir = path.resolve(process.cwd(), projectPath);
@@ -599,7 +609,7 @@ program
   .option('-t, --time <seconds>', 'Time offset in seconds', '1.0')
   .option('-f, --format <format>', 'Image format (png, jpg, jpeg)', 'png')
   .option('-w, --width <pixels>', 'Target width in pixels')
-  .option('-h, --height <pixels>', 'Target height in pixels')
+  .option('-H, --height <pixels>', 'Target height in pixels')
   .option('-o, --out <path>', 'Custom output image path')
   .action(async (target, opts) => {
     try {
@@ -633,7 +643,7 @@ program
       const res = await runReframe(video, {
         ratio: opts.ratio,
         strategy: opts.strategy,
-        padColor: opts.color,
+        padColor: safeColor(opts.color),
         out: opts.out
       });
       console.log(`\n📐 Video Reframed!`);
@@ -671,7 +681,7 @@ program
   .command('waveform <media>')
   .description('Generate high-resolution audio waveform visualizer PNG')
   .option('-w, --width <pixels>', 'Waveform width', '1200')
-  .option('-h, --height <pixels>', 'Waveform height', '240')
+  .option('-H, --height <pixels>', 'Waveform height', '240')
   .option('-c, --color <hex>', 'Waveform stroke color', '#2563EB')
   .option('-o, --out <path>', 'Output image path')
   .action(async (media, opts) => {
@@ -679,7 +689,7 @@ program
       const res = await runWaveform(media, {
         width: parseInt(opts.width, 10),
         height: parseInt(opts.height, 10),
-        color: opts.color,
+        color: safeColor(opts.color),
         out: opts.out
       });
       console.log(`\n🌊 Audio Waveform Generated!`);
@@ -693,8 +703,8 @@ program
 // mgvideo notify <project>
 program
   .command('notify <project>')
-  .description('Dispatch webhook notification payload for CI/CD integrations')
-  .requiredOption('-e, --event <event>', 'Event type (e.g. render.completed, validation.failed)')
+  .description('Print a webhook notification payload for CI/CD integrations (does not send it)')
+  .addOption(new Option('-e, --event <event>', 'Event type').choices([...PIPELINE_EVENTS]).makeOptionMandatory())
   .action(async (project, opts) => {
     try {
       const notif = await runNotify(opts.event, project, {
@@ -739,9 +749,11 @@ program
       console.log('\n================================================================================');
       console.log('                    MAGNIFITO SUPER VIDEO PRODUCTION DASHBOARD                  ');
       console.log('================================================================================');
-      console.log(`  Doctor Health Check    : ${res.doctorPassed ? 'PASS (All binaries & fonts green)' : 'FAIL'}`);
+      console.log(`  Doctor Health Check    : ${res.doctorPassed ? 'PASS (no errors; run `mgvideo doctor` for warnings)' : 'FAIL'}`);
       console.log(`  Tracked Repositories   : ${res.trackedReposCount} pinned repos in quarantine catalog`);
-      console.log(`  Financial Compliance   : Media Budget Spend $0.00 (Zero-spend verified)`);
+      console.log(
+        `  Financial Compliance   : ${res.mediaBudgetZeroEnforced ? 'All fixture briefs declare a $0.00 media budget' : 'WARNING: a fixture brief allows non-zero media spend'}`
+      );
       console.log('--------------------------------------------------------------------------------');
       console.log('  CANONICAL WORKFLOW STATUS:');
       for (const wf of res.workflows) {
@@ -758,13 +770,15 @@ program
 // mgvideo verify-bundle <bundle>
 program
   .command('verify-bundle <bundle>')
-  .description('Verify cryptographic SHA256 checksums and review signatures inside a production bundle')
-  .action(async (bundlePath) => {
+  .description('Verify SHA256 checksums, the HMAC signature (MGVIDEO_SIGNING_KEY) and the approved review record inside a production bundle')
+  .option('--allow-unsigned', 'Accept the bundle when no signing key is configured to check its signature', false)
+  .action(async (bundlePath, opts) => {
     try {
-      const res = await runVerifyBundle(bundlePath);
+      const res = await runVerifyBundle(bundlePath, { allowUnsigned: opts.allowUnsigned });
       console.log(`\n🔍 Bundle Verification Result:`);
       console.log(`Bundle: ${res.bundlePath}`);
-      console.log(`Status: ${res.valid ? 'VALID (100% Integrity Verified)' : 'FAILED'}`);
+      console.log(`Status: ${res.valid ? 'VALID' : 'FAILED'}`);
+      console.log(`Signature: ${res.signatureStatus.toUpperCase()}`);
       console.log(`Verified Deliverables: ${res.verifiedFilesCount}`);
       console.log(`Signed Review Record: ${res.hasSignedReview ? 'APPROVED' : 'MISSING / UNAPPROVED'}`);
       if (res.errors.length > 0) {
@@ -875,7 +889,7 @@ program
   .command('concat <clips...>')
   .description('Concatenate multiple video clips, normalizing resolution and audio sample rates')
   .option('-w, --width <pixels>', 'Target width', '1920')
-  .option('-h, --height <pixels>', 'Target height', '1080')
+  .option('-H, --height <pixels>', 'Target height', '1080')
   .option('-o, --out <path>', 'Custom output path')
   .action((clips, opts) => {
     try {
@@ -1105,7 +1119,7 @@ program
   .description('Stitch storyboard styleframes into an animated review animatic video')
   .option('-s, --seconds <seconds>', 'Seconds per slide', '2.0')
   .option('-w, --width <pixels>', 'Video width', '1920')
-  .option('-h, --height <pixels>', 'Video height', '1080')
+  .option('-H, --height <pixels>', 'Video height', '1080')
   .option('-o, --out <path>', 'Custom output video path')
   .action((images, opts) => {
     try {
@@ -1277,7 +1291,7 @@ program
       const res = MatteEngine.applyMatte(fullVideo, {
         preset: opts.preset,
         barHeightPixels: opts.bars ? parseInt(opts.bars, 10) : undefined,
-        barColor: opts.color,
+        barColor: safeColor(opts.color),
         outputPath: opts.out ? path.resolve(process.cwd(), opts.out) : undefined
       });
       console.log(`\n🎬 Cinematic Matte Applied!`);
@@ -1291,8 +1305,9 @@ program
 
 // mgvideo sfx <type>
 program
-  .command('sfx <type>')
+  .command('sfx')
   .description('Procedurally synthesize transition sound effects without external audio assets (whoosh, thud, pop, chime)')
+  .addArgument(new Argument('<type>', 'Effect type').choices(['whoosh', 'thud', 'pop', 'chime']))
   .option('-d, --duration <seconds>', 'Sound duration in seconds')
   .option('-o, --out <path>', 'Custom output audio path')
   .action((type, opts) => {
@@ -1342,7 +1357,7 @@ program
     try {
       const fullVideo = path.resolve(process.cwd(), video);
       const res = ChromaKeyEngine.composite(fullVideo, {
-        keyColor: opts.key,
+        keyColor: safeColor(opts.key),
         similarity: parseFloat(opts.similarity),
         backgroundPath: opts.bg ? path.resolve(process.cwd(), opts.bg) : undefined,
         outputPath: opts.out ? path.resolve(process.cwd(), opts.out) : undefined

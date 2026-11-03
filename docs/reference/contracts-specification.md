@@ -1,3 +1,9 @@
+---
+title: Magnifito Super Video Contracts Specification
+kind: reference
+status: reference
+updated: 2026-11-03
+---
 # Magnifito Super Video Contracts Specification
 
 The Magnifito Super Video platform enforces strict schema-first contracts built using [Zod](https://github.com/colinhacks/zod). Every production run requires validated contracts before rendering, preventing corrupt parameters or unauthorized state mutations.

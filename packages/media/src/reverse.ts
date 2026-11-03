@@ -1,9 +1,14 @@
-import { execSync } from 'node:child_process';
 import path from 'node:path';
 import fs from 'node:fs';
+import { runFfmpeg, probe } from './proc.js';
 
 export interface ReverseOptions {
   outputPath?: string;
+  /**
+   * The reverse/areverse filters buffer the entire stream in memory. Inputs longer than this
+   * are rejected to avoid running out of memory. Default 60 seconds.
+   */
+  maxDurationSeconds?: number;
 }
 
 export interface ReverseResult {
@@ -22,20 +27,13 @@ export class VideoReverseEngine {
       throw new Error(`Video file not found: ${videoPath}`);
     }
 
-    let hasAudio = false;
-    let duration = 5.0;
-    try {
-      const probeAudio = execSync(`ffprobe -v error -select_streams a:0 -show_entries stream=codec_name -of csv=p=0 "${videoPath}"`, {
-        encoding: 'utf8'
-      }).trim();
-      hasAudio = probeAudio.length > 0;
-
-      const probeDur = execSync(`ffprobe -v error -show_entries format=duration -of csv=p=0 "${videoPath}"`, {
-        encoding: 'utf8'
-      }).trim();
-      duration = parseFloat(probeDur) || 5.0;
-    } catch {
-      // fallback
+    const info = probe(videoPath);
+    if (!info.hasVideo) throw new Error(`No video stream in ${videoPath}`);
+    const maxDuration = options.maxDurationSeconds ?? 60;
+    if (info.durationSeconds > maxDuration) {
+      throw new Error(
+        `Clip is ${info.durationSeconds.toFixed(1)}s; reversing buffers the whole clip in memory, so the limit is ${maxDuration}s. Trim it first or raise maxDurationSeconds.`
+      );
     }
 
     const outPath = options.outputPath ?? path.join(
@@ -48,29 +46,19 @@ export class VideoReverseEngine {
       fs.mkdirSync(parentDir, { recursive: true });
     }
 
-    let cmd = '';
-    if (hasAudio) {
-      cmd = [
-        'ffmpeg -y',
-        `-i "${videoPath}"`,
-        '-filter_complex "[0:v]reverse[outv];[0:a]areverse[outa]"',
-        '-map "[outv]"',
-        '-map "[outa]"',
-        '-c:v libx264 -preset fast -crf 20 -pix_fmt yuv420p',
-        '-c:a aac -b:a 192k',
-        `"${outPath}"`
-      ].join(' ');
+    const videoArgs = ['-c:v', 'libx264', '-preset', 'fast', '-crf', '20', '-pix_fmt', 'yuv420p'];
+    if (info.hasAudio) {
+      runFfmpeg([
+        '-i', videoPath,
+        '-filter_complex', '[0:v]reverse[outv];[0:a]areverse[outa]',
+        '-map', '[outv]', '-map', '[outa]',
+        ...videoArgs,
+        '-c:a', 'aac', '-b:a', '192k',
+        outPath,
+      ]);
     } else {
-      cmd = [
-        'ffmpeg -y',
-        `-i "${videoPath}"`,
-        '-vf "reverse"',
-        '-c:v libx264 -preset fast -crf 20 -pix_fmt yuv420p',
-        `"${outPath}"`
-      ].join(' ');
+      runFfmpeg(['-i', videoPath, '-vf', 'reverse', '-an', ...videoArgs, outPath]);
     }
-
-    execSync(cmd, { stdio: 'pipe' });
 
     if (!fs.existsSync(outPath)) {
       throw new Error(`Failed to generate reversed video at: ${outPath}`);
@@ -79,9 +67,8 @@ export class VideoReverseEngine {
     return {
       sourceVideo: videoPath,
       outputPath: outPath,
-      durationSeconds: duration,
-      reversedAudio: hasAudio
+      durationSeconds: info.durationSeconds,
+      reversedAudio: info.hasAudio
     };
   }
 }
-

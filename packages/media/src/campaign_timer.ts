@@ -1,3 +1,5 @@
+import { parseDateStrict } from './proc.js';
+
 export interface CountdownValues {
   days: number;
   hours: number;
@@ -18,8 +20,11 @@ export class CampaignTimer {
     sceneElapsedSeconds: number,
     locale = 'en'
   ): CountdownValues {
-    const referenceEpoch = new Date(campaignReferenceIso).getTime();
-    const deadlineEpoch = new Date(targetDeadlineIso).getTime();
+    const referenceEpoch = parseDateStrict(campaignReferenceIso, 'campaignReferenceIso').getTime();
+    const deadlineEpoch = parseDateStrict(targetDeadlineIso, 'targetDeadlineIso').getTime();
+    if (!Number.isFinite(sceneElapsedSeconds)) {
+      throw new Error(`sceneElapsedSeconds must be a finite number, got ${sceneElapsedSeconds}`);
+    }
 
     // Virtual frame time: reference time + seconds elapsed in video
     const virtualFrameEpoch = referenceEpoch + Math.round(sceneElapsedSeconds * 1000);

@@ -92,7 +92,8 @@ export class AudioCatalogManager {
 
   /**
    * Generates volume keyframes for dialogue sidechain ducking.
-   * Attenuates background music 0.3s before speech begins and restores 0.5s after speech ends.
+   * Envelope: a 0.3 s fade-down that starts 0.4 s before speech (fully ducked 0.1 s before it),
+   * a hold until 0.1 s after speech ends, then a 0.5 s fade back to full level.
    */
   static generateDuckingEnvelope(
     speechStartSeconds: number,

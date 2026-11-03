@@ -122,22 +122,23 @@
       "name": "HyperFrames Engine Adapter",
       "tier": "primary",
       "status": "active",
-      "supported_formats": ["mp4", "webm", "prores_mov", "png_sequence"],
+      "supported_formats": ["mp4", "webm", "prores_mov"],
       "transparency_supported": true,
       "audio_muxing": true,
       "preview_supported": true,
-      "execution_model": "headless-chrome-html-seekable"
+      "execution_model": "static-svg-card-slideshow-ffmpeg",
+"execution_notes": "Each scene is rasterized once from SVG and held for its duration. composition.html is emitted as a contract artifact but is not frame-captured; motion preferences are not animated."
     },
     {
       "id": "html",
-      "name": "Standard Seekable HTML Adapter",
+      "name": "Seekable HTML Adapter (static card renderer)",
       "tier": "experimental",
       "status": "active",
       "supported_formats": ["mp4"],
       "transparency_supported": false,
       "audio_muxing": true,
       "preview_supported": true,
-      "execution_model": "window-seek-playwright-ffmpeg"
+      "execution_model": "static-svg-card-slideshow-ffmpeg"
     },
     {
       "id": "remotion",
@@ -147,7 +148,8 @@
       "supported_formats": ["mp4", "webm"],
       "transparency_supported": true,
       "audio_muxing": true,
-      "preview_supported": true,
+      "preview_supported": false,
+      "renderable": false,
       "execution_model": "react-isolated-worker"
     },
     {

@@ -1,0 +1,70 @@
+{
+  "generated": "scripts/gen-docs-index.mjs",
+  "count": 9,
+  "docs": [
+    {
+      "path": "docs/reference/architecture.md",
+      "title": "Magnifito Super Video Architecture",
+      "kind": "reference",
+      "status": "reference",
+      "updated": "2026-11-03"
+    },
+    {
+      "path": "docs/reference/audio-engineering.md",
+      "title": "Magnifito Audio Engineering Standards",
+      "kind": "reference",
+      "status": "reference",
+      "updated": "2026-11-03"
+    },
+    {
+      "path": "docs/reference/cli-reference.md",
+      "title": "Magnifito Super Video CLI Reference",
+      "kind": "reference",
+      "status": "reference",
+      "updated": "2026-11-03"
+    },
+    {
+      "path": "docs/reference/contracts-specification.md",
+      "title": "Magnifito Super Video Contracts Specification",
+      "kind": "reference",
+      "status": "reference",
+      "updated": "2026-11-03"
+    },
+    {
+      "path": "docs/reference/developer-guide.md",
+      "title": "Magnifito Developer Guide",
+      "kind": "reference",
+      "status": "reference",
+      "updated": "2026-11-03"
+    },
+    {
+      "path": "docs/reference/sdk-reference.md",
+      "title": "Magnifito Super Video SDK Reference",
+      "kind": "reference",
+      "status": "reference",
+      "updated": "2026-11-03"
+    },
+    {
+      "path": "docs/reference/security-and-governance.md",
+      "title": "Magnifito Security, Policy & Governance",
+      "kind": "reference",
+      "status": "reference",
+      "updated": "2026-11-03"
+    },
+    {
+      "path": "docs/reference/video-engineering.md",
+      "title": "Magnifito Video Engineering Standards",
+      "kind": "reference",
+      "status": "reference",
+      "updated": "2026-11-03"
+    },
+    {
+      "path": "docs/reference/workflows-guide.md",
+      "title": "Magnifito Super Video Workflows Guide",
+      "kind": "reference",
+      "status": "reference",
+      "updated": "2026-11-03"
+    }
+  ],
+  "by_code": {}
+}

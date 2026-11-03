@@ -1,6 +1,6 @@
-import { execSync } from 'node:child_process';
 import path from 'node:path';
 import fs from 'node:fs';
+import { runFfmpeg, requirePositive } from './proc.js';
 
 export type PipCorner = 'bottom_right' | 'top_right' | 'bottom_left' | 'top_left';
 
@@ -34,6 +34,9 @@ export class PipEngine {
     const corner = options.corner ?? 'bottom_right';
     const pipW = options.pipWidth ?? 480;
     const pad = options.padding ?? 40;
+    requirePositive(pipW, 'pipWidth');
+    if (!Number.isFinite(pad) || pad < 0) throw new Error(`padding must be >= 0, got ${pad}`);
+    const pipWEven = Math.max(2, Math.round(pipW / 2) * 2);
 
     const outPath = options.outputPath ?? path.join(
       path.dirname(mainVideo),
@@ -45,27 +48,28 @@ export class PipEngine {
       fs.mkdirSync(parentDir, { recursive: true });
     }
 
-    let overlayCoords = 'W-w-40:H-h-40';
+    let overlayCoords: string;
     if (corner === 'bottom_right') overlayCoords = `W-w-${pad}:H-h-${pad}`;
-    if (corner === 'top_right') overlayCoords = `W-w-${pad}:${pad}`;
-    if (corner === 'bottom_left') overlayCoords = `${pad}:H-h-${pad}`;
-    if (corner === 'top_left') overlayCoords = `${pad}:${pad}`;
+    else if (corner === 'top_right') overlayCoords = `W-w-${pad}:${pad}`;
+    else if (corner === 'bottom_left') overlayCoords = `${pad}:H-h-${pad}`;
+    else if (corner === 'top_left') overlayCoords = `${pad}:${pad}`;
+    else throw new Error(`Unknown PiP corner: ${String(corner)}`);
 
-    const filter = `[1:v]scale=${pipW}:-2[pip];[0:v][pip]overlay=${overlayCoords}:shortest=1[outv]`;
+    const filter = `[1:v]scale=${pipWEven}:-2[pip];[0:v][pip]overlay=${overlayCoords}:eof_action=pass[outv]`;
 
-    const cmd = [
-      'ffmpeg -y',
-      `-i "${mainVideo}"`,
-      `-i "${overlayVideo}"`,
-      `-filter_complex "${filter}"`,
-      '-map "[outv]"',
-      '-map "0:a?"',
-      '-c:v libx264 -preset fast -crf 20 -pix_fmt yuv420p',
-      '-c:a copy',
-      `"${outPath}"`
-    ].join(' ');
-
-    execSync(cmd, { stdio: 'pipe' });
+    // The main video defines the program length; audio is re-encoded and cut with -shortest so it
+    // never runs past the video when the overlay is shorter.
+    runFfmpeg([
+      '-i', mainVideo,
+      '-i', overlayVideo,
+      '-filter_complex', filter,
+      '-map', '[outv]',
+      '-map', '0:a?',
+      '-c:v', 'libx264', '-preset', 'fast', '-crf', '20', '-pix_fmt', 'yuv420p',
+      '-c:a', 'aac', '-b:a', '192k',
+      '-shortest',
+      outPath,
+    ]);
 
     if (!fs.existsSync(outPath)) {
       throw new Error(`Failed to generate PiP video at: ${outPath}`);
@@ -76,7 +80,7 @@ export class PipEngine {
       overlayVideo,
       outputPath: outPath,
       corner,
-      pipWidth: pipW
+      pipWidth: pipWEven
     };
   }
 }

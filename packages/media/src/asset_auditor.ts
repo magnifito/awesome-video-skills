@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import crypto from 'node:crypto';
+import { DeliverableArchiver } from './archiver.js';
+import { safeJoin } from './proc.js';
 import type { AssetManifest, AssetManifestItem } from '../../contracts/src/index.js';
 
 export interface AssetAuditResult {
@@ -24,8 +25,7 @@ export interface AssetManifestAuditReport {
 
 export class AssetAuditor {
   static computeSha256(filePath: string): string {
-    const data = fs.readFileSync(filePath);
-    return crypto.createHash('sha256').update(data).digest('hex');
+    return DeliverableArchiver.computeSha256(filePath);
   }
 
   static auditManifest(projectDir: string, manifest?: AssetManifest): AssetManifestAuditReport {
@@ -44,7 +44,16 @@ export class AssetAuditor {
           results: []
         };
       }
-      loadedManifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+      try {
+        loadedManifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+      } catch (err) {
+        const msg = `Invalid manifest.json: ${(err as Error).message}`;
+        return { valid: false, total_assets: 0, verified_assets: 0, errors: [msg], results: [] };
+      }
+      if (!loadedManifest || !Array.isArray(loadedManifest.assets)) {
+        const msg = 'Invalid manifest.json: missing "assets" array';
+        return { valid: false, total_assets: 0, verified_assets: 0, errors: [msg], results: [] };
+      }
     }
 
     const results: AssetAuditResult[] = [];
@@ -52,9 +61,24 @@ export class AssetAuditor {
     let verifiedCount = 0;
 
     for (const item of loadedManifest.assets) {
-      const resolvedPath = path.isAbsolute(item.local_path)
-        ? item.local_path
-        : path.resolve(projectDir, item.local_path);
+      let resolvedPath: string;
+      try {
+        // Asset paths must stay inside the project directory.
+        resolvedPath = safeJoin(projectDir, item.local_path);
+      } catch {
+        const err = `Asset path escapes project directory: ${item.local_path} (asset_id: ${item.asset_id})`;
+        errors.push(err);
+        results.push({
+          asset_id: item.asset_id,
+          file_path: item.local_path,
+          expected_hash: item.content_hash,
+          passed: false,
+          status: item.status,
+          rights_cleared: false,
+          error: err
+        });
+        continue;
+      }
 
       if (!fs.existsSync(resolvedPath)) {
         const err = `Asset file missing: ${item.local_path} (asset_id: ${item.asset_id})`;
@@ -65,7 +89,7 @@ export class AssetAuditor {
           expected_hash: item.content_hash,
           passed: false,
           status: item.status,
-          rights_cleared: item.consent_obtained && item.status === 'approved',
+          rights_cleared: item.consent_obtained === true && item.status === 'approved',
           error: err
         });
         continue;
@@ -76,7 +100,7 @@ export class AssetAuditor {
       const actualNormalized = actualHash.toLowerCase();
 
       const hashMatches = actualNormalized === expectedNormalized;
-      const rightsCleared = item.consent_obtained && item.status === 'approved';
+      const rightsCleared = item.consent_obtained === true && item.status === 'approved';
 
       let errorMsg: string | undefined;
       if (!hashMatches) {

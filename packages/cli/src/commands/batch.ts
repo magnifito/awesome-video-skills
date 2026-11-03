@@ -1,6 +1,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { runInit } from './init.js';
+import { safeId, safeJoin } from '../../../media/src/proc.js';
 import { runRender } from './render.js';
 import { runValidate } from './validate.js';
 
@@ -77,7 +78,14 @@ export async function runBatchCommerce(
         continue;
       }
 
-      const skuDir = path.join(batchRunsDir, item.sku);
+      // SKUs come from an external catalog; confine each workspace to the batch directory.
+      let skuDir: string;
+      try {
+        skuDir = safeJoin(batchRunsDir, safeId(String(item.sku), 'SKU'));
+      } catch (err) {
+        itemsResults.push({ sku: String(item.sku), title: item.title, status: 'failed', error: (err as Error).message });
+        continue;
+      }
 
       try {
         // 1. Initialize SKU workspace if needed
@@ -86,7 +94,9 @@ export async function runBatchCommerce(
           clientId: catalogData.client_id,
           workflow: 'commerce-variants',
           language: 'en',
-          duration: 15
+          duration: 15,
+          // Batch workspaces are generated output and are regenerated on every run.
+          force: true
         });
 
         // Update claims with price & discount

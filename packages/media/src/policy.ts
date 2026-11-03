@@ -25,8 +25,16 @@ export class PolicyChecker {
       }
 
       if (asset.validity_until) {
-        const expiryDate = new Date(asset.validity_until);
-        if (expiryDate.getTime() < Date.now()) {
+        const expiryMs = new Date(asset.validity_until).getTime();
+        if (Number.isNaN(expiryMs)) {
+          // An unparseable expiry must never be treated as "still valid".
+          violations.push({
+            code: 'ASSET_EXPIRY_INVALID',
+            category: 'rights',
+            message: `Asset '${asset.asset_id}' has an invalid validity_until date: '${asset.validity_until}'`,
+            item_id: asset.asset_id
+          });
+        } else if (expiryMs < Date.now()) {
           violations.push({
             code: 'ASSET_EXPIRED',
             category: 'rights',
@@ -99,8 +107,15 @@ export class PolicyChecker {
       }
 
       if (claim.expiry) {
-        const expiryDate = new Date(claim.expiry);
-        if (expiryDate.getTime() < Date.now()) {
+        const expiryMs = new Date(claim.expiry).getTime();
+        if (Number.isNaN(expiryMs)) {
+          violations.push({
+            code: 'CLAIM_EXPIRY_INVALID',
+            category: 'claims',
+            message: `Claim '${claimId}' has an invalid expiry date: '${claim.expiry}'`,
+            item_id: claimId
+          });
+        } else if (expiryMs < Date.now()) {
           violations.push({
             code: 'CLAIM_EXPIRED',
             category: 'claims',

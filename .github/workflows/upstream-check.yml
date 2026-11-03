@@ -11,18 +11,24 @@ permissions:
 jobs:
   check-upstreams:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
 
       - name: Setup Node.js 22
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 22
+          cache: npm
 
       - name: Install Dependencies
         run: npm ci
 
-      - name: Run Upstream Discovery Check
-        run: npx tsx packages/cli/src/bin/mgvideo.ts upstream check
+      - name: Verify registry consistency
+        run: npx tsx tools/upstreams/lock.ts
 
+      - name: Compare remote HEADs against pinned commits
+        run: npx tsx tools/upstreams/remote_check.ts

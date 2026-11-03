@@ -1,6 +1,6 @@
-import { execSync } from 'node:child_process';
 import path from 'node:path';
 import fs from 'node:fs';
+import { runFfmpeg, hasAudio } from './proc.js';
 
 export interface AudioTrackInput {
   filePath: string;
@@ -40,6 +40,12 @@ export class MultiTrackAudioMuxer {
       if (!fs.existsSync(tr.filePath)) {
         throw new Error(`Audio track file not found: ${tr.filePath}`);
       }
+      if (!/^[a-z]{3}$/.test(tr.language)) {
+        throw new Error(`Audio track language must be an ISO 639-2 code (e.g. "eng"), got ${JSON.stringify(tr.language)}`);
+      }
+      if (!hasAudio(tr.filePath)) {
+        throw new Error(`Audio track file has no audio stream: ${tr.filePath}`);
+      }
     }
 
     const outPath = options.outputPath ?? path.join(
@@ -52,31 +58,23 @@ export class MultiTrackAudioMuxer {
       fs.mkdirSync(parentDir, { recursive: true });
     }
 
-    const inputArgs: string[] = [`-i "${videoPath}"`];
-    const mapArgs: string[] = ['-map 0:v:0'];
-    const metaArgs: string[] = [];
+    const args: string[] = ['-i', videoPath];
+    audioTracks.forEach(tr => args.push('-i', tr.filePath));
+    args.push('-map', '0:v:0');
+    audioTracks.forEach((_, idx) => args.push('-map', `${idx + 1}:a:0`));
+    args.push('-c:v', 'copy', '-c:a', 'aac', '-b:a', '192k');
 
+    const hasExplicitDefault = audioTracks.some(t => t.isDefault);
     audioTracks.forEach((tr, idx) => {
-      inputArgs.push(`-i "${tr.filePath}"`);
-      mapArgs.push(`-map ${idx + 1}:a:0`);
-      metaArgs.push(`-metadata:s:a:${idx} language="${tr.language}"`);
-      metaArgs.push(`-metadata:s:a:${idx} title="${tr.title}"`);
-      if (tr.isDefault) {
-        metaArgs.push(`-disposition:a:${idx} default`);
-      }
+      // Argument arrays pass titles verbatim; no shell quoting is involved.
+      args.push(`-metadata:s:a:${idx}`, `language=${tr.language}`);
+      args.push(`-metadata:s:a:${idx}`, `title=${tr.title}`);
+      const isDefault = hasExplicitDefault ? !!tr.isDefault : idx === 0;
+      args.push(`-disposition:a:${idx}`, isDefault ? 'default' : '0');
     });
+    args.push(outPath);
 
-    const cmd = [
-      'ffmpeg -y',
-      inputArgs.join(' '),
-      mapArgs.join(' '),
-      '-c:v copy',
-      '-c:a aac -b:a 192k',
-      metaArgs.join(' '),
-      `"${outPath}"`
-    ].join(' ');
-
-    execSync(cmd, { stdio: 'pipe' });
+    runFfmpeg(args);
 
     if (!fs.existsSync(outPath)) {
       throw new Error(`Failed to generate multitrack video at: ${outPath}`);
@@ -90,4 +88,3 @@ export class MultiTrackAudioMuxer {
     };
   }
 }
-

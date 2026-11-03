@@ -1,3 +1,9 @@
+---
+title: Magnifito Super Video SDK Reference
+kind: reference
+status: reference
+updated: 2026-11-03
+---
 # Magnifito Super Video SDK Reference
 
 The `@magnifito/sdk` package provides a high-level programmatic TypeScript API via the `MagnifitoVideoEngine` facade class.

@@ -2,6 +2,7 @@ import http from 'node:http';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { HyperFramesAdapter } from '../../../../adapters/hyperframes/index.js';
+import { escapeHtml } from './_shared.js';
 import { ProjectBriefSchema, BrandProfileSchema, ClaimsRegisterSchema, AssetManifestSchema, ScenePlanSchema } from '../../../contracts/src/index.js';
 
 export interface PreviewServerInstance {
@@ -10,7 +11,11 @@ export interface PreviewServerInstance {
   close: () => Promise<void>;
 }
 
-export async function startPreviewServer(projectDir: string, port = 3456): Promise<PreviewServerInstance> {
+export async function startPreviewServer(
+  projectDir: string,
+  port = 3456,
+  host = '127.0.0.1'
+): Promise<PreviewServerInstance> {
   const brief = ProjectBriefSchema.parse(JSON.parse(await fs.readFile(path.join(projectDir, 'brief.json'), 'utf-8')));
   const brand = BrandProfileSchema.parse(JSON.parse(await fs.readFile(path.join(projectDir, 'brand.json'), 'utf-8')));
   const claims = ClaimsRegisterSchema.parse(JSON.parse(await fs.readFile(path.join(projectDir, 'claims.json'), 'utf-8')));
@@ -30,7 +35,7 @@ export async function startPreviewServer(projectDir: string, port = 3456): Promi
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>Magnifito Studio Live Preview: ${brief.project_id}</title>
+  <title>Magnifito Studio Live Preview: ${escapeHtml(brief.project_id)}</title>
   <style>
     body { margin: 0; background: #020617; color: #f8fafc; font-family: system-ui, -apple-system, sans-serif; display: flex; flex-direction: column; height: 100vh; }
     header { padding: 16px 24px; background: #0f172a; border-bottom: 1px solid #1e293b; display: flex; justify-content: space-between; align-items: center; }
@@ -46,8 +51,8 @@ export async function startPreviewServer(projectDir: string, port = 3456): Promi
 </head>
 <body>
   <header>
-    <h1>🎬 ${brief.project_id} <span class="badge">${brief.workflow}</span></h1>
-    <div>Renderer: HyperFrames (Pinned) | Locale: ${brief.language.toUpperCase()}</div>
+    <h1>🎬 ${escapeHtml(brief.project_id)} <span class="badge">${escapeHtml(brief.workflow)}</span></h1>
+    <div>Renderer: ${escapeHtml(brief.engine)} | Locale: ${escapeHtml(brief.language.toUpperCase())}</div>
   </header>
   <div class="viewport">
     <iframe id="preview-frame" src="/composition" width="${width > height ? 960 : 405}" height="${width > height ? 540 : 720}"></iframe>
@@ -98,18 +103,23 @@ export async function startPreviewServer(projectDir: string, port = 3456): Promi
 </html>`;
 
   const server = http.createServer((req, res) => {
+    const headers = { 'Content-Type': 'text/html; charset=utf-8', 'X-Content-Type-Options': 'nosniff' };
     if (req.url === '/composition') {
-      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+      res.writeHead(200, headers);
       res.end(compositionHtml);
-    } else {
-      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+    } else if (req.url === '/' || req.url === '/index.html') {
+      res.writeHead(200, headers);
       res.end(previewUiHtml);
+    } else {
+      res.writeHead(404, headers);
+      res.end('Not found');
     }
   });
 
   return new Promise((resolve, reject) => {
-    server.listen(port, () => {
-      const url = `http://localhost:${port}`;
+    // Bind to loopback only so unreleased client work is not exposed on the local network.
+    server.listen(port, host, () => {
+      const url = `http://${host === '127.0.0.1' ? 'localhost' : host}:${port}`;
       resolve({
         port,
         url,

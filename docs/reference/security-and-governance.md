@@ -1,3 +1,9 @@
+---
+title: "Magnifito Security, Policy & Governance"
+kind: reference
+status: reference
+updated: 2026-11-03
+---
 # Magnifito Security, Policy & Governance
 
 The Magnifito Super Video platform enforces strict enterprise security policies, zero-budget isolation guards, multi-role human governance, and cryptographic artifact verification.

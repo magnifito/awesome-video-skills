@@ -1,6 +1,6 @@
-import { execSync } from 'node:child_process';
 import path from 'node:path';
 import fs from 'node:fs';
+import { runFfmpeg, probe, safeColor } from './proc.js';
 
 export type MattePreset = '2.39:1' | '1.85:1' | '4:3' | 'custom';
 
@@ -15,10 +15,13 @@ export interface MatteResult {
   sourceVideo: string;
   outputPath: string;
   preset: string;
+  /** Height of each letterbox bar, or width of each pillar for the 4:3 preset. 0 means no matte was needed. */
   barHeight: number;
   width: number;
   height: number;
 }
+
+const ENCODE_ARGS = ['-c:v', 'libx264', '-preset', 'fast', '-crf', '20', '-pix_fmt', 'yuv420p', '-c:a', 'copy'];
 
 export class MatteEngine {
   /**
@@ -29,64 +32,47 @@ export class MatteEngine {
       throw new Error(`Video file not found: ${videoPath}`);
     }
 
-    let w = 1920;
-    let h = 1080;
-    try {
-      const probeDims = execSync(`ffprobe -v error -select_streams v:0 -show_entries stream=width,height -of csv=s=x:p=0 "${videoPath}"`, {
-        encoding: 'utf8'
-      }).trim();
-      const parts = probeDims.split('x').map(Number);
-      if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
-        w = parts[0];
-        h = parts[1];
-      }
-    } catch {
-      // fallback
-    }
+    const info = probe(videoPath);
+    if (!info.hasVideo) throw new Error(`No video stream in ${videoPath}`);
+    const w = info.displayWidth;
+    const h = info.displayHeight;
 
     const preset = options.preset ?? '2.39:1';
-    let barH = options.barHeightPixels ?? 0;
+    const color = safeColor(options.barColor ?? 'black');
 
-    if (preset === '2.39:1') {
-      const activeH = Math.round(w / 2.39);
-      barH = Math.max(0, Math.round((h - activeH) / 2));
-    } else if (preset === '1.85:1') {
-      const activeH = Math.round(w / 1.85);
-      barH = Math.max(0, Math.round((h - activeH) / 2));
-    } else if (preset === '4:3') {
+    if (preset === '4:3') {
       const activeW = Math.round(h * (4 / 3));
       const pillarW = Math.max(0, Math.round((w - activeW) / 2));
-      // For 4:3 on landscape, pillarbox left & right
-      return this.applyPillarbox(videoPath, pillarW, options, w, h);
+      return this.applyPillarbox(videoPath, pillarW, color, options, w, h);
     }
 
-    if (barH === 0 && !options.barHeightPixels) {
-      barH = 138; // Default 2.39:1 on 1080p
+    let barH: number;
+    if (preset === '2.39:1') {
+      barH = Math.max(0, Math.round((h - Math.round(w / 2.39)) / 2));
+    } else if (preset === '1.85:1') {
+      barH = Math.max(0, Math.round((h - Math.round(w / 1.85)) / 2));
+    } else if (preset === 'custom') {
+      // Custom preset without an explicit height falls back to the 2.39:1 bar for 1080p.
+      barH = Math.round(options.barHeightPixels ?? 138);
+    } else {
+      throw new Error(`Unknown matte preset: ${JSON.stringify(preset)}`);
+    }
+    if (!(barH >= 0) || barH * 2 >= h) {
+      throw new Error(`Bar height ${barH}px is invalid for a ${h}px tall frame`);
     }
 
-    const color = options.barColor ?? 'black';
     const outPath = options.outputPath ?? path.join(
       path.dirname(videoPath),
       `${path.basename(videoPath, path.extname(videoPath))}-matte-${preset.replace(':', '_')}.mp4`
     );
+    fs.mkdirSync(path.dirname(outPath), { recursive: true });
 
-    const parentDir = path.dirname(outPath);
-    if (!fs.existsSync(parentDir)) {
-      fs.mkdirSync(parentDir, { recursive: true });
-    }
+    // drawbox treats w=0/h=0 as "full input size", so a zero-size bar must skip the filter entirely.
+    const filter = barH > 0
+      ? `drawbox=x=0:y=0:w=iw:h=${barH}:color=${color}:t=fill,drawbox=x=0:y=ih-${barH}:w=iw:h=${barH}:color=${color}:t=fill`
+      : 'null';
 
-    const filter = `drawbox=x=0:y=0:w=iw:h=${barH}:color=${color}:t=fill,drawbox=x=0:y=ih-${barH}:w=iw:h=${barH}:color=${color}:t=fill`;
-
-    const cmd = [
-      'ffmpeg -y',
-      `-i "${videoPath}"`,
-      `-vf "${filter}"`,
-      '-c:v libx264 -preset fast -crf 20 -pix_fmt yuv420p',
-      '-c:a copy',
-      `"${outPath}"`
-    ].join(' ');
-
-    execSync(cmd, { stdio: 'pipe' });
+    runFfmpeg(['-i', videoPath, '-vf', filter, ...ENCODE_ARGS, outPath]);
 
     if (!fs.existsSync(outPath)) {
       throw new Error(`Failed to generate letterbox matte at: ${outPath}`);
@@ -102,30 +88,23 @@ export class MatteEngine {
     };
   }
 
-  private static applyPillarbox(videoPath: string, pillarWidth: number, options: MatteOptions, w: number, h: number): MatteResult {
-    const color = options.barColor ?? 'black';
+  private static applyPillarbox(videoPath: string, pillarWidth: number, color: string, options: MatteOptions, w: number, h: number): MatteResult {
     const outPath = options.outputPath ?? path.join(
       path.dirname(videoPath),
       `${path.basename(videoPath, path.extname(videoPath))}-matte-4_3.mp4`
     );
+    fs.mkdirSync(path.dirname(outPath), { recursive: true });
 
-    const parentDir = path.dirname(outPath);
-    if (!fs.existsSync(parentDir)) {
-      fs.mkdirSync(parentDir, { recursive: true });
+    // Source already 4:3 or narrower: no pillars (drawbox w=0 would fill the whole frame).
+    const filter = pillarWidth > 0
+      ? `drawbox=x=0:y=0:w=${pillarWidth}:h=ih:color=${color}:t=fill,drawbox=x=iw-${pillarWidth}:y=0:w=${pillarWidth}:h=ih:color=${color}:t=fill`
+      : 'null';
+
+    runFfmpeg(['-i', videoPath, '-vf', filter, ...ENCODE_ARGS, outPath]);
+
+    if (!fs.existsSync(outPath)) {
+      throw new Error(`Failed to generate pillarbox matte at: ${outPath}`);
     }
-
-    const filter = `drawbox=x=0:y=0:w=${pillarWidth}:h=ih:color=${color}:t=fill,drawbox=x=iw-${pillarWidth}:y=0:w=${pillarWidth}:h=ih:color=${color}:t=fill`;
-
-    const cmd = [
-      'ffmpeg -y',
-      `-i "${videoPath}"`,
-      `-vf "${filter}"`,
-      '-c:v libx264 -preset fast -crf 20 -pix_fmt yuv420p',
-      '-c:a copy',
-      `"${outPath}"`
-    ].join(' ');
-
-    execSync(cmd, { stdio: 'pipe' });
 
     return {
       sourceVideo: videoPath,
@@ -137,4 +116,3 @@ export class MatteEngine {
     };
   }
 }
-
