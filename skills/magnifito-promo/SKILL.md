@@ -28,6 +28,8 @@ Every scene must use one of the four motion recipes; `mgvideo render` refuses ot
 
 Brand colours, the heading/body fonts (`fonts[].file_path` is embedded; Geist otherwise) and the brand name drive every recipe. Geist covers Latin and Cyrillic, including Bulgarian. Transparent output (`mov_prores`) renders ProRes 4444 with alpha. Engine details: `reference/motion-engine.md`. A working example lives in `fixtures/motion-demo/`.
 
+Kinetic type and beat-locked reels (beat grid, words on screen, sound rules, HyperFrames pitfalls): `reference/kinetic-and-beat-reels.md`.
+
 ## Production Workflow
 
 1. **Intake Review**:
@@ -37,7 +39,7 @@ Brand colours, the heading/body fonts (`fonts[].file_path` is embedded; Geist ot
    - Render Scene 1 (the hook) as a still frame using `mgvideo render <project> --format 9:16` to verify font rendering, contrast, and layout.
 3. **Full Render**:
    - Execute complete render request via `mgvideo render <project>`.
-   - HyperFrames compiles HTML composition, captures frames, and muxes AAC audio.
+   - HyperFrames renders each scene's recipe card frame by frame: elements fade and rise in on the brand `tempo`, cinematic and product recipes drift the camera (off when `camera_style` is `static`), and each card fades out before the cut. It writes `composition.html` as a contract artifact and muxes AAC audio.
    - The motion engine writes one HTML page per scene to `runs/<run_id>/clips/`, captures each with motion blur, and joins them with a silent audio bed for later mixing.
 4. **Validation**:
    - Run `mgvideo validate <run_id>` to confirm duration, dimensions, framerate, and claims compliance.

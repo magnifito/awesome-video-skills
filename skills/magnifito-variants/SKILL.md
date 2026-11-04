@@ -18,6 +18,8 @@ Never blindly crop a 16:9 composition to 9:16:
 - **1:1 (Square Feed)**:
   - Centered hero arrangement with condensed headline leading.
 
+Lower thirds per ratio (`mgvideo lower-third` placement, sizes, timing, alpha checks): `reference/lower-thirds.md`.
+
 ## 2. Bulgarian & Multilingual Localization
 
 - Preserve factual equivalence: prices, currencies (`лв.`, `EUR`), and dates must align with approved data.

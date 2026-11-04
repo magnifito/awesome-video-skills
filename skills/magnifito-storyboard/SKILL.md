@@ -45,6 +45,8 @@ Each clip opens from and closes on the same centred dot, so plan scenes back to 
    - Every metric, discount, accreditation, or timeline in `copy_text` must explicitly cite a `claim_id`.
    - Modifying copy invalidates the scene plan and requires re-running validation.
 
+References: `reference/motion-timing.md` (durations, stagger, reading holds, scene order) and `reference/script-and-shot-plan.md` (evidence-linked script and shot plan onto claims, brief and scene plan).
+
 ## Stopping Conditions
 
 - Fail immediately if any `claims_refs` identifier is not found in `claims.json`.

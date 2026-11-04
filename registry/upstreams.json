@@ -272,6 +272,43 @@
         "packages/ffmpeg"
       ],
       "review_status": "observed"
+    },
+    {
+      "id": "vxi-motion-tools",
+      "name": "VisualxIntelligence Motion Tools and Skills",
+      "owner": "VisualxIntelligence",
+      "repo": "motion-tools-and-skills",
+      "github_repo_id": 1406867986,
+      "tracking_branch": "main",
+      "observed_commit": "2fae287134109449676d9afbfd38318985d75121",
+      "approved_commit": "2fae287134109449676d9afbfd38318985d75121",
+      "license": "MIT",
+      "component_licenses": {
+        "skills/motion-design-principles": "MIT",
+        "skills/claude-motion": "MIT",
+        "skills/hyperframes-motion-reel": "MIT",
+        "skills/lower-thirds": "MIT",
+        "skills/talking-head-b-roll": "MIT",
+        "skills/opus-visual-motion-engine": "MIT",
+        "skills/motion-designer": "MIT",
+        "skills/video-production-skills": "MIT",
+        "skills/kinetic-reel": "MIT"
+      },
+      "skills_count": 9,
+      "main_contribution": "Curated motion-graphics skills: timing principles, render QA, beat grids, lower thirds, word-timed b-roll",
+      "magnifito_decision": "Vendor nine MIT skills as data; distil their rules into Magnifito skill references; exclude Blender, Remotion, paid-API and starter material",
+      "source_paths": [
+        "skills/motion-design-principles",
+        "skills/claude-motion",
+        "skills/hyperframes-motion-reel",
+        "skills/lower-thirds",
+        "skills/talking-head-b-roll",
+        "skills/opus-visual-motion-engine",
+        "skills/motion-designer",
+        "skills/video-production-skills",
+        "skills/kinetic-reel"
+      ],
+      "review_status": "approved"
     }
   ]
 }

@@ -58,6 +58,14 @@
       "license": "MIT",
       "modifications": "Adapted retail card layout and multi-SKU batch processing into magnifito-variants with retry tracking",
       "attribution": "Copyright (c) 2025-2026 iart-ai"
+    },
+    {
+      "source_id": "vxi-motion-tools",
+      "origin_url": "https://github.com/VisualxIntelligence/motion-tools-and-skills",
+      "commit": "2fae287134109449676d9afbfd38318985d75121",
+      "license": "MIT",
+      "modifications": "Vendored unchanged at vendor/vxi-motion-tools/2fae287134109449676d9afbfd38318985d75121 (nine skills plus LICENSE, README.md, SOURCES.md, docs/techniques.md). Rules are restated in our own words in skills/magnifito-*/reference/ files; no upstream code is copied into the toolkit.",
+      "attribution": "Copyright (c) 2026 Ahmed Albadri (collection); per-skill copyright holders in each vendored LICENSE: LottieFiles, whaleyxbt, Sunwood AI Labs, iart.ai, Yuri Queiroz Lobo, kaventro, Video Production Skills contributors, tuzhechen2005"
     }
   ]
 }

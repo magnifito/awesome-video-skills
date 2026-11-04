@@ -26,6 +26,8 @@ Each project brief defines its audio mode:
 - Fail if measured integrated loudness deviates by more than `±1.0 LUFS` from target.
 - Fail if true peak exceeds `-0.5 dBFS`.
 
+For beat grids, cutting music on whole bars, cue placement from one timeline and voice/caption sync checks, see [`reference/beat-and-sound-sync.md`](reference/beat-and-sound-sync.md).
+
 
 ## Sound Pass (`mgvideo sfx <video> --cues`)
 

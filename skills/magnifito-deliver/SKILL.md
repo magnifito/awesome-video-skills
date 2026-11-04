@@ -30,6 +30,8 @@ Before packaging, `mgvideo validate <run-id>` executes:
 3. **Claims Preservation**: Asserts that copy in rendered scenes matches `claims.json` verbatim.
 4. **Rights Clearance**: Verifies no assets carry `status: "unresolved"` or `status: "expired"`.
 
+For the full pre-delivery QA pass (determinism, frame sheets, text, contrast, dead air, captions, release checklist), follow [`reference/render-qa.md`](reference/render-qa.md).
+
 ## Signing Review Record
 
 The output `review-record.json` records:

@@ -30,7 +30,7 @@ External open-source motion graphics and video repositories are tracked by immut
 
 ## Repository Portfolio & Tracked Upstreams
 
-All 12 audited repositories are tracked by immutable commit hash in `registry/upstreams.json`:
+All 13 audited repositories are tracked by immutable commit hash in `registry/upstreams.json`:
 
 | Repository | Audited Observed Commit | License | Magnifito Production Role |
 | :--- | :--- | :--- | :--- |
@@ -46,6 +46,7 @@ All 12 audited repositories are tracked by immutable commit hash in `registry/up
 | **Noam HTML Product Video** | `dfbe716495abfad263b2b8c783c21b3940b8e225` | MIT | Lightweight HTML video experimental reference |
 | **Revideo** | `b5de67a009a55aa2768a1e178b0446b2479a0b4e` | MIT | Headless TypeScript framework (watchlist) |
 | **Motion Canvas** | `7b91435c301d530351dcf5ebb91dd139c002e405` | MIT / GPLv3 | Vector animation framework (watchlist) |
+| **VisualxIntelligence Motion Tools** | `2fae287134109449676d9afbfd38318985d75121` | MIT | Nine motion skills vendored as data: timing, render QA, beat reels, lower thirds, word-timed b-roll |
 
 ---
 

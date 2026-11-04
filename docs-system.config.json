@@ -1,4 +1,10 @@
 {
   "$schema": "https://raw.githubusercontent.com/magnifito/docs-notary/main/schema/docs-system.config.schema.json",
-  "referenceScanExclude+": ["evaluations/runner.ts", "dist"]
+  "referenceScanExclude+": [
+    "evaluations/runner.ts",
+    "dist",
+    "registry/approved.lock.json",
+    "registry/provenance.json",
+    "vendor"
+  ]
 }

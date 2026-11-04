@@ -34,6 +34,7 @@ mgvideo broll compose motion/plan.json motion/out/preview.mp4 --sheet motion/out
    editor or captioning tool. Put important changes on the first or last word of a cue, where
    the estimate is best.
 2. **Plan.** Pick the moments, one idea per clip, and decide panel, full or nothing for each.
+   Timing rules (lead, sync, hold, rhythm, face-safe areas): `reference/word-timed-graphics.md`.
    Show the user a table (in–out, the line, what the shape does, panel/full, why) and get
    approval before rendering.
 3. **Check.** `broll check` validates the plan against its directory and the probed source.
