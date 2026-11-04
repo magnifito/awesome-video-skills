@@ -104,7 +104,7 @@ export async function run(t: SuiteContext): Promise<void> {
     { path: 'sfx/click.mp3', status: 'added', additions: 0, deletions: 0 },
     { path: 'CLAUDE.md', status: 'modified', additions: 1, deletions: 0 },
     { path: 'package.json', status: 'modified', additions: 1, deletions: 0 },
-    { path: 'docs/guide.md', status: 'modified', additions: 1, deletions: 0 },
+    { path: 'guides/intro.md', status: 'modified', additions: 1, deletions: 0 },
   ]);
   t.assert(flags.license.map(f => f.path).join() === 'LICENSE,licenses/NOTICE.txt', 'license and notice changes are flagged', flags.license.map(f => f.path).join());
   t.assert(flags.skill_added.sort().join() === 'skills/moved/SKILL.md,skills/new-skill/SKILL.md', 'new SKILL.md files are flagged (rename counts as new)', flags.skill_added.join());
@@ -114,7 +114,7 @@ export async function run(t: SuiteContext): Promise<void> {
   t.assert(flags.audio.map(f => f.path).join() === 'assets/audio/mixkit-whoosh-1234.wav,sfx/click.mp3', 'audio files are flagged by extension');
   t.assert(flags.instructions.map(f => f.path).join() === 'CLAUDE.md', 'agent instruction files other than SKILL.md are flagged');
   t.assert(flags.dependency.map(f => f.path).join() === 'package.json', 'dependency manifests are flagged');
-  const none = computeFlags([{ path: 'docs/guide.md', status: 'modified', additions: 1, deletions: 0 }]);
+  const none = computeFlags([{ path: 'guides/intro.md', status: 'modified', additions: 1, deletions: 0 }]);
   t.assert(Object.values(none).every(v => v.length === 0), 'a docs-only change raises no flags');
   const flagged = renderIssueBody(delta({ files: [{ path: 'LICENSE', status: 'modified', additions: 1, deletions: 1 }, { path: 'a/mixkit.mp3', status: 'added', additions: 0, deletions: 0 }] }), 'x');
   t.assert(flagged.includes('License or notice files changed: 1') && flagged.includes('Mixkit paths (never vendor): 1'), 'flags are rendered in the issue body');
