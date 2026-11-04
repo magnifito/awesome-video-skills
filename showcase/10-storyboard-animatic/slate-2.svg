@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080">
+  <!-- Animatic slate for scene 2: bottom bar with scene, beat, recipe, planned length and claim -->
+  <rect x="0" y="988" width="1920" height="92" fill="#2b1c17" fill-opacity="0.92"/>
+  <rect x="0" y="988" width="1920" height="6" fill="#f0eadf" fill-opacity="0.18"/>
+  <rect x="511" y="982" width="3" height="18" fill="#f0eadf" fill-opacity="0.7"/>
+  <rect x="1279" y="982" width="3" height="18" fill="#f0eadf" fill-opacity="0.7"/>
+  <g font-family="Geist" font-size="28" fill="#f0eadf">
+    <text x="48" y="1047" font-weight="700" letter-spacing="1.5">SCENE 2 / 3</text>
+    <text x="250" y="1047" font-weight="600">Core claim</text>
+    <text x="560" y="1047" font-weight="400" fill="#d8c6b4">product-reveal</text>
+    <text x="900" y="1047" font-weight="400" fill="#d8c6b4">4.8 s</text>
+    <text x="1060" y="1047" font-weight="400" fill="#d8c6b4">claim-services</text>
+    <circle cx="1580" cy="1037" r="7" fill="#8acf31"/>
+    <text x="1872" y="1047" font-weight="700" letter-spacing="1.5" text-anchor="end">ANIMATIC · 12 s</text>
+  </g>
+</svg>

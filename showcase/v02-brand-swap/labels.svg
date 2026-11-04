@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080">
+  <!-- Bands above and below the two 960x540 halves from mgvideo multicam, plus a divider -->
+  <rect x="0" y="0" width="1920" height="270" fill="#1d1714"/>
+  <rect x="0" y="810" width="1920" height="270" fill="#1d1714"/>
+  <rect x="958" y="270" width="4" height="540" fill="#f6f1e4"/>
+  <g font-family="Geist" text-anchor="middle">
+    <circle cx="300" cy="150" r="14" fill="#7a584c"/>
+    <circle cx="334" cy="150" r="14" fill="#f0eadf"/>
+    <circle cx="368" cy="150" r="14" fill="#8acf31"/>
+    <text x="560" y="168" font-size="52" font-weight="700" fill="#f0eadf">Magnifito</text>
+    <text x="480" y="224" font-size="27" font-weight="400" fill="#c9bfb2">magnifito/brand.json · Geist Bold · cream and brown</text>
+    <circle cx="1188" cy="150" r="14" fill="#0d343a" stroke="#f6f1e4" stroke-width="2"/>
+    <circle cx="1222" cy="150" r="14" fill="#f0a63a"/>
+    <circle cx="1256" cy="150" r="14" fill="#ffd166"/>
+    <text x="1500" y="168" font-size="52" font-weight="700" fill="#f6f1e4">Quillfern Studio</text>
+    <text x="1440" y="224" font-size="27" font-weight="400" fill="#c9bfb2">quillfern/brand.json · Geist Mono Medium · teal and amber</text>
+    <text x="960" y="900" font-size="30" font-weight="600" fill="#f6f1e4">One brief, one claims register, one scene plan: two brand profiles</text>
+    <text x="960" y="950" font-size="26" font-weight="400" fill="#c9bfb2">Quillfern Studio is a fictional brand made for this example; its tagline and web address are its own</text>
+  </g>
+</svg>

@@ -1,0 +1,29 @@
+{
+  "id": "f11-glitch",
+  "title": "Glitch before and after on the motion promo",
+  "type": "Glitch",
+  "skill": "magnifito-edit",
+  "engine": "glitch",
+  "caption": "The glitch look on the opening headline of the motion promo, shown as a split screen: the left half is clean, the right half carries the red and blue channel shift and the flickering grain.",
+  "prompt": "Give the opening headline of ../videos/06-motion-graphics.mp4 (1 s to 7 s) a digital glitch look at intensity 0.3 with a 10 px chromatic red/blue shift plus light grain. Then make a before/after split: left half the clean clip, right half the glitched one, a thin cream divider and small \"Before\" and \"After: glitch\" labels in Geist from fonts/ (labels.svg).",
+  "commands": [
+    "ffmpeg -ss 1 -t 6 -i ../videos/06-motion-graphics.mp4 -c:v libx264 -crf 16 -preset medium work/source.mp4",
+    "mgvideo glitch work/source.mp4 --intensity 0.3 --shift 10 --out work/glitch.mp4",
+    "node rasterize.mjs labels.svg work/labels.png 1920 1080",
+    "ffmpeg -i work/source.mp4 -i work/glitch.mp4 -i work/labels.png -filter_complex \"[0:v]crop=960:1080:0:0[l];[1:v]crop=960:1080:960:0[r];[l][r]hstack=inputs=2,drawbox=x=958:y=0:w=4:h=1080:color=0xf0eadf:t=fill[c];[c][2:v]overlay=0:0,format=yuv420p[v]\" -map [v] -c:v libx264 -crf 16 -preset medium work/compare.mp4"
+  ],
+  "output": "work/compare.mp4",
+  "poster_at": 1.8,
+  "expect": {
+    "width": 1920,
+    "height": 1080,
+    "duration_seconds": 6,
+    "audio": false
+  },
+  "synthetic_footage": false,
+  "credits": [
+    "Video: 06-motion-graphics from this showcase (Geist and Geist Mono fonts by Vercel, SIL OFL 1.1; motion engine adapted from Barty-Bart/motion-graphics, MIT)",
+    "Magnifito logo: owned by Magnifito, the demo client; used with permission",
+    "Labels: Geist typeface by Vercel, SIL Open Font License 1.1 (fonts/OFL-Geist.txt)"
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "id": "f19-review-watermark",
+  "title": "Review-copy watermark on the launch film",
+  "type": "Review watermark",
+  "skill": "magnifito-edit",
+  "engine": "watermark",
+  "caption": "The Magnifito launch film as a client review copy: a dark banner reading \"REVIEW COPY\" with the reviewer's name is burned into the top-right corner of every frame, so a shared cut cannot pass as the final.",
+  "prompt": "Make a review copy of ../videos/01-branded-promo.mp4 for the client: burn in a \"REVIEW COPY\" watermark with the reviewer name \"Magnifito client\" in the top-right corner, clear of the titles. Keep the sound.",
+  "commands": [
+    "mgvideo watermark ../videos/01-branded-promo.mp4 --text 'REVIEW COPY' --reviewer 'Magnifito client' --position top_right --out work/review-copy.mp4"
+  ],
+  "output": "work/review-copy.mp4",
+  "poster_at": 5.5,
+  "expect": {
+    "width": 1920,
+    "height": 1080,
+    "duration_seconds": 15,
+    "audio": true
+  },
+  "synthetic_footage": false,
+  "credits": [
+    "Video and sound: 01-branded-promo from this showcase (Geist typeface, OFL-1.1; sound effects synthesized by mgvideo sfx)",
+    "Magnifito logo: owned by Magnifito, the demo client; used with permission"
+  ]
+}

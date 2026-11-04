@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080">
+  <!-- Bands above and below the two 960x540 halves from mgvideo multicam, plus a divider -->
+  <rect x="0" y="0" width="1920" height="270" fill="#2b1c17"/>
+  <rect x="0" y="810" width="1920" height="270" fill="#2b1c17"/>
+  <rect x="958" y="270" width="4" height="540" fill="#f0eadf"/>
+  <g font-family="Geist" fill="#f0eadf" text-anchor="middle">
+    <text x="480" y="168" font-size="56" font-weight="700">HyperFrames</text>
+    <text x="480" y="224" font-size="26" font-weight="400" fill="#d8c6b4">kinetic-typography · isometric-feature-grid · brand-title</text>
+    <text x="1440" y="168" font-size="56" font-weight="700">Motion</text>
+    <text x="1440" y="224" font-size="26" font-weight="400" fill="#d8c6b4">motion-kinetic-type · motion-card-morph · motion-logo-reveal</text>
+    <text x="960" y="900" font-size="30" font-weight="600">Same brief, brand, copy and scene timing: only the engine and its recipes changed</text>
+    <text x="960" y="950" font-size="26" font-weight="400" fill="#d8c6b4">The motion engine accepts only motion-* recipes, so each scene uses the closest recipe of each engine</text>
+  </g>
+  <circle cx="960" cy="1010" r="7" fill="#8acf31"/>
+</svg>

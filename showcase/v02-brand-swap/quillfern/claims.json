@@ -1,0 +1,26 @@
+{
+  "schema_version": "1.0.0",
+  "revision": "rev-showcase-1",
+  "claims": [
+    {
+      "claim_id": "claim-services",
+      "approved_wording": "Websites, social media, email, ads and automation",
+      "evidence_source": "Quillfern service catalogue (fictional brand)",
+      "owner": "Quillfern marketing lead (fictional)",
+      "locale": "en",
+      "tags": [
+        "services"
+      ]
+    },
+    {
+      "claim_id": "claim-one-team",
+      "approved_wording": "One team from first idea to launch",
+      "evidence_source": "Quillfern engagement model (fictional brand): one project team per client",
+      "owner": "Quillfern marketing lead (fictional)",
+      "locale": "en",
+      "tags": [
+        "process"
+      ]
+    }
+  ]
+}

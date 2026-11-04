@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="160" viewBox="0 0 1000 160">
+  <!-- Idea to launch: three open steps and a filled final step -->
+  <defs>
+    <linearGradient id="line" gradientUnits="userSpaceOnUse" x1="70" y1="0" x2="930" y2="0">
+      <stop offset="0" stop-color="#573a30" stop-opacity="0.35"/>
+      <stop offset="1" stop-color="#7a584c"/>
+    </linearGradient>
+  </defs>
+  <line x1="70" y1="80" x2="930" y2="80" stroke="url(#line)" stroke-width="8" stroke-linecap="round"/>
+  <circle cx="70" cy="80" r="26" fill="#ffffff" stroke="#573a30" stroke-width="8"/>
+  <circle cx="356" cy="80" r="26" fill="#ffffff" stroke="#573a30" stroke-width="8"/>
+  <circle cx="643" cy="80" r="26" fill="#ffffff" stroke="#ae8c72" stroke-width="8"/>
+  <circle cx="930" cy="80" r="44" fill="#8acf31"/>
+  <polyline points="910,80 924,94 952,66" fill="none" stroke="#2b1c17" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

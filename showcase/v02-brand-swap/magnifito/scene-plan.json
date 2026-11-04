@@ -1,0 +1,52 @@
+{
+  "schema_version": "1.0.0",
+  "plan_revision": "rev-showcase-1",
+  "renderer": "hyperframes",
+  "timing_authority": "template",
+  "scenes": [
+    {
+      "scene_id": "scene-01-hook",
+      "factual_purpose": "Introduce the Magnifito brand and its tagline",
+      "duration_seconds": 3.5,
+      "duration_frames": 105,
+      "copy_text": "Marketing with heart and value",
+      "claims_refs": [],
+      "asset_refs": ["magnifito-logo"],
+      "visual_recipe": "brand-title",
+      "audio_events": []
+    },
+    {
+      "scene_id": "scene-02-services",
+      "factual_purpose": "List the approved service lines",
+      "duration_seconds": 4.0,
+      "duration_frames": 120,
+      "copy_text": "Websites, social media, email, ads and automation",
+      "claims_refs": ["claim-services"],
+      "asset_refs": ["service-icons"],
+      "visual_recipe": "brand-title",
+      "audio_events": []
+    },
+    {
+      "scene_id": "scene-03-team",
+      "factual_purpose": "State the one-team engagement model",
+      "duration_seconds": 3.5,
+      "duration_frames": 105,
+      "copy_text": "One team from first idea to launch",
+      "claims_refs": ["claim-one-team"],
+      "asset_refs": ["journey-line"],
+      "visual_recipe": "brand-title",
+      "audio_events": []
+    },
+    {
+      "scene_id": "scene-04-cta",
+      "factual_purpose": "Invite the viewer to the website",
+      "duration_seconds": 4.0,
+      "duration_frames": 120,
+      "copy_text": "Say hello at magnifito.com",
+      "claims_refs": [],
+      "asset_refs": ["magnifito-logo"],
+      "visual_recipe": "brand-title",
+      "audio_events": []
+    }
+  ]
+}

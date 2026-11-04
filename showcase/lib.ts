@@ -3,7 +3,8 @@
  *
  * Each folder `showcase/<prefix>NN-<slug>/` is self-contained and reproducible. The prefix
  * picks the section: none = the main video types, `s` = style gallery (one clip per visual
- * recipe), `f` = format and finishing variants.
+ * recipe), `f` = format and finishing variants, `v` = variations (one input changed, shown
+ * side by side).
  *   - `showcase.json`  the recipe: the prompt an agent is given, the exact shell commands that
  *                      render the video (run in order, from the project folder), the file they
  *                      produce, and the spec the committed MP4 must meet
@@ -23,23 +24,26 @@ import { z } from 'zod';
 export const SHOWCASE_DIR = path.dirname(fileURLToPath(import.meta.url));
 export const REPO_ROOT = path.resolve(SHOWCASE_DIR, '..');
 export const VIDEOS_DIR = path.join(SHOWCASE_DIR, 'videos');
+/** Committed review artifacts, one folder per project: `showcase/artifacts/<id>/`. */
+export const ARTIFACTS_DIR = path.join(SHOWCASE_DIR, 'artifacts');
 export const MGVIDEO_BIN = path.join(REPO_ROOT, 'dist/packages/cli/src/bin/mgvideo.js');
 
 /** Programs a recipe command may start. `mgvideo` resolves to the built CLI in this repo. */
 export const ALLOWED_PROGRAMS = ['mgvideo', 'ffmpeg', 'node'] as const;
 
 /** Folder names that are showcase projects. */
-export const PROJECT_ID = /^[sf]?\d{2}-[a-z0-9-]+$/;
+export const PROJECT_ID = /^[sfv]?\d{2}-[a-z0-9-]+$/;
 
 export const SECTIONS = {
   main: { title: 'Video types', blurb: 'One example of each kind of video the skills make.' },
   styles: { title: 'Style gallery', blurb: 'One short clip per visual recipe, rendered by the recipe itself.' },
   formats: { title: 'Formats and finishing', blurb: 'The same films reframed for social formats and run through the finishing commands.' },
+  variations: { title: 'Variations', blurb: 'The same film rendered twice with one setting changed, side by side.' },
 } as const;
 export type Section = keyof typeof SECTIONS;
 
 export function sectionOf(id: string): Section {
-  return id.startsWith('s') ? 'styles' : id.startsWith('f') ? 'formats' : 'main';
+  return id.startsWith('s') ? 'styles' : id.startsWith('f') ? 'formats' : id.startsWith('v') ? 'variations' : 'main';
 }
 
 export const ShowcaseMetaSchema = z.object({
@@ -81,6 +85,16 @@ export const ShowcaseMetaSchema = z.object({
   synthetic_footage: z.boolean().default(false),
   /** Third-party material used and its licence, e.g. "Geist font (OFL-1.1)". */
   credits: z.array(z.string().min(1)).default([]),
+  /**
+   * Review artifacts the commands produce besides the video (storyboard sheet, validate
+   * report, chapters ...). `path` is a generated file (same `*` rules as `output`); render.ts
+   * copies it to `showcase/artifacts/<id>/<file name>`, which is committed.
+   */
+  artifacts: z.array(z.object({
+    label: z.string().min(1),
+    /** The file name (last segment) has no `*`: it is the committed name. */
+    path: z.string().regex(/^(?:.*\/)?[^/*]+$/, 'artifact file name must not contain *'),
+  })).default([]),
 });
 export type ShowcaseMeta = z.infer<typeof ShowcaseMetaSchema>;
 
@@ -206,6 +220,13 @@ export function renderReadme(meta: ShowcaseMeta): string {
     '',
     `The finished file is \`${meta.output}\`. The config files in this folder are the inputs.`,
   );
+  if (meta.artifacts.length) {
+    lines.push('', '## Behind the clip', '', 'Review files the same run produced, committed in `../artifacts/' + meta.id + '/`:', '');
+    for (const a of meta.artifacts) {
+      const name = path.basename(a.path);
+      lines.push(`- ${a.label}: [\`${name}\`](../artifacts/${meta.id}/${name})`);
+    }
+  }
   if (meta.credits.length) lines.push('', '## Credits', '', ...meta.credits.map(c => `- ${c}`));
   return `${lines.join('\n')}\n`;
 }

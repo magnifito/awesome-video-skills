@@ -1,0 +1,62 @@
+{
+  "schema_version": "1.0.0",
+  "assets": [
+    {
+      "asset_id": "quillfern-logo",
+      "content_hash": "sha256-showcase-quillfern-logo-v1",
+      "local_path": "assets/quillfern-logo.svg",
+      "source": "Quillfern Studio logo, a fictional brand mark drawn as SVG for this repository",
+      "rights_evidence": "Repository-Owned (drawn for this showcase)",
+      "consent_obtained": true,
+      "permitted": {
+        "client": "quillfern",
+        "channels": [
+          "all"
+        ],
+        "territories": [
+          "worldwide"
+        ]
+      },
+      "attribution_required": false,
+      "status": "approved"
+    },
+    {
+      "asset_id": "service-icons",
+      "content_hash": "sha256-showcase-quillfern-service-icons-v1",
+      "local_path": "assets/service-icons.svg",
+      "source": "Quillfern brand kit (fictional brand; showcase vector recoloured from 01-branded-promo, drawn for this repository)",
+      "rights_evidence": "Repository-Owned (drawn for this showcase)",
+      "consent_obtained": true,
+      "permitted": {
+        "client": "quillfern",
+        "channels": [
+          "all"
+        ],
+        "territories": [
+          "worldwide"
+        ]
+      },
+      "attribution_required": false,
+      "status": "approved"
+    },
+    {
+      "asset_id": "journey-line",
+      "content_hash": "sha256-showcase-quillfern-journey-line-v1",
+      "local_path": "assets/journey-line.svg",
+      "source": "Quillfern brand kit (fictional brand; showcase vector recoloured from 01-branded-promo, drawn for this repository)",
+      "rights_evidence": "Repository-Owned (drawn for this showcase)",
+      "consent_obtained": true,
+      "permitted": {
+        "client": "quillfern",
+        "channels": [
+          "all"
+        ],
+        "territories": [
+          "worldwide"
+        ]
+      },
+      "attribution_required": false,
+      "status": "approved"
+    }
+  ]
+}

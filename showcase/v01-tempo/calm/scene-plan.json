@@ -1,0 +1,21 @@
+{
+  "schema_version": "1.0.0",
+  "plan_revision": "rev-showcase-s01-1",
+  "renderer": "hyperframes",
+  "timing_authority": "template",
+  "scenes": [
+    {
+      "scene_id": "scene-01-title",
+      "factual_purpose": "Open on the agency name over its approved service lines",
+      "duration_seconds": 6,
+      "duration_frames": 180,
+      "copy_text": "Magnifito | Websites, social media, email, ads and automation",
+      "claims_refs": [
+        "claim-services"
+      ],
+      "asset_refs": [],
+      "visual_recipe": "cinematic-title",
+      "audio_events": []
+    }
+  ]
+}

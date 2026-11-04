@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080">
+  <g font-family="Geist" font-size="30" font-weight="600" letter-spacing="0.3">
+    <rect x="766" y="40" width="168" height="56" rx="28" fill="#2b1c17" fill-opacity="0.88"/>
+    <text x="850" y="79" fill="#f0eadf" text-anchor="middle">Before</text>
+    <rect x="986" y="40" width="252" height="56" rx="28" fill="#2b1c17" fill-opacity="0.88"/>
+    <circle cx="1018" cy="68" r="7" fill="#8acf31"/>
+    <text x="1040" y="79" fill="#f0eadf">After: glitch</text>
+  </g>
+</svg>

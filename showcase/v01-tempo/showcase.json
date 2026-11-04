@@ -1,0 +1,26 @@
+{
+  "id": "v01-tempo",
+  "title": "Brand tempo: calm and static against punchy and drifting",
+  "type": "Tempo variation",
+  "skill": "magnifito-promo",
+  "engine": "hyperframes",
+  "caption": "The s01 cinematic title rendered twice from the same scene plan, with only motion_preferences in brand.json changed: tempo calm with a static camera on the left, tempo punchy with the recipe's camera drift on the right. The HyperFrames animation reads both settings frame by frame.",
+  "prompt": "Use the magnifito-promo skill to show the client how the brand motion settings change a film. Take the cinematic title from showcase/s01-cinematic-title and render it twice with HyperFrames: once with motion_preferences.tempo \"calm\" and camera_style \"static\" (calm/), once with tempo \"punchy\" and camera_style \"subtle_drift\" (punchy/). Change nothing else. Put the two renders side by side with mgvideo multicam and label each half with its settings in Geist from fonts/ (labels.svg).",
+  "commands": [
+    "mgvideo render calm --force",
+    "node collect-run.mjs calm/runs work/calm.mp4",
+    "mgvideo render punchy --force",
+    "node collect-run.mjs punchy/runs work/punchy.mp4",
+    "mgvideo multicam work/calm.mp4 work/punchy.mp4 --layout side-by-side -o work/side-by-side.mp4",
+    "node rasterize.mjs labels.svg work/labels.png 1920 1080",
+    "ffmpeg -i work/side-by-side.mp4 -i work/labels.png -filter_complex \"[0:v][1:v]overlay=0:0,format=yuv420p[v]\" -map [v] -an -c:v libx264 -crf 16 -preset medium work/tempo.mp4"
+  ],
+  "output": "work/tempo.mp4",
+  "poster_at": 0.8,
+  "expect": { "width": 1920, "height": 1080, "duration_seconds": 6, "audio": false },
+  "synthetic_footage": false,
+  "credits": [
+    "Geist typeface by Vercel, SIL Open Font License 1.1 (fonts/OFL-Geist.txt); TTF converted from the WOFF2 vendored in vendor/barty-motion-graphics",
+    "Magnifito logo: owned by Magnifito, the demo client; used with permission"
+  ]
+}

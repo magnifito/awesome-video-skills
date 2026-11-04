@@ -1,0 +1,25 @@
+{
+  "id": "f09-letterbox",
+  "title": "2.39:1 letterbox on the motion promo",
+  "type": "Letterbox matte",
+  "skill": "magnifito-edit",
+  "engine": "matte",
+  "caption": "The motion-graphics promo with a 2.39:1 cinema matte: black bars top and bottom turn the 16:9 frame into a widescreen look without re-rendering or cropping the picture underneath.",
+  "prompt": "Give the Magnifito motion promo (../videos/06-motion-graphics.mp4) a cinematic widescreen feel: add black 2.39:1 letterbox bars over the full 12 seconds, keep the 1920x1080 frame, and save it as work/letterbox.mp4.",
+  "commands": [
+    "mgvideo matte ../videos/06-motion-graphics.mp4 --preset 2.39:1 --color black --out work/letterbox.mp4"
+  ],
+  "output": "work/letterbox.mp4",
+  "poster_at": 9,
+  "expect": {
+    "width": 1920,
+    "height": 1080,
+    "duration_seconds": 12,
+    "audio": false
+  },
+  "synthetic_footage": false,
+  "credits": [
+    "Video: 06-motion-graphics from this showcase (Geist and Geist Mono fonts by Vercel, SIL OFL 1.1; motion engine adapted from Barty-Bart/motion-graphics, MIT)",
+    "Magnifito logo: owned by Magnifito, the demo client; used with permission"
+  ]
+}

@@ -1,0 +1,33 @@
+{
+  "id": "v02-brand-swap",
+  "title": "Brand swap: one brief, two brand profiles",
+  "type": "Brand swap",
+  "skill": "magnifito-brand",
+  "engine": "hyperframes",
+  "caption": "The 01 launch-film brief, claims and scene plan rendered with Magnifito's brand.json on the left and a fictional second brand, Quillfern Studio, on the right: colours, typeface (Geist against Geist Mono), logo and icon colours all come from the brand profile. Both profiles pass a brand check first.",
+  "prompt": "Use the magnifito-brand skill to show that one brief works for any brand. Take the 01-branded-promo launch film (brief, claims and the four brand-title scenes) and render it twice with HyperFrames: once with Magnifito's brand.json (magnifito/), once with a second, clearly fictional brand, Quillfern Studio (quillfern/): deep teal and amber, Geist Mono Medium from the repository's OFL fonts, a simple fern-quill SVG logo, its own tagline and a quillfern.example address. Check both brand profiles first (schema, WCAG contrast of the text and mark colours, font files, licences and Cyrillic coverage) and keep the reports. Then put the two films side by side with mgvideo multicam and label each half with its brand in Geist (labels.svg).",
+  "commands": [
+    "node brand-check.mjs magnifito work/brand-check-magnifito.json",
+    "node brand-check.mjs quillfern work/brand-check-quillfern.json",
+    "mgvideo render magnifito --force",
+    "node collect-run.mjs magnifito/runs work/magnifito.mp4",
+    "mgvideo render quillfern --force",
+    "node collect-run.mjs quillfern/runs work/quillfern.mp4",
+    "mgvideo multicam work/magnifito.mp4 work/quillfern.mp4 --layout side-by-side -o work/side-by-side.mp4",
+    "node rasterize.mjs labels.svg work/labels.png 1920 1080",
+    "ffmpeg -i work/side-by-side.mp4 -i work/labels.png -filter_complex \"[0:v][1:v]overlay=0:0,format=yuv420p[v]\" -map [v] -an -c:v libx264 -crf 16 -preset medium work/brand-swap.mp4"
+  ],
+  "output": "work/brand-swap.mp4",
+  "poster_at": 2,
+  "expect": { "width": 1920, "height": 1080, "duration_seconds": 15, "audio": false },
+  "synthetic_footage": false,
+  "credits": [
+    "Geist and Geist Mono typefaces by Vercel, SIL Open Font License 1.1 (fonts/OFL-Geist.txt, quillfern/fonts/OFL-Geist.txt); Geist Mono Medium is the WOFF2 vendored in vendor/barty-motion-graphics",
+    "Magnifito logo: owned by Magnifito, the demo client; used with permission",
+    "Quillfern Studio is a fictional brand; its logo, icons and journey line are SVG drawn for this repository"
+  ],
+  "artifacts": [
+    { "label": "Brand check: Magnifito (schema, contrast, fonts)", "path": "work/brand-check-magnifito.json" },
+    { "label": "Brand check: Quillfern Studio (schema, contrast, fonts)", "path": "work/brand-check-quillfern.json" }
+  ]
+}

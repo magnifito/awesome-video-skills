@@ -7,7 +7,7 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
-import { REPO_ROOT, SECTIONS, VIDEOS_DIR, listProjects, loadMeta, sectionOf, type Section, type ShowcaseMeta } from '../showcase/lib.js';
+import { ARTIFACTS_DIR, REPO_ROOT, SECTIONS, VIDEOS_DIR, listProjects, loadMeta, sectionOf, type Section, type ShowcaseMeta } from '../showcase/lib.js';
 
 const REPO_URL = 'https://github.com/magnifito/awesome-video-skills';
 const outDir = path.resolve(REPO_ROOT, process.argv[2] ?? '_site');
@@ -45,6 +45,8 @@ function card(meta: ShowcaseMeta, index: number): string {
         <p class="label">The steps it runs, from <a href="${folder}">showcase/${esc(meta.id)}/</a></p>
         <pre><code>${meta.commands.map(esc).join('\n')}</code></pre>
       </details>
+      ${meta.artifacts.length ? `<p class="label">Behind the clip</p>
+      <ul class="artifacts">${meta.artifacts.map(a => `<li><a href="artifacts/${esc(meta.id)}/${esc(path.basename(a.path))}">${esc(a.label)}</a></li>`).join('')}</ul>` : ''}
     </div>
   </article>`;
 }
@@ -110,6 +112,7 @@ main { padding: 8px 0 40px; display: grid; gap: 28px; grid-template-columns: rep
 .facts { list-style: none; padding: 0; margin: 0 0 14px; display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 13px; color: var(--muted); }
 .facts code { background: var(--code-bg); padding: 1px 6px; border-radius: 5px; color: var(--ink); }
 .facts .note { color: var(--accent); }
+.artifacts { list-style: none; padding: 0; margin: 4px 0 0; display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 13px; }
 details { border-top: 1px solid var(--line); padding-top: 12px; }
 summary { cursor: pointer; font-weight: 600; }
 .label { margin: 14px 0 6px; font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
@@ -123,7 +126,7 @@ footer { border-top: 1px solid var(--line); padding: 28px 0 48px; color: var(--m
   <div class="wrap">
     <p class="kicker">Claude Code plugin · open source</p>
     <h1>Magnifito <em>Video</em> Skills</h1>
-    <p class="lede">${count('main')} video types${count('styles') ? `, ${count('styles')} visual styles` : ''}, one toolkit. Every example below was rendered by the skills from a prompt and a few config files, and each one shows exactly how to recreate it.</p>
+    <p class="lede">${count('main')} video types${count('styles') ? `, ${count('styles')} visual styles` : ''}${count('formats') ? `, ${count('formats')} formats and finishes` : ''}${count('variations') ? `, ${count('variations')} variations` : ''}, one toolkit. Every example below was rendered by the skills from a prompt and a few config files, and each one shows exactly how to recreate it.</p>
     <div class="install">
       <pre><code>/plugin install magnifito-video-skills --marketplace magnifito/awesome-video-skills</code></pre>
       <a class="btn" href="${REPO_URL}">View on GitHub</a>
@@ -152,6 +155,16 @@ for (const meta of metas) {
     const src = path.join(VIDEOS_DIR, `${meta.id}.${ext}`);
     if (!fs.existsSync(src)) throw new Error(`Missing ${path.relative(REPO_ROOT, src)}; run: npm run showcase -- ${meta.id}`);
     fs.copyFileSync(src, path.join(outDir, 'videos', `${meta.id}.${ext}`));
+  }
+  if (meta.artifacts.length) {
+    const dir = path.join(ARTIFACTS_DIR, meta.id);
+    fs.mkdirSync(path.join(outDir, 'artifacts', meta.id), { recursive: true });
+    for (const a of meta.artifacts) {
+      const name = path.basename(a.path);
+      const src = path.join(dir, name);
+      if (!fs.existsSync(src)) throw new Error(`Missing ${path.relative(REPO_ROOT, src)}; run: npm run showcase -- ${meta.id}`);
+      fs.copyFileSync(src, path.join(outDir, 'artifacts', meta.id, name));
+    }
   }
 }
 fs.writeFileSync(path.join(outDir, 'index.html'), page(metas));

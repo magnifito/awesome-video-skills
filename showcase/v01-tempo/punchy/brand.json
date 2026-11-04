@@ -1,0 +1,41 @@
+{
+  "schema_version": "1.0.0",
+  "brand_id": "magnifito",
+  "name": "Magnifito",
+  "logos": {
+    "primary": "assets/magnifito-logo.svg"
+  },
+  "colors": {
+    "primary": "#7a584c",
+    "secondary": "#ae8c72",
+    "background": "#f0eadf",
+    "text_primary": "#2b1c17",
+    "accent": "#8acf31"
+  },
+  "fonts": [
+    {
+      "family": "Geist",
+      "weight": "700",
+      "file_path": "fonts/Geist-Variable.ttf",
+      "rights_evidence": "OFL-1.1 (Geist by Vercel, TTF of the vendored Geist-Variable.woff2; fonts/OFL-Geist.txt)",
+      "supports_cyrillic": true
+    }
+  ],
+  "type_scale": {
+    "h1": 84,
+    "h2": 52,
+    "body": 28,
+    "caption": 18
+  },
+  "motion_preferences": {
+    "tempo": "punchy",
+    "camera_style": "subtle_drift",
+    "border_radius": 24,
+    "glassmorphism": false
+  },
+  "prohibited_treatments": [
+    "guaranteed results or ranking promises",
+    "invented client logos or testimonials",
+    "flashing neon effects"
+  ]
+}

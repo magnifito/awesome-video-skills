@@ -1,0 +1,43 @@
+{
+  "schema_version": "1.0.0",
+  "plan_revision": "rev-showcase-v03-1",
+  "renderer": "motion",
+  "timing_authority": "template",
+  "scenes": [
+    {
+      "scene_id": "scene-01-problem",
+      "factual_purpose": "Name the problem in big type",
+      "duration_seconds": 3.0,
+      "duration_frames": 90,
+      "copy_text": "Great businesses stay | invisible online",
+      "claims_refs": [],
+      "asset_refs": [],
+      "visual_recipe": "motion-kinetic-type",
+      "audio_events": []
+    },
+    {
+      "scene_id": "scene-02-services",
+      "factual_purpose": "Show what Magnifito does as four service lines",
+      "duration_seconds": 3.8,
+      "duration_frames": 114,
+      "copy_text": "Grow with Magnifito | Websites | Social media | Email and ads | Automation",
+      "claims_refs": [],
+      "asset_refs": [],
+      "visual_recipe": "motion-card-morph",
+      "audio_events": []
+    },
+    {
+      "scene_id": "scene-03-logo",
+      "factual_purpose": "Close on the logo and tagline",
+      "duration_seconds": 2.4,
+      "duration_frames": 72,
+      "copy_text": "Marketing with heart and value",
+      "claims_refs": [],
+      "asset_refs": [
+        "magnifito-logo"
+      ],
+      "visual_recipe": "motion-logo-reveal",
+      "audio_events": []
+    }
+  ]
+}

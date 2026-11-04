@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080">
+  <g font-family="Geist" font-size="24" font-weight="600" letter-spacing="0.3">
+    <rect x="786" y="20" width="150" height="46" rx="23" fill="#2b1c17" fill-opacity="0.88"/>
+    <text x="861" y="54" fill="#f0eadf" text-anchor="middle">Original</text>
+    <rect x="1786" y="20" width="110" height="46" rx="23" fill="#2b1c17" fill-opacity="0.88"/>
+    <text x="1841" y="54" fill="#f0eadf" text-anchor="middle">Grade</text>
+    <rect x="786" y="560" width="150" height="46" rx="23" fill="#2b1c17" fill-opacity="0.88"/>
+    <text x="861" y="594" fill="#f0eadf" text-anchor="middle">Vignette</text>
+    <rect x="1720" y="560" width="176" height="46" rx="23" fill="#2b1c17" fill-opacity="0.88"/>
+    <text x="1808" y="594" fill="#f0eadf" text-anchor="middle">Speed 1.5x</text>
+  </g>
+</svg>

@@ -1,0 +1,29 @@
+{
+  "id": "f15-freeze-end",
+  "title": "End card held with a freeze frame",
+  "type": "Freeze frame",
+  "skill": "magnifito-edit",
+  "engine": "freeze",
+  "caption": "The last nine seconds of the launch film before its fade, with mgvideo freeze holding the end card for three more seconds so the call to action stays on screen; a small label marks the frozen stretch.",
+  "prompt": "The end card of ../videos/01-branded-promo.mp4 is on screen too briefly. Take 4 s to 13 s (before the fade to black) and hold the last frame for 3 more seconds with silent audio padding, so the clip ends on \"Say hello at magnifito.com\". Mark the held part with a small \"Freeze: end frame held 3 s\" label in Geist (labels.svg, fonts/) that fades in when the freeze starts.",
+  "commands": [
+    "ffmpeg -ss 4 -t 9 -i ../videos/01-branded-promo.mp4 -c:v libx264 -crf 16 -preset medium -c:a aac -b:a 160k work/source.mp4",
+    "mgvideo freeze work/source.mp4 --position end --duration 3 --out work/held.mp4",
+    "node rasterize.mjs labels.svg work/labels.png 1920 1080",
+    "ffmpeg -i work/held.mp4 -loop 1 -t 12 -i work/labels.png -filter_complex \"[1:v]format=rgba,fade=t=in:st=9:d=0.3:alpha=1[lab];[0:v][lab]overlay=0:0:shortest=1,format=yuv420p[v]\" -map [v] -map 0:a -c:v libx264 -crf 16 -preset medium -c:a aac -b:a 160k work/final.mp4"
+  ],
+  "output": "work/final.mp4",
+  "poster_at": 10.5,
+  "expect": {
+    "width": 1920,
+    "height": 1080,
+    "duration_seconds": 12,
+    "audio": true
+  },
+  "synthetic_footage": false,
+  "credits": [
+    "Video and audio: 01-branded-promo from this showcase (Geist typeface by Vercel, SIL OFL 1.1; sound effects synthesized by mgvideo sfx, no third-party audio)",
+    "Magnifito logo: owned by Magnifito, the demo client; used with permission",
+    "Labels: Geist typeface by Vercel, SIL Open Font License 1.1 (fonts/OFL-Geist.txt)"
+  ]
+}

@@ -13,7 +13,7 @@
     {
       "path": "docs/plans/showcase-videos.md",
       "title": "Showcase videos and GitHub Pages site",
-      "summary": "Nine Magnifito demo projects, one per video type, rendered to committed MP4s, checked by a test suite and shown on a GitHub Pages site",
+      "summary": "Definition of the Magnifito showcase: every video type, visual recipe, format, finishing command and variation the toolkit makes, as reproducible example videos checked by a test suite and shown on a GitHub Pages site",
       "kind": "plan",
       "status": "draft",
       "updated": "2026-11-04"

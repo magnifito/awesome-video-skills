@@ -1,0 +1,76 @@
+{
+  "schema_version": "1.0.0",
+  "plan_revision": "rev-1",
+  "renderer": "hyperframes",
+  "timing_authority": "template",
+  "scenes": [
+    {
+      "scene_id": "scene-01-hook",
+      "factual_purpose": "Hook audience and establish brand problem-solving scope",
+      "duration_seconds": 3.2,
+      "duration_frames": 96,
+      "copy_text": "Looking for proven practical results?",
+      "claims_refs": [],
+      "asset_refs": [
+        "brand-logo"
+      ],
+      "visual_recipe": "kinetic-typography",
+      "audio_events": [
+        {
+          "type": "music_cue",
+          "event_name": "intro_beat",
+          "start_frame": 0,
+          "volume": 0.8
+        }
+      ]
+    },
+    {
+      "scene_id": "scene-02-core-claim",
+      "factual_purpose": "Deliver primary approved educational claim",
+      "duration_seconds": 4.8,
+      "duration_frames": 144,
+      "copy_text": "Websites, social media, email, ads and automation",
+      "claims_refs": [
+        "claim-services"
+      ],
+      "asset_refs": [],
+      "visual_recipe": "product-reveal",
+      "audio_events": [
+        {
+          "type": "voiceover",
+          "event_name": "vo_claim_1",
+          "start_frame": 10,
+          "volume": 1
+        }
+      ]
+    },
+    {
+      "scene_id": "scene-03-cta",
+      "factual_purpose": "Deliver secondary claim and direct trial action",
+      "duration_seconds": 4,
+      "duration_frames": 120,
+      "copy_text": "One team from first idea to launch",
+      "claims_refs": [
+        "claim-one-team"
+      ],
+      "asset_refs": [
+        "brand-logo"
+      ],
+      "visual_recipe": "retail-card",
+      "audio_events": [
+        {
+          "type": "voiceover",
+          "event_name": "vo_claim_2",
+          "start_frame": 10,
+          "volume": 1
+        },
+        {
+          "type": "sfx",
+          "event_name": "cta_chime",
+          "start_frame": 40,
+          "volume": 0.9
+        }
+      ]
+    }
+  ]
+}

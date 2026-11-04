@@ -1,0 +1,50 @@
+{
+  "id": "f24-size-budget",
+  "title": "Launch film squeezed into a 0.5 MB size budget",
+  "type": "Size budget",
+  "skill": "magnifito-deliver",
+  "engine": "optimize",
+  "caption": "The Magnifito launch film re-encoded by mgvideo optimize to fit a 0.5 MB budget (two-pass, bitrate worked out from the duration). The split shows the original on the left and the budgeted file on the right, with both real file sizes. Behind the clip: mgvideo validate on a fresh render of the 01 project and the YouTube chapters from its scene plan.",
+  "prompt": "The client needs the launch film ../videos/01-branded-promo.mp4 as a tiny file for an email preview: at most 0.5 MB. Run it through the size optimizer and show the client what that costs: a split with the original on the left and the budgeted file on the right, a thin cream divider and labels with the real file sizes in Geist from fonts/. Also prepare the delivery checks for the same project (../01-branded-promo): render it in a scratch copy, run mgvideo validate on the newest run and generate the YouTube chapters from its scene plan, and keep both reports with the clip.",
+  "commands": [
+    "mgvideo optimize ../videos/01-branded-promo.mp4 --size 0.5 --out work/budget.mp4",
+    "node make-labels.mjs ../videos/01-branded-promo.mp4 work/budget.mp4 0.5 work/labels.svg",
+    "node rasterize.mjs work/labels.svg work/labels.png 1920 1080",
+    "ffmpeg -i ../videos/01-branded-promo.mp4 -i work/budget.mp4 -i work/labels.png -filter_complex \"[0:v]crop=960:1080:0:0[l];[1:v]crop=960:1080:960:0[r];[l][r]hstack=inputs=2,drawbox=x=958:y=0:w=4:h=1080:color=0xf0eadf:t=fill[c];[c][2:v]overlay=0:0,format=yuv420p[v]\" -map [v] -map 1:a -c:v libx264 -crf 14 -preset medium -c:a aac -b:a 160k work/compare.mp4",
+    "node copy-project.mjs ../01-branded-promo work/promo",
+    "mgvideo render work/promo --codec mp4",
+    "node pin-run.mjs work/promo/runs latest",
+    "mgvideo validate latest -p work/promo",
+    "mgvideo chapters work/promo",
+    "node save-output.mjs work/validate.txt validate latest -p work/promo",
+    "node save-output.mjs work/chapters.txt chapters work/promo"
+  ],
+  "output": "work/compare.mp4",
+  "poster_at": 5.5,
+  "expect": {
+    "width": 1920,
+    "height": 1080,
+    "duration_seconds": 15,
+    "audio": true
+  },
+  "synthetic_footage": false,
+  "credits": [
+    "Video and sound: 01-branded-promo from this showcase (Geist typeface, OFL-1.1; sound effects synthesized by mgvideo sfx)",
+    "Geist typeface by Vercel, SIL Open Font License 1.1 (fonts/OFL-Geist.txt)",
+    "Magnifito logo: owned by Magnifito, the demo client; used with permission"
+  ],
+  "artifacts": [
+    {
+      "label": "mgvideo validate output for the 01 project render",
+      "path": "work/validate.txt"
+    },
+    {
+      "label": "mgvideo validate report (JSON)",
+      "path": "work/promo/runs/latest/validation-report.json"
+    },
+    {
+      "label": "YouTube chapters from mgvideo chapters",
+      "path": "work/chapters.txt"
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+$ mgvideo validate latest -p work/promo
+
+🔎 Validation Report for Run: run-1793804069687-d76388d1
+Overall Result: PASSED ✅ (6/6 checks passed)
+
+ ✅ File integrity: final_output_run-1793804069687-d76388d1.mp4: File exists and SHA-256 matches render manifest.
+ ✅ Export Dimensions                  : Dimensions match render request settings exactly.
+ ✅ Frame Rate (FPS)                   : Frame rate conforms to target standard.
+ ✅ Audio Stream Presence              : Audio stream verified with valid codec.
+ ✅ Rendered Inputs Unchanged          : scene-plan.json and claims.json match the hashes recorded in render-request.json.
+ ✅ Factual Claims Integrity           : All scene copy preserves approved claims wording without unapproved modification.

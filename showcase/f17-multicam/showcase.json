@@ -1,0 +1,29 @@
+{
+  "id": "f17-multicam",
+  "title": "Four finishing passes in one 2x2 grid",
+  "type": "Multicam grid",
+  "skill": "magnifito-edit",
+  "engine": "multicam",
+  "caption": "mgvideo multicam tiles four clips that start on the same frame of the talking-head edit into one 2x2 grid: the original, the warm-vibrant grade (f04), the vignette (f10) and the 1.5x speed-up (f13). The sound is the original's.",
+  "prompt": "Put four versions of the talking-head edit in one 2x2 grid for a client review: the original from 2 s (cut from ../videos/03-talking-head-edit.mp4), the colour grade (../videos/f04-color-grade.mp4), the vignette (../videos/f10-vignette.mp4) and the 1.5x speed-up (../videos/f13-speed.mp4). They all start at 2 s of the edit, so keep them in sync, use the original's audio, and name each cell with a small Geist label (labels.svg, fonts/).",
+  "commands": [
+    "ffmpeg -ss 2 -t 7 -i ../videos/03-talking-head-edit.mp4 -c:v libx264 -crf 16 -preset medium -c:a aac -b:a 160k work/original.mp4",
+    "mgvideo multicam work/original.mp4 ../videos/f04-color-grade.mp4 ../videos/f10-vignette.mp4 ../videos/f13-speed.mp4 --layout quad-2x2 --out work/grid.mp4",
+    "node rasterize.mjs labels.svg work/labels.png 1920 1080",
+    "ffmpeg -i work/grid.mp4 -i work/labels.png -filter_complex \"[0:v][1:v]overlay=0:0,format=yuv420p[v]\" -map [v] -map 0:a -c:v libx264 -crf 16 -preset medium -c:a aac -b:a 160k work/final.mp4"
+  ],
+  "output": "work/final.mp4",
+  "poster_at": 3.5,
+  "expect": {
+    "width": 1920,
+    "height": 1080,
+    "duration_seconds": 7,
+    "audio": true
+  },
+  "synthetic_footage": true,
+  "credits": [
+    "Video and audio: 03-talking-head-edit, f04-color-grade, f10-vignette and f13-speed from this showcase (synthetic presenter and generated voice-like tone track; Geist typeface by Vercel, SIL OFL 1.1)",
+    "Magnifito logo: owned by Magnifito, the demo client; used with permission",
+    "Labels: Geist typeface by Vercel, SIL Open Font License 1.1 (fonts/OFL-Geist.txt)"
+  ]
+}

@@ -4,7 +4,7 @@
 A 20-second cursor tour of a mock campaign dashboard. The UI states are committed SVGs rasterized at 4K; ffmpeg moves an eased cursor and camera over them, swaps states on each click and adds captions rendered by HyperFrames in Geist.
 
 - Type: Product demo
-- Skill: `magnifito-promo`
+- Skill: `magnifito-product-demo`
 - Engine: `hyperframes`
 - Output: 1920x1080, 20 s, with audio
 - Video: [`../videos/02-product-demo.mp4`](../videos/02-product-demo.mp4)

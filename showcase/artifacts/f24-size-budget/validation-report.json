@@ -1,0 +1,48 @@
+{
+  "run_id": "run-1793804069687-d76388d1",
+  "passed": true,
+  "total_checks": 6,
+  "passed_checks": 6,
+  "failed_checks": 0,
+  "items": [
+    {
+      "check": "File integrity: final_output_run-1793804069687-d76388d1.mp4",
+      "passed": true,
+      "expected": "8bbf20e5f1367c54c1b70b3836ae6ad77af88bff0ce3cf349067de535f9ba5ba",
+      "actual": "8bbf20e5f1367c54c1b70b3836ae6ad77af88bff0ce3cf349067de535f9ba5ba",
+      "details": "File exists and SHA-256 matches render manifest."
+    },
+    {
+      "check": "Export Dimensions",
+      "passed": true,
+      "expected": "1920x1080",
+      "actual": "1920x1080",
+      "details": "Dimensions match render request settings exactly."
+    },
+    {
+      "check": "Frame Rate (FPS)",
+      "passed": true,
+      "expected": 30,
+      "actual": 30,
+      "details": "Frame rate conforms to target standard."
+    },
+    {
+      "check": "Audio Stream Presence",
+      "passed": true,
+      "expected": true,
+      "actual": true,
+      "details": "Audio stream verified with valid codec."
+    },
+    {
+      "check": "Rendered Inputs Unchanged",
+      "passed": true,
+      "details": "scene-plan.json and claims.json match the hashes recorded in render-request.json."
+    },
+    {
+      "check": "Factual Claims Integrity",
+      "passed": true,
+      "details": "All scene copy preserves approved claims wording without unapproved modification."
+    }
+  ],
+  "unresolved_review_items": []
+}

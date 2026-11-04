@@ -1,0 +1,9 @@
+$ mgvideo chapters work/promo
+
+📑 Chapters Generated for work/promo:
+--------------------------------------------------
+00:00 Introduce the Magnifito brand and its tagline
+00:03 List the approved service lines
+00:07 State the one-team engagement model
+00:11 Invite the viewer to the website
+--------------------------------------------------

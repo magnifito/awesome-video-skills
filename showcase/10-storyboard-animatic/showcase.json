@@ -1,0 +1,58 @@
+{
+  "id": "10-storyboard-animatic",
+  "title": "Storyboard and animatic for a 12-second promo",
+  "type": "Storyboard animatic",
+  "skill": "magnifito-storyboard",
+  "engine": "hyperframes",
+  "caption": "Before anything is rendered: mgvideo plan turns a 12-second Magnifito brief and its claims register into a timed three-scene plan, mgvideo storyboard draws one styleframe per scene and a review contact sheet, and mgvideo montage holds each frame for its planned length to make an animatic with a slate per shot (scene, beat, recipe, length, linked claim) and a progress bar.",
+  "prompt": "Use the magnifito-storyboard skill to plan a 12-second 16:9 promo for Magnifito from brief.json, brand.json and claims.json, before we render anything. Make the claims-linked scene plan, a storyboard with one styleframe per scene and a contact sheet I can send to the client, and an animatic that holds each frame for exactly its planned length. Mark each shot with a slate (scene number, beat, recipe and length) in Geist from fonts/, a progress bar with a tick at each cut, and put a soft whoosh on each cut and a chime on the last card so the timing can be judged with sound.",
+  "commands": [
+    "node stage.mjs work/board brief.json brand.json claims.json",
+    "mgvideo plan work/board",
+    "mgvideo storyboard work/board",
+    "mgvideo montage work/board/storyboard/frame_1_scene-01-hook.png -s 3.2 -o work/shot-1.mp4",
+    "mgvideo montage work/board/storyboard/frame_2_scene-02-core-claim.png -s 4.8 -o work/shot-2.mp4",
+    "mgvideo montage work/board/storyboard/frame_3_scene-03-cta.png -s 4.0 -o work/shot-3.mp4",
+    "node rasterize.mjs slate-1.svg work/slate-1.png 1920 1080",
+    "node rasterize.mjs slate-2.svg work/slate-2.png 1920 1080",
+    "node rasterize.mjs slate-3.svg work/slate-3.png 1920 1080",
+    "mgvideo sfx whoosh -d 0.8 -o work/whoosh.wav",
+    "mgvideo sfx chime -d 2.5 -o work/chime.wav",
+    "ffmpeg -i work/shot-1.mp4 -i work/shot-2.mp4 -i work/shot-3.mp4 -i work/whoosh.wav -i work/chime.wav -i work/slate-1.png -i work/slate-2.png -i work/slate-3.png -f lavfi -i color=c=0x8acf31:s=1920x6:r=30:d=12 -filter_complex \"[0:v][1:v][2:v]concat=n=3:v=1:a=0[c];[c][5:v]overlay=0:0:enable='lt(t,3.2)'[s1];[s1][6:v]overlay=0:0:enable='between(t,3.2,8)'[s2];[s2][7:v]overlay=0:0:enable='gte(t,8)'[s3];[s3][8:v]overlay=x='-1920+1920*t/12':y=988,format=yuv420p[v];[3]asplit=2[w0][w1];[w0]adelay=3050:all=1,volume=0.5[x0];[w1]adelay=7850:all=1,volume=0.5[x1];[4]adelay=8300:all=1,volume=0.6[x2];[x0][x1][x2]amix=inputs=3:normalize=0,aformat=sample_rates=48000:channel_layouts=stereo,apad,atrim=0:12,afade=t=out:st=11.2:d=0.8[a]\" -map [v] -map [a] -t 12 -c:v libx264 -crf 16 -pix_fmt yuv420p -c:a aac -b:a 160k work/animatic.mp4"
+  ],
+  "output": "work/animatic.mp4",
+  "poster_at": 5,
+  "expect": {
+    "width": 1920,
+    "height": 1080,
+    "duration_seconds": 12,
+    "audio": true
+  },
+  "synthetic_footage": false,
+  "credits": [
+    "Geist typeface by Vercel, SIL Open Font License 1.1 (fonts/OFL-Geist.txt), used for the slates",
+    "Sound effects synthesized by mgvideo sfx (procedural, no third-party audio)"
+  ],
+  "artifacts": [
+    {
+      "label": "Storyboard contact sheet (HTML, from mgvideo storyboard)",
+      "path": "work/board/storyboard/storyboard.html"
+    },
+    {
+      "label": "Styleframe 1: hook",
+      "path": "work/board/storyboard/frame_1_scene-01-hook.png"
+    },
+    {
+      "label": "Styleframe 2: core claim",
+      "path": "work/board/storyboard/frame_2_scene-02-core-claim.png"
+    },
+    {
+      "label": "Styleframe 3: call to action",
+      "path": "work/board/storyboard/frame_3_scene-03-cta.png"
+    },
+    {
+      "label": "Scene plan (from mgvideo plan)",
+      "path": "work/board/scene-plan.json"
+    }
+  ]
+}

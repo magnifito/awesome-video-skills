@@ -1,0 +1,25 @@
+{
+  "id": "f20-safezone-guide",
+  "title": "Safe-zone guide on the vertical launch film",
+  "type": "Safe-zone guide",
+  "skill": "magnifito-variants",
+  "engine": "safezone",
+  "caption": "mgvideo safezone burns the Reels, Shorts and TikTok safe area onto the native 9:16 launch film (f07) for review: shaded top and bottom margins where the app UI sits, and the dashed area the cards must stay inside.",
+  "prompt": "Use the magnifito-variants skill to check the vertical launch film (../videos/f07-native-vertical.mp4) against the mobile safe zones before it goes to Reels and Shorts. Burn the safe-area guide over the whole clip so the client can see that every card stays clear of the top and bottom UI margins, and save the review copy as work/safezone.mp4.",
+  "commands": [
+    "mgvideo safezone ../videos/f07-native-vertical.mp4 --out work/safezone.mp4"
+  ],
+  "output": "work/safezone.mp4",
+  "poster_at": 5.5,
+  "expect": {
+    "width": 1080,
+    "height": 1920,
+    "duration_seconds": 15,
+    "audio": true
+  },
+  "synthetic_footage": false,
+  "credits": [
+    "Video and audio: f07-native-vertical from this showcase (the 01-branded-promo project rendered at 9:16; Geist typeface by Vercel, SIL OFL 1.1; sound effects synthesized by mgvideo sfx)",
+    "Magnifito logo: owned by Magnifito, the demo client; used with permission"
+  ]
+}

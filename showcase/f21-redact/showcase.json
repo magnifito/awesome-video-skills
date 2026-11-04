@@ -1,0 +1,25 @@
+{
+  "id": "f21-redact",
+  "title": "Redacting a share link on the product tour",
+  "type": "Redaction",
+  "skill": "magnifito-edit",
+  "engine": "mask",
+  "caption": "The share step of the product tour, held on one frame: for three seconds the report link is readable, then the masked version takes over and the link field is pixelated and blurred so the URL cannot be read.",
+  "prompt": "The product tour ../videos/02-product-demo.mp4 shows a live report link (hub.magnifito.demo/r/spring) in the Share report popover. Hold the frame at 15.75 s for 8 seconds and redact the link field with a blur mask (box 1340,336 to 1726,394). For the client, show the original frame for the first 3 seconds with an \"Original frame\" label, then cut to the redacted version labelled \"Share link redacted\", in Geist from fonts/.",
+  "commands": [
+    "ffmpeg -ss 15.75 -i ../videos/02-product-demo.mp4 -frames:v 1 work/frame.png",
+    "ffmpeg -loop 1 -framerate 30 -t 8 -i work/frame.png -c:v libx264 -crf 14 -preset medium -pix_fmt yuv420p work/still.mp4",
+    "mgvideo mask work/still.mp4 --box 1340,336,386,58 --mode blur --out work/redacted.mp4",
+    "node rasterize.mjs label-original.svg work/label-original.png 1920 1080",
+    "node rasterize.mjs label-redacted.svg work/label-redacted.png 1920 1080",
+    "ffmpeg -i work/still.mp4 -i work/redacted.mp4 -i work/label-original.png -i work/label-redacted.png -filter_complex \"[0:v]trim=0:3,setpts=PTS-STARTPTS[a];[2:v]loop=-1:1,trim=0:3[la];[a][la]overlay=0:0[av];[1:v]trim=3:8,setpts=PTS-STARTPTS[b];[3:v]loop=-1:1,trim=0:5[lb];[b][lb]overlay=0:0[bv];[av][bv]concat=n=2:v=1:a=0,format=yuv420p[v]\" -map [v] -c:v libx264 -crf 16 -preset medium work/compare.mp4"
+  ],
+  "output": "work/compare.mp4",
+  "poster_at": 5,
+  "expect": { "width": 1920, "height": 1080, "duration_seconds": 8, "audio": false },
+  "synthetic_footage": false,
+  "credits": [
+    "Screen: 02-product-demo from this showcase (mock dashboard SVGs, demo data; the link is fictional)",
+    "Geist typeface by Vercel, SIL Open Font License 1.1 (fonts/OFL-Geist.txt)"
+  ]
+}

@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="160" viewBox="0 0 1000 160">
+  <!-- Idea to launch in Quillfern colours: three open steps and a filled final step -->
+  <defs>
+    <linearGradient id="line" gradientUnits="userSpaceOnUse" x1="70" y1="0" x2="930" y2="0">
+      <stop offset="0" stop-color="#f6f1e4" stop-opacity="0.35"/>
+      <stop offset="1" stop-color="#f0a63a"/>
+    </linearGradient>
+  </defs>
+  <line x1="70" y1="80" x2="930" y2="80" stroke="url(#line)" stroke-width="8" stroke-linecap="round"/>
+  <circle cx="70" cy="80" r="26" fill="#0d343a" stroke="#f6f1e4" stroke-width="8"/>
+  <circle cx="356" cy="80" r="26" fill="#0d343a" stroke="#f6f1e4" stroke-width="8"/>
+  <circle cx="643" cy="80" r="26" fill="#0d343a" stroke="#f0a63a" stroke-width="8"/>
+  <circle cx="930" cy="80" r="44" fill="#ffd166"/>
+  <polyline points="910,80 924,94 952,66" fill="none" stroke="#0d343a" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

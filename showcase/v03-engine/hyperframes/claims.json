@@ -1,0 +1,16 @@
+{
+  "schema_version": "1.0.0",
+  "revision": "rev-showcase-v03-1",
+  "claims": [
+    {
+      "claim_id": "claim-services",
+      "approved_wording": "Websites, social media, email, ads and automation",
+      "evidence_source": "Magnifito service catalogue (magnifito.com/services)",
+      "owner": "Magnifito marketing lead",
+      "locale": "en",
+      "tags": [
+        "services"
+      ]
+    }
+  ]
+}

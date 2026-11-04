@@ -2,7 +2,7 @@
   "id": "02-product-demo",
   "title": "Campaign hub product tour",
   "type": "Product demo",
-  "skill": "magnifito-promo",
+  "skill": "magnifito-product-demo",
   "engine": "hyperframes",
   "caption": "A 20-second cursor tour of a mock campaign dashboard. The UI states are committed SVGs rasterized at 4K; ffmpeg moves an eased cursor and camera over them, swaps states on each click and adds captions rendered by HyperFrames in Geist.",
   "prompt": "Make a 20-second 16:9 product demo for Magnifito's campaign hub using the product-demo workflow. Use the three mock dashboard states in assets/ (overview, post scheduled, report shared) as the screen: rasterize them at 4K, then animate a cursor that sweeps across the channel cards, clicks Schedule on Thursday's post and then clicks Share report, swapping the screen state on each click with a click ripple. Push the camera in on each action and ease it back out at the end. Bookend the tour with a logo title card (\"A tour of the campaign hub\") and an end card (\"Talk to us at magnifito.com\"), and put three short captions in a dark pill at the bottom, each linked to an approved claim. Render the cards and captions transparent with HyperFrames in Geist, composite everything over the Magnifito cream backdrop, and add soft whooshes, a pop per click and a chime on the end card. Label the dashboard as demo data.",

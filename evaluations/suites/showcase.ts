@@ -4,18 +4,30 @@
  *
  * Always checks: recipe schema and commands, generated README in sync, inputs referenced by
  * the commands exist, committed MP4 + poster exist and ffprobe matches `expect`.
- * With MGVIDEO_TEST_SHOWCASE=1 it also re-renders every project (about 10 minutes).
+ * Coverage (docs/plans/showcase-videos.md): one style clip per recipe, every shown mgvideo
+ * command used, every skill except the router owns a clip, review artifacts committed.
+ * With MGVIDEO_TEST_SHOWCASE=1 it also re-renders every project.
  */
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import type { SuiteContext } from '../run-suites.js';
 import {
-  REPO_ROOT, SHOWCASE_DIR, VIDEOS_DIR, listProjects, loadMeta, renderReadme, sectionOf, splitCommand,
+  ARTIFACTS_DIR, REPO_ROOT, SHOWCASE_DIR, VIDEOS_DIR, listProjects, loadMeta, renderReadme, sectionOf, splitCommand,
 } from '../../showcase/lib.js';
 import { probe } from '../../packages/media/src/proc.js';
 
-const EXPECTED_TYPES = 9;
+const EXPECTED_TYPES = 10;
+/** mgvideo commands that change what a viewer sees or hears; each must appear in a recipe. */
+const SHOWN_COMMANDS = [
+  'render', 'sfx', 'concat', 'batch', 'broll', 'separate', 'plan', 'storyboard', 'montage',
+  'reframe', 'blur-bg', 'smart-crop', 'matte', 'grade', 'vignette', 'glitch', 'title', 'lower-third',
+  'loop', 'speed', 'reverse', 'freeze', 'pip', 'multicam', 'chromakey', 'watermark', 'safezone',
+  'mask', 'declick', 'noise-gate', 'eq', 'compress-audio', 'waveform', 'optimize', 'validate', 'chapters',
+];
+/** The router takes every prompt first and has no clip of its own. */
+const ROUTER_SKILL = 'magnifito-video';
+const MAX_ARTIFACT_BYTES = 2 * 1024 * 1024;
 /** Allowed difference between the recipe duration and the committed file, in seconds. */
 const DURATION_TOLERANCE = 0.25;
 const MAX_BYTES = 6 * 1024 * 1024;
@@ -49,6 +61,9 @@ export async function run(t: SuiteContext): Promise<void> {
   t.assert(mainIds.length === EXPECTED_TYPES, `showcase has ${EXPECTED_TYPES} main video types`, `found ${mainIds.length}: ${mainIds.join(', ')}`);
 
   const types = new Set<string>();
+  const usedCommands = new Set<string>();
+  const usedSkills = new Set<string>();
+  const styleRecipes = new Map<string, string[]>();
   for (const id of ids) {
     const dir = path.join(SHOWCASE_DIR, id);
     let meta;
@@ -60,6 +75,25 @@ export async function run(t: SuiteContext): Promise<void> {
       continue;
     }
     if (sectionOf(id) === 'main') types.add(meta.type);
+    usedSkills.add(meta.skill);
+    for (const cmd of meta.commands) {
+      const argv = splitCommand(cmd);
+      if (argv[0] === 'mgvideo' && argv[1]) usedCommands.add(argv[1]);
+    }
+    if (sectionOf(id) === 'styles') {
+      const planFile = path.join(dir, 'scene-plan.json');
+      const recipes = fs.existsSync(planFile)
+        ? [...new Set((JSON.parse(fs.readFileSync(planFile, 'utf8')).scenes as { visual_recipe: string }[]).map(sc => sc.visual_recipe))]
+        : [];
+      t.assert(recipes.length === 1, `${id}: style clip uses exactly one recipe`, recipes.join(', ') || 'no scene-plan.json');
+      if (recipes.length === 1) styleRecipes.set(recipes[0], [...(styleRecipes.get(recipes[0]) ?? []), id]);
+    }
+    for (const a of meta.artifacts) {
+      const file = path.join(ARTIFACTS_DIR, id, path.basename(a.path));
+      const ok = fs.existsSync(file) && fs.statSync(file).size > 0;
+      t.assert(ok, `${id}: artifact committed: ${path.basename(a.path)}`);
+      if (ok) t.assert(fs.statSync(file).size <= MAX_ARTIFACT_BYTES, `${id}: artifact ${path.basename(a.path)} is at most 2 MiB`);
+    }
 
     const readme = path.join(dir, 'README.md');
     t.assert(
@@ -113,6 +147,18 @@ export async function run(t: SuiteContext): Promise<void> {
     t.assert(moov !== -1 && (mdat === -1 || moov < mdat), `${id}: faststart (moov before mdat)`);
   }
   t.assert(types.size === mainIds.length, 'every main project shows a different video type', [...types].join(', '));
+
+  // Coverage rules from docs/plans/showcase-videos.md.
+  const recipeIds = fs.readdirSync(path.join(REPO_ROOT, 'styles/recipes')).filter(f => f.endsWith('.json')).map(f => f.replace(/\.json$/, ''));
+  for (const r of recipeIds) {
+    const clips = styleRecipes.get(r) ?? [];
+    t.assert(clips.length === 1, `style gallery has one clip for recipe ${r}`, clips.length ? clips.join(', ') : 'none');
+  }
+  const missingCommands = SHOWN_COMMANDS.filter(c => !usedCommands.has(c));
+  t.assert(missingCommands.length === 0, 'every shown mgvideo command appears in a recipe', missingCommands.join(', '));
+  const skills = fs.readdirSync(path.join(REPO_ROOT, 'skills')).filter(s => s !== ROUTER_SKILL);
+  const missingSkills = skills.filter(s => !usedSkills.has(s));
+  t.assert(missingSkills.length === 0, 'every skill except the router owns a clip', missingSkills.join(', '));
 
   if (process.env.MGVIDEO_TEST_SHOWCASE !== '1') {
     t.skip('full showcase re-render (set MGVIDEO_TEST_SHOWCASE=1, about 10 minutes)');

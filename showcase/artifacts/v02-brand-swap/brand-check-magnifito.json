@@ -1,0 +1,96 @@
+{
+  "brand_id": "magnifito",
+  "name": "Magnifito",
+  "project": "magnifito",
+  "passed": true,
+  "passed_checks": 10,
+  "total_checks": 11,
+  "warnings": [
+    "Contrast: accent on background (highlights; keep it off text and information)"
+  ],
+  "checks": [
+    {
+      "check": "brand.json matches BrandProfileSchema",
+      "level": "error",
+      "passed": true,
+      "details": "valid"
+    },
+    {
+      "check": "Contrast: text_primary on background (headlines and body)",
+      "level": "error",
+      "passed": true,
+      "foreground": "#2b1c17",
+      "background": "#f0eadf",
+      "ratio": 13.69,
+      "minimum": 4.5
+    },
+    {
+      "check": "Contrast: text_primary on secondary (gradient end of the brand-title card)",
+      "level": "error",
+      "passed": true,
+      "foreground": "#2b1c17",
+      "background": "#d8c6b4",
+      "ratio": 9.88,
+      "minimum": 4.5
+    },
+    {
+      "check": "Contrast: primary on background (marks, icons, large text)",
+      "level": "error",
+      "passed": true,
+      "foreground": "#7a584c",
+      "background": "#f0eadf",
+      "ratio": 5.27,
+      "minimum": 3
+    },
+    {
+      "check": "Contrast: accent on background (highlights; keep it off text and information)",
+      "level": "warning",
+      "passed": false,
+      "foreground": "#8acf31",
+      "background": "#f0eadf",
+      "ratio": 1.59,
+      "minimum": 3
+    },
+    {
+      "check": "Font rights evidence: Geist",
+      "level": "error",
+      "passed": true,
+      "details": "OFL-1.1 (Geist by Vercel, TTF of the vendored Geist-Variable.woff2; fonts/OFL-Geist.txt)"
+    },
+    {
+      "check": "Font file: Geist",
+      "level": "error",
+      "passed": true,
+      "file": "fonts/Geist-Variable.ttf",
+      "bytes": 169056
+    },
+    {
+      "check": "Font licence text shipped: Geist",
+      "level": "error",
+      "passed": true,
+      "details": "OFL-Geist.txt"
+    },
+    {
+      "check": "Font licence record: Geist",
+      "level": "error",
+      "passed": true,
+      "source": "FontAuditor",
+      "license": "This Font Software is licensed under the SIL Open Font License, Version 1.1. This license is available with a FAQ at: https://openfontlicense.org | https://openfontlicense.org"
+    },
+    {
+      "check": "Cyrillic coverage as declared: Geist",
+      "level": "error",
+      "passed": true,
+      "source": "FontAuditor (cmap)",
+      "declared": true,
+      "covers_bulgarian": true,
+      "warnings": []
+    },
+    {
+      "check": "Primary logo file exists",
+      "level": "error",
+      "passed": true,
+      "file": "assets/magnifito-logo.svg"
+    }
+  ]
+}

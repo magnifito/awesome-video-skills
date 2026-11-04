@@ -1,0 +1,22 @@
+{
+  "schema_version": "1.0.0",
+  "project_id": "showcase-v02-brand-swap-magnifito",
+  "client_id": "magnifito",
+  "workflow": "branded-promo",
+  "objective": "Launch film introducing Magnifito's digital marketing services",
+  "audience": "Small and mid-sized businesses looking for one marketing partner",
+  "language": "en",
+  "duration_seconds": 15,
+  "formats": [
+    "16:9"
+  ],
+  "engine": "hyperframes",
+  "timing_authority": "template",
+  "campaign_reference_time": "2026-11-04T09:00:00Z",
+  "budgets": {
+    "agent_budget_usd": 10,
+    "compute_budget_usd": 5,
+    "media_budget_usd": 0,
+    "max_retries": 3
+  }
+}

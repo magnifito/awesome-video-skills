@@ -93,16 +93,20 @@ Update later with `/plugin marketplace update magnifito-video`.
 
 ## Showcase
 
-Nine example videos, one per video type, made with these skills for Magnifito as the demo
+Ten example videos, one per video type, made with these skills for Magnifito as the demo
 client. The [showcase site](https://magnifito.github.io/awesome-video-skills/) also has a style
-gallery (12 clips, one per visual recipe, `showcase/s*`) and 6 format and finishing clips
-(`reframe`, `blur-bg`, `grade`, `lower-third`, `loop`, `showcase/f*`).
+gallery (17 clips, one per visual recipe, `showcase/s*`), 24 format and finishing clips (one
+finishing command each, `showcase/f*`) and 3 variations that render one film twice with one
+setting changed (`showcase/v*`). Some cards also link the review files their run produced: a
+storyboard sheet, brand checks, the `validate` and `chapters` output. The full definition is
+[docs/plans/showcase-videos.md](docs/plans/showcase-videos.md).
 
 | | | |
 | :---: | :---: | :---: |
 | [![Branded promo](showcase/videos/01-branded-promo.jpg)](showcase/01-branded-promo/)<br>Branded promo | [![Product demo](showcase/videos/02-product-demo.jpg)](showcase/02-product-demo/)<br>Product demo | [![Talking-head edit](showcase/videos/03-talking-head-edit.jpg)](showcase/03-talking-head-edit/)<br>Talking-head edit |
 | [![Commerce variants](showcase/videos/04-commerce-variants.jpg)](showcase/04-commerce-variants/)<br>Commerce variants | [![Multilingual explainer](showcase/videos/05-multilingual-explainer.jpg)](showcase/05-multilingual-explainer/)<br>Multilingual explainer | [![Motion graphics](showcase/videos/06-motion-graphics.jpg)](showcase/06-motion-graphics/)<br>Motion graphics |
 | [![B-roll](showcase/videos/07-broll.jpg)](showcase/07-broll/)<br>B-roll over a speaker | [![Sound pass](showcase/videos/08-sound-pass.jpg)](showcase/08-sound-pass/)<br>Sound pass | [![Object cut-out](showcase/videos/09-object-cutout.jpg)](showcase/09-object-cutout/)<br>Object cut-out |
+| [![Storyboard animatic](showcase/videos/10-storyboard-animatic.jpg)](showcase/10-storyboard-animatic/)<br>Storyboard animatic | | |
 
 Each folder under `showcase/` holds a `showcase.json` recipe: the prompt to give Claude Code,
 the exact commands, and the config files they read. Its `README.md` shows both. To recreate an
@@ -110,7 +114,7 @@ example exactly as committed:
 
 ```sh
 npm run showcase -- 06-motion-graphics   # one example
-npm run showcase                         # all 27
+npm run showcase                         # all 54
 ```
 
 The `showcase` test suite checks every recipe and runs ffprobe on every committed video. Set

@@ -11,7 +11,7 @@ import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import {
-  MGVIDEO_BIN, SHOWCASE_DIR, VIDEOS_DIR, listProjects, loadMeta, renderReadme, resolveOutput, runCommand,
+  ARTIFACTS_DIR, MGVIDEO_BIN, SHOWCASE_DIR, VIDEOS_DIR, listProjects, loadMeta, renderReadme, resolveOutput, runCommand,
 } from './lib.js';
 
 const readmeOnly = process.argv.includes('--readme-only');
@@ -60,6 +60,13 @@ for (const id of ids) {
       '-y', '-hide_banner', '-loglevel', 'error', '-ss', String(meta.poster_at), '-i', mp4,
       '-frames:v', '1', '-vf', 'scale=960:-2', '-q:v', '4', jpg,
     ]);
+    const artifactDir = path.join(ARTIFACTS_DIR, id);
+    fs.rmSync(artifactDir, { recursive: true, force: true });
+    if (meta.artifacts.length) fs.mkdirSync(artifactDir, { recursive: true });
+    for (const a of meta.artifacts) {
+      const src = resolveOutput(dir, a.path);
+      fs.copyFileSync(src, path.join(artifactDir, path.basename(a.path)));
+    }
     const kb = Math.round(fs.statSync(mp4).size / 1024);
     console.log(` ✅ ${id}: ${kb} KiB in ${Math.round((Date.now() - started) / 1000)} s`);
   } catch (err) {
