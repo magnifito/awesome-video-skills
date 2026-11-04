@@ -123,7 +123,7 @@ export async function run(t: SuiteContext): Promise<void> {
       'mgvideo brand check --json --out exits 0 and the file equals stdout', bc.stderr.slice(-400));
 
     const lowDir = path.join(tmp, 'low');
-    fs.cpSync(good, lowDir, { recursive: true, filter: src => !src.includes(`${path.sep}runs`) && !src.includes(`${path.sep}work`) });
+    fs.cpSync(good, lowDir, { recursive: true, filter: src => !/^(runs|work)(\/|\\|$)/.test(path.relative(good, src)) });
     const lowBrand = JSON.parse(fs.readFileSync(path.join(lowDir, 'brand.json'), 'utf8'));
     lowBrand.colors.text_primary = '#cfc6b8'; // light grey on the cream background
     fs.writeFileSync(path.join(lowDir, 'brand.json'), JSON.stringify(lowBrand, null, 2));
