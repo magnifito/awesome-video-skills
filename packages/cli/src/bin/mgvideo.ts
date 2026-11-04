@@ -68,6 +68,13 @@ import { AudioCompressor } from '../../../media/src/compressor.js';
 import { PipEngine } from '../../../media/src/pip.js';
 import { VignetteEngine } from '../../../media/src/vignette.js';
 import { DeClickerEngine } from '../../../media/src/declick.js';
+import { runSetupSfx, runSfxPassCommand } from '../commands/sound_pass.js';
+import { runBrollCheck, runBrollCompose, runBrollRender, runBrollWords } from '../commands/broll.js';
+import { InvalidArgumentError } from 'commander';
+import {
+  estimateSeconds, parseFrameNumber, parsePoint, readSeparateMarker, separateVideo, setupSeparate,
+  SEPARATE_MODELS, type CutoutFormat, type SeparateModelSize, type SeparatePoint,
+} from '../../../media/src/separate.js';
 
 
 
@@ -1303,16 +1310,41 @@ program
     }
   });
 
-// mgvideo sfx <type>
+// mgvideo sfx <type>               procedural effect (whoosh, thud, pop, chime)
+// mgvideo sfx <video> --cues ...    measured sound pass with the vendored CC0 library
 program
   .command('sfx')
-  .description('Procedurally synthesize transition sound effects without external audio assets (whoosh, thud, pop, chime)')
-  .addArgument(new Argument('<type>', 'Effect type').choices(['whoosh', 'thud', 'pop', 'chime']))
-  .option('-d, --duration <seconds>', 'Sound duration in seconds')
-  .option('-o, --out <path>', 'Custom output audio path')
-  .action((type, opts) => {
+  .description('Synthesize a procedural effect (sfx <whoosh|thud|pop|chime>), or run the measured sound pass on a video (sfx <video> --cues cues.json --out dir)')
+  .argument('<target>', 'Effect type (whoosh, thud, pop, chime) or, with --cues, the input video')
+  .option('-d, --duration <seconds>', 'Procedural effect: sound duration in seconds')
+  .option('-o, --out <path>', 'Procedural effect: output audio path. Sound pass: output directory')
+  .option('--cues <file>', 'Sound pass: cues JSON ([{"t": 2.0, "type": "scene_cut", "desc": "..."}])')
+  .option('--music <track>', 'Sound pass: music bed (beat grid analysed with librosa; needs `mgvideo setup sfx`)')
+  .option('--music-db <db>', 'Sound pass: music gain relative to the track', '-12')
+  .option('--music-source <text>', 'Sound pass: track, artist and link, written to CREDITS.txt')
+  .option('--music-license <text>', 'Sound pass: the music licence the user confirmed')
+  .option('--use-case <text>', 'Sound pass: where the video will be published (checked against known licence limits)')
+  .option('--seed <n>', 'Sound pass: seed for picking takes from the library', '7')
+  .option('--swaps <file>', 'Sound pass: swaps.json downloaded from report.html')
+  .option('--snap-window <seconds>', 'Sound pass: max distance a cue with "snap": true moves to the beat', '0.12')
+  .option('--no-proof', 'Sound pass: skip per-cue proof frames and waveforms')
+  .action((target, opts) => {
+    if (opts.cues) {
+      try {
+        if (!opts.out) throw new Error('--out <dir> is required for the sound pass');
+        runSfxPassCommand(path.resolve(process.cwd(), target), opts);
+      } catch (err) {
+        console.error(`Sound pass failed: ${err instanceof Error ? err.message : String(err)}`);
+        process.exit(1);
+      }
+      return;
+    }
+    if (!SfxSynthesizer.TYPES.includes(target as SfxType)) {
+      console.error(`Unknown effect type "${target}" (choices: ${SfxSynthesizer.TYPES.join(', ')}). For a sound pass on a video, pass --cues <file> --out <dir>.`);
+      process.exit(1);
+    }
     try {
-      const res = SfxSynthesizer.synthesize(type as SfxType, {
+      const res = SfxSynthesizer.synthesize(target as SfxType, {
         durationSeconds: opts.duration ? parseFloat(opts.duration) : undefined,
         outputPath: opts.out ? path.resolve(process.cwd(), opts.out) : undefined
       });
@@ -1604,6 +1636,168 @@ program
     } catch (err) {
       console.error('Declick command failed:', err);
       process.exit(1);
+    }
+  });
+
+// mgvideo setup <component>: managed optional toolchains. Other subcommands (e.g. `setup sfx`)
+// attach to the same group; reuse it if it was already created above.
+const setupCommand =
+  program.commands.find(c => c.name() === 'setup') ??
+  program.command('setup').description('Install optional managed toolchains into the user cache (never into the repo)');
+
+// mgvideo setup separate
+setupCommand
+  .command('separate')
+  .description('Create the Python venv for object separation (SAM 2.1: torch, transformers, opencv) in the user cache')
+  .option('--force', 'Delete and recreate the venv')
+  .action(opts => {
+    try {
+      const res = setupSeparate({ force: !!opts.force, log: msg => console.log(`  ${msg}`) });
+      const s = res.marker.scan;
+      console.log(`\n✂️  Object separation ${res.status === 'exists' ? 'already set up' : 'ready'}`);
+      console.log(`Venv: ${res.venvDir} (Python ${res.marker.pythonVersion})`);
+      console.log(`Device: ${s.device}${s.gpu ? ` (${s.gpu}${s.vram_gb ? `, ${s.vram_gb} GB` : ''})` : ''} | default model: ${s.model}`);
+      console.log('Model weights download into the Hugging Face cache on the first `mgvideo separate` run.\n');
+    } catch (err) {
+      console.error(`Setup separate failed: ${err instanceof Error ? err.message : String(err)}`);
+      process.exit(1);
+    }
+  });
+
+// mgvideo setup sfx
+setupCommand
+  .command('sfx')
+  .description('Create the pinned Python venv for the sound pass (librosa, soundfile, numpy, scipy) in the user cache')
+  .option('--python <bin>', 'Base interpreter to build the venv from (Python 3.10-3.13)')
+  .option('--force', 'Delete and recreate the venv')
+  .action(opts => {
+    try {
+      runSetupSfx({ python: opts.python, force: !!opts.force });
+    } catch (err) {
+      console.error(`Setup sfx failed: ${err instanceof Error ? err.message : String(err)}`);
+      process.exit(1);
+    }
+  });
+
+// mgvideo separate <video>
+program
+  .command('separate <video>')
+  .description('Separate a subject from the background with SAM 2.1 from click points; writes masks, a green preview and an alpha cut-out')
+  .requiredOption('-p, --point <x,y[,label]>', 'Click point in source pixels on the start frame; label 1 = subject (default), 0 = exclude. Repeatable', (v: string, prev: SeparatePoint[] = []) => {
+    try {
+      return [...prev, parsePoint(v)];
+    } catch (err) {
+      throw new InvalidArgumentError(err instanceof Error ? err.message : String(err));
+    }
+  })
+  .option('--start <frame>', 'First frame (0-based, default 0); points are picked on this frame')
+  .option('--end <frame>', 'Last frame, inclusive (default: last frame)')
+  .addOption(new Option('--model <size>', 'Override the hardware-based model choice').choices(Object.keys(SEPARATE_MODELS)))
+  .addOption(new Option('--format <fmt>', 'Alpha cut-out container').choices(['mov', 'webm', 'both']).default('mov'))
+  .option('--keep-frames', 'Keep the extracted input frames in <out>/frames')
+  .requiredOption('-o, --out <dir>', 'Output directory')
+  .action((video, opts) => {
+    try {
+      const marker = readSeparateMarker();
+      if (!marker) {
+        console.error('Object separation is not set up. Run `mgvideo setup separate` first (installs torch + transformers into the user cache).');
+        process.exit(1);
+      }
+      const start = parseFrameNumber(opts.start, '--start');
+      const end = parseFrameNumber(opts.end, '--end');
+      const formats: CutoutFormat[] = opts.format === 'both' ? ['mov', 'webm'] : [opts.format as CutoutFormat];
+      const device = marker.scan.device;
+      const model = opts.model ? SEPARATE_MODELS[opts.model as SeparateModelSize] : marker.scan.model;
+      const res = separateVideo({
+        video: path.resolve(process.cwd(), video),
+        points: opts.point as SeparatePoint[],
+        start, end,
+        model: opts.model as SeparateModelSize | undefined,
+        outDir: path.resolve(process.cwd(), opts.out),
+        formats,
+        keepFrames: !!opts.keepFrames,
+        log: msg => {
+          console.log(`  ${msg}`);
+        },
+        onPlan: plan => {
+          const secs = estimateSeconds(device, plan.frames);
+          console.log(`\nSeparating frames ${plan.start}..${plan.end} (${plan.frames} frames) on ${device} with ${model}`);
+          console.log(`Estimated time: ~${secs}s (${device === 'cpu' ? '~5 s/frame on CPU' : device}) plus a one-time model download`);
+          if (device === 'cpu' && secs > 120) {
+            console.warn(`⚠️  This is a long CPU job (~${Math.round(secs / 60)} min). Use --start/--end to separate only the part you need.`);
+          }
+        },
+      });
+      const h = res.helper as { device?: string; model?: string; timings?: Record<string, number> };
+      console.log(`\n✂️  Subject separated (${h.device}, ${h.model}, ${h.timings?.total_s ?? '?'}s)`);
+      console.log(`Masks: ${res.masksDir}`);
+      console.log(`Preview: ${res.preview}`);
+      for (const c of res.cutouts) console.log(`Cut-out: ${c}`);
+      console.log(`Summary: ${res.summaryPath}\n`);
+    } catch (err) {
+      console.error(`Separate command failed: ${err instanceof Error ? err.message : String(err)}`);
+      process.exit(1);
+    }
+  });
+
+// mgvideo broll <words|check|render|compose>: motion B-roll laid over footage
+const broll = program
+  .command('broll')
+  .description('Motion B-roll on footage: caption words, plan check, clip render (full = opaque MP4, panel = transparent ProRes 4444) and compose');
+
+const brollFail = (label: string) => (err: unknown) => {
+  console.error(`B-roll ${label} failed: ${err instanceof Error ? err.message : String(err)}`);
+  process.exit(1);
+};
+
+broll
+  .command('words <captions>')
+  .description('Estimate word times from an SRT or VTT file (spread across each cue, about ±0.2 s); no speech recognition')
+  .option('-o, --out <file>', 'Write a Transcript contract JSON')
+  .option('--txt <file>', 'Write upstream words.txt (one line per cue, start:word)')
+  .option('--video <file>', 'Source video to hash into source_audio_hash (default: hash of the captions)')
+  .option('--language <code>', 'Transcript language', 'en')
+  .action((captions, opts) => {
+    try {
+      runBrollWords(path.resolve(process.cwd(), captions), {
+        out: opts.out ? path.resolve(process.cwd(), opts.out) : undefined,
+        txt: opts.txt ? path.resolve(process.cwd(), opts.txt) : undefined,
+        video: opts.video ? path.resolve(process.cwd(), opts.video) : undefined,
+        language: opts.language
+      });
+    } catch (err) {
+      brollFail('words')(err);
+    }
+  });
+
+broll
+  .command('check <plan>')
+  .description('Validate plan.json: in < out, inside the source, no overlaps, paths confined to the plan directory')
+  .action(plan => {
+    try {
+      runBrollCheck(path.resolve(process.cwd(), plan));
+    } catch (err) {
+      brollFail('check')(err);
+    }
+  });
+
+broll
+  .command('render <plan>')
+  .description('Render every plan clip with the motion engine at the source resolution and fps')
+  .option('--only <ids>', 'Comma-separated clip ids to render')
+  .action((plan, opts) => {
+    runBrollRender(path.resolve(process.cwd(), plan), { only: opts.only }).catch(brollFail('render'));
+  });
+
+broll
+  .command('compose <plan> <out>')
+  .description('Lay the rendered clips over the source at in/out (holds last frame, alpha for .mov, original audio as AAC, H.264 faststart)')
+  .option('--sheet <png>', 'Also write a contact sheet of the composite around every clip window')
+  .action((plan, out, opts) => {
+    try {
+      runBrollCompose(path.resolve(process.cwd(), plan), path.resolve(process.cwd(), out), { sheet: opts.sheet });
+    } catch (err) {
+      brollFail('compose')(err);
     }
   });
 

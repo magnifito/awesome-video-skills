@@ -1,7 +1,15 @@
 {
   "generated": "scripts/gen-docs-index.mjs",
-  "count": 9,
+  "count": 10,
   "docs": [
+    {
+      "path": "docs/plans/motion-engine.md",
+      "title": "Motion engine (Barty-Bart motion-graphics integration)",
+      "summary": "Vendor Barty-Bart/motion-graphics at 3d83d98 and add a motion renderer, recipes, transparent B-roll, sound effects and object separation",
+      "kind": "plan",
+      "status": "draft",
+      "updated": "2026-11-04"
+    },
     {
       "path": "docs/reference/architecture.md",
       "title": "Magnifito Super Video Architecture",

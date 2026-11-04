@@ -1,0 +1,31 @@
+{
+  "id": "motion-bars-chart",
+  "name": "Motion Bars Chart Recipe",
+  "description": "A title pill opens into a chart card; up to six labelled bars grow on a stagger while values count up and settle on the exact approved wording. Values come from referenced claims, then numeric copy segments. Motion engine only.",
+  "engines": [
+    "motion"
+  ],
+  "recommended_duration_seconds": [
+    2.8,
+    6.0
+  ],
+  "motion": {
+    "bar_spring": [
+      10,
+      0.78
+    ],
+    "count_spring": [
+      9,
+      1
+    ],
+    "bar_stagger_s": 0.16,
+    "transition": "cut",
+    "hand_off": "centred dot"
+  },
+  "layout": {
+    "source": "claims_refs approved_wording with a number, then numeric copy segments (max 6); first non-numeric segment is the title",
+    "highlight": "largest value in brand primary",
+    "hud": true,
+    "transparent_background": false
+  }
+}

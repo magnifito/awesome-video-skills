@@ -1,0 +1,9 @@
+{
+  "schema_version": "1.0.0",
+  "revision": "rev-motion-1",
+  "claims": [
+    { "claim_id": "claim-manual", "approved_wording": "Manual edit: 180 min", "evidence_source": "Fixture data (illustrative, not a real benchmark)", "owner": "Toolkit maintainers", "locale": "en" },
+    { "claim_id": "claim-template", "approved_wording": "Template tool: 45 min", "evidence_source": "Fixture data (illustrative, not a real benchmark)", "owner": "Toolkit maintainers", "locale": "en" },
+    { "claim_id": "claim-motion", "approved_wording": "Motion engine: 12 min", "evidence_source": "Fixture data (illustrative, not a real benchmark)", "owner": "Toolkit maintainers", "locale": "en" }
+  ]
+}

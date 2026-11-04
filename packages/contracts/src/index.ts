@@ -25,7 +25,7 @@ export const ProjectBriefSchema = z.object({
   language: z.string().min(2).default('en'),
   duration_seconds: z.number().positive(),
   formats: z.array(z.enum(['16:9', '9:16', '1:1'])).min(1),
-  engine: z.enum(['hyperframes', 'html', 'remotion']).default('hyperframes'),
+  engine: z.enum(['hyperframes', 'html', 'remotion', 'motion']).default('hyperframes'),
   timing_authority: z.enum(['speech', 'music', 'template', 'manual']).default('speech'),
   campaign_reference_time: z.string().datetime().optional(),
   budgets: z.object({
@@ -251,7 +251,7 @@ export const ScenePlanItemSchema = z.object({
 export const ScenePlanSchema = z.object({
   schema_version: z.literal('1.0.0').default('1.0.0'),
   plan_revision: z.string().default('rev-1'),
-  renderer: z.enum(['hyperframes', 'html', 'remotion']).default('hyperframes'),
+  renderer: z.enum(['hyperframes', 'html', 'remotion', 'motion']).default('hyperframes'),
   timing_authority: z.enum(['speech', 'music', 'template', 'manual']).default('speech'),
   scenes: z.array(ScenePlanItemSchema).min(1)
 }).superRefine((plan, ctx) => {
@@ -323,7 +323,7 @@ export const RenderRequestSchema = z.object({
   schema_version: z.literal('1.0.0').default('1.0.0'),
   toolkit_version: z.string().min(1),
   approved_source_lock: z.string().min(1),
-  adapter: z.enum(['hyperframes', 'html', 'remotion']).default('hyperframes'),
+  adapter: z.enum(['hyperframes', 'html', 'remotion', 'motion']).default('hyperframes'),
   input_hashes: z.object({
     brief_hash: z.string(),
     brand_hash: z.string(),
@@ -474,3 +474,4 @@ export type ProjectLock = z.infer<typeof ProjectLockSchema>;
 
 export * from './migrate.js';
 
+export * from './broll.js';

@@ -1,0 +1,31 @@
+{
+  "id": "motion-logo-reveal",
+  "name": "Motion Logo Reveal Recipe",
+  "description": "A dot sparks into a brand-coloured line, the logo rises out from behind the line with a spring, a ring pulse marks the landing and the tagline settles in below. Falls back to the brand name in the heading font when the scene has no logo asset. Motion engine only.",
+  "engines": [
+    "motion"
+  ],
+  "recommended_duration_seconds": [
+    1.8,
+    5.0
+  ],
+  "motion": {
+    "line_spring": [
+      14,
+      0.8
+    ],
+    "logo_spring": [
+      11,
+      0.74
+    ],
+    "ring_pulse": true,
+    "transition": "cut",
+    "hand_off": "hold when last"
+  },
+  "layout": {
+    "source": "first SVG/PNG/JPEG asset in asset_refs; copy_text is the tagline",
+    "logo_max_width_ratio": 0.36,
+    "hud": true,
+    "transparent_background": false
+  }
+}

@@ -11,6 +11,8 @@ delivery/
 fixtures/**/delivery/
 storyboard/
 fixtures/**/storyboard/
+# B-roll clip renders and previews (mgvideo broll render/compose)
+fixtures/**/out/
 
 # Temporary files
 *.tmp

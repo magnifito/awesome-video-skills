@@ -5,6 +5,8 @@ export interface ShotRecipe {
   id: string;
   name: string;
   description: string;
+  /** Engines that implement the recipe. Absent means the static-card engines (hyperframes, html). */
+  engines?: string[];
   recommended_duration_seconds: [number, number];
   motion: Record<string, unknown>;
   layout: Record<string, unknown>;

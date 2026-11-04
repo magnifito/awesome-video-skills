@@ -1,0 +1,25 @@
+{
+  "id": "motion-kinetic-type",
+  "name": "Motion Kinetic Type Recipe",
+  "description": "Scene copy builds word by word in the brand heading font while one liquid highlight shape springs from word to word and reveals each word inverted through a mask. Opens from and closes on a centred dot. Motion engine only.",
+  "engines": [
+    "motion"
+  ],
+  "recommended_duration_seconds": [
+    2.5,
+    6.0
+  ],
+  "motion": {
+    "carrier": "liquid highlight (leading edge FAST, trailing edge SLOW)",
+    "word_entry": "blur + spring rise with overshoot",
+    "transition": "cut",
+    "hand_off": "centred dot"
+  },
+  "layout": {
+    "source": "copy_text words (max 24)",
+    "max_lines_landscape": 3,
+    "max_lines_portrait": 5,
+    "hud": true,
+    "transparent_background": false
+  }
+}

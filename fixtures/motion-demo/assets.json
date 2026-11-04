@@ -1,0 +1,16 @@
+{
+  "schema_version": "1.0.0",
+  "assets": [
+    {
+      "asset_id": "logo-lumo",
+      "content_hash": "sha256-9e5035cd5d53bd7cd2a8dbd92bf06af61f6be5dc8bf09e4288ab6569c6b58ccb",
+      "local_path": "assets/logo.svg",
+      "source": "Lumo fixture brand kit (authored for this fixture)",
+      "rights_evidence": "Toolkit-Authored-Fixture",
+      "consent_obtained": true,
+      "permitted": { "client": "lumo", "channels": ["all"], "territories": ["worldwide"] },
+      "attribution_required": false,
+      "status": "approved"
+    }
+  ]
+}

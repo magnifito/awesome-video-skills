@@ -2,7 +2,13 @@
 
 # Documentation index
 
-9 documents. Agents should read `docs/index.json` instead of this file.
+10 documents. Agents should read `docs/index.json` instead of this file.
+
+## plan (1)
+
+| Document | Status | Updated | Summary |
+|---|---|---|---|
+| [Motion engine (Barty-Bart motion-graphics integration)](plans/motion-engine.md) | `draft` | 2026-11-04 | Vendor Barty-Bart/motion-graphics at 3d83d98 and add a motion renderer, recipes, transparent B-roll, sound effects and object separation |
 
 ## reference (9)
 

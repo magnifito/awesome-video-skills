@@ -1,0 +1,19 @@
+{
+  "schema_version": "1.0.0",
+  "brand_id": "lumo",
+  "name": "Lumo",
+  "logos": { "primary": "assets/logo.svg" },
+  "colors": {
+    "primary": "#ff5a1f",
+    "secondary": "#2f47ff",
+    "background": "#0e0f13",
+    "text_primary": "#f4f1ea",
+    "accent": "#ffd23f"
+  },
+  "fonts": [
+    { "family": "Geist", "weight": "800", "rights_evidence": "OFL-1.1 (vendored Barty-Bart/motion-graphics engine font)", "supports_cyrillic": false }
+  ],
+  "type_scale": { "h1": 96, "h2": 56, "body": 30, "caption": 18 },
+  "motion_preferences": { "tempo": "punchy", "camera_style": "subtle_drift", "border_radius": 36, "glassmorphism": false },
+  "prohibited_treatments": ["hard cuts inside a clip", "glow on everything"]
+}

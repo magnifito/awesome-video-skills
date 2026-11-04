@@ -24,7 +24,7 @@
       "origin_url": "https://github.com/Barty-Bart/motion-graphics",
       "commit": "3d83d987d658601d8a1269eb691622bdcd427335",
       "license": "MIT",
-      "modifications": "Reused speech-timed overlay pattern in magnifito-broll; reconciled conflicting audio generation rules into explicit audio policy",
+      "modifications": "Vendored unchanged at vendor/barty-motion-graphics/3d83d987d658601d8a1269eb691622bdcd427335 (docs/ excluded). packages/motion ports build.py, render.js and beats.js to TypeScript and reuses motion.js, base.css and Geist fonts as data; recipes adapt explainer and motion-broll patterns; mgvideo broll compose ports composite.py; mgvideo sfx and separate wrap the sound-pass and SAM 2 methods in managed Python environments. Mixkit runtime audio is excluded.",
       "attribution": "Copyright (c) 2025-2026 Barty-Bart"
     },
     {

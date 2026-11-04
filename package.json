@@ -14,7 +14,7 @@
     "build": "tsc",
     "doctor": "node dist/packages/cli/src/bin/mgvideo.js doctor",
     "catalog": "node dist/packages/cli/src/bin/mgvideo.js catalog",
-    "test": "tsx evaluations/runner.ts",
+    "test": "tsx evaluations/runner.ts && tsx evaluations/run-suites.ts",
     "lint": "tsc --noEmit",
     "upstream:check": "node dist/packages/cli/src/bin/mgvideo.js upstream check",
     "package:skills": "tsx tools/packaging/packager.ts",
@@ -23,13 +23,15 @@
     "lint:docs": "docs-notary check",
     "lint:docs:advisory": "docs-notary advisory",
     "gen:docs-index": "docs-notary gen",
-    "docs:impact": "docs-notary impact"
+    "docs:impact": "docs-notary impact",
+    "test:suites": "tsx evaluations/run-suites.ts"
   },
   "engines": {
     "node": ">=22.0.0"
   },
   "dependencies": {
     "commander": "^13.1.0",
+    "playwright-core": "^1.56.1",
     "zod": "^3.24.2"
   },
   "devDependencies": {

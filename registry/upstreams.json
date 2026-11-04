@@ -12,7 +12,7 @@
       "github_repo_id": 924856102,
       "tracking_branch": "main",
       "observed_commit": "3d83d987d658601d8a1269eb691622bdcd427335",
-      "approved_commit": null,
+      "approved_commit": "3d83d987d658601d8a1269eb691622bdcd427335",
       "license": "MIT",
       "component_licenses": {
         "fonts/Geist": "OFL-1.1",
@@ -24,12 +24,14 @@
       "main_contribution": "Explainers and speech timed graphics",
       "magnifito_decision": "Reuse bounded tools; replace setup and reconcile audio rules",
       "source_paths": [
-        "skills/b-roll",
-        "skills/explainer",
-        "tools/sound",
-        "tools/segmentation"
+        "skills/motion-broll",
+        "skills/explainer-high-energy",
+        "skills/explainer-default",
+        "skills/explainer-engaging",
+        "skills/sound-effects",
+        "skills/object-separation"
       ],
-      "review_status": "observed"
+      "review_status": "approved"
     },
     {
       "id": "charlie-motion-graphics-skills",

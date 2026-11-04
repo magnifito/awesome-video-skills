@@ -1,0 +1,52 @@
+{
+  "schema_version": "1.0.0",
+  "plan_revision": "rev-motion-1",
+  "renderer": "motion",
+  "timing_authority": "template",
+  "scenes": [
+    {
+      "scene_id": "scene-01-hook",
+      "factual_purpose": "Open on the promise in kinetic type",
+      "duration_seconds": 3.2,
+      "duration_frames": 96,
+      "copy_text": "Make every frame move like it was designed",
+      "claims_refs": [],
+      "asset_refs": [],
+      "visual_recipe": "motion-kinetic-type",
+      "audio_events": []
+    },
+    {
+      "scene_id": "scene-02-card",
+      "factual_purpose": "Show what one brief produces as a pill that becomes a checklist card and a control",
+      "duration_seconds": 3.6,
+      "duration_frames": 108,
+      "copy_text": "Render the launch video | Brand fonts and colours | Approved claims only | Motion blur on every frame | One shape that never cuts",
+      "claims_refs": [],
+      "asset_refs": [],
+      "visual_recipe": "motion-card-morph",
+      "audio_events": []
+    },
+    {
+      "scene_id": "scene-03-bars",
+      "factual_purpose": "Compare time from brief to cut using approved claims",
+      "duration_seconds": 3.0,
+      "duration_frames": 90,
+      "copy_text": "Brief to first cut | Manual edit: 180 min | Template tool: 45 min | Motion engine: 12 min",
+      "claims_refs": ["claim-manual", "claim-template", "claim-motion"],
+      "asset_refs": [],
+      "visual_recipe": "motion-bars-chart",
+      "audio_events": []
+    },
+    {
+      "scene_id": "scene-04-logo",
+      "factual_purpose": "Close on the logo and tagline",
+      "duration_seconds": 2.2,
+      "duration_frames": 66,
+      "copy_text": "Motion that never cuts.",
+      "claims_refs": [],
+      "asset_refs": ["logo-lumo"],
+      "visual_recipe": "motion-logo-reveal",
+      "audio_events": []
+    }
+  ]
+}

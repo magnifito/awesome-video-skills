@@ -1,0 +1,30 @@
+{
+  "id": "motion-card-morph",
+  "name": "Motion Card Morph Recipe",
+  "description": "One shape never cuts: a dot springs into a headline pill, the pill morphs into a card whose rows land on a stagger, then into a control pill the cursor clicks (arrow turns into a check). Copy: 'Headline | row | row ...'. Motion engine only.",
+  "engines": [
+    "motion"
+  ],
+  "recommended_duration_seconds": [
+    3.4,
+    7.0
+  ],
+  "motion": {
+    "states": [
+      "dot",
+      "pill",
+      "card",
+      "control",
+      "done"
+    ],
+    "row_stagger_s": 0.12,
+    "cursor_click": true,
+    "transition": "cut",
+    "hand_off": "centred dot"
+  },
+  "layout": {
+    "source": "copy_text segments split on '|' or newlines; first is the headline, up to 4 rows",
+    "hud": true,
+    "transparent_background": false
+  }
+}

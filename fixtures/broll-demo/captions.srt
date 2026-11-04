@@ -1,0 +1,11 @@
+1
+00:00:00,500 --> 00:00:04,000
+First you plan the clips, then render them, then compose them over the footage.
+
+2
+00:00:04,300 --> 00:00:05,800
+And then you ship it.
+
+3
+00:00:06,000 --> 00:00:07,900
+Render time went from forty minutes to twelve.

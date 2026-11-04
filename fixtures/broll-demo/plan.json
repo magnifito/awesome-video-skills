@@ -1,0 +1,43 @@
+{
+  "schema_version": "1.0.0",
+  "title": "B-roll demo",
+  "video": "work/source.mp4",
+  "fps": "30/1",
+  "clips": [
+    {
+      "id": "01",
+      "title": "Plan, render, compose",
+      "line": "First you plan the clips, then render them, then compose them over the footage.",
+      "in": 0.6,
+      "out": 4.0,
+      "kind": "panel",
+      "area": "right",
+      "recipe": "motion-card-morph",
+      "scene": { "copy": "B-roll pipeline | Plan the clips | Render with motion | Compose over footage" }
+    },
+    {
+      "id": "02",
+      "title": "Ship it",
+      "line": "And then you ship it.",
+      "in": 4.4,
+      "out": 5.8,
+      "kind": "full",
+      "recipe": "motion-kinetic-type",
+      "scene": { "copy": "Then you ship it" }
+    },
+    {
+      "id": "03",
+      "title": "Render time bars",
+      "line": "Render time went from forty minutes to twelve.",
+      "in": 6.0,
+      "out": 7.9,
+      "kind": "panel",
+      "recipe": "motion-bars-chart",
+      "scene": { "copy": "Render time | Before: 40 min | After: 12 min" }
+    }
+  ],
+  "notes": [
+    "work/source.mp4 is a generated stand-in for talking-head footage (static silhouette on the left, tone audio).",
+    "The render-time figures in clip 03 are illustrative."
+  ]
+}

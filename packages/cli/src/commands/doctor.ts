@@ -1,6 +1,9 @@
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { CHROME_CANDIDATES, findChrome } from '../../../media/src/proc.js';
+import { readSeparateMarker, SEPARATE_PINS, separateVenvDir } from '../../../media/src/separate.js';
+import { sfxEnvStatus } from '../../../media/src/sfx_env.js';
+import { motionAvailability } from '../../../motion/src/capture.js';
 
 const execFileAsync = promisify(execFile);
 
@@ -109,6 +112,17 @@ export async function runDoctor(): Promise<{ passed: boolean; items: HealthCheck
     });
   }
 
+  // 3b. Motion engine: playwright-core driving system Chrome (no browser download)
+  const motion = motionAvailability();
+  items.push({
+    component: 'Motion Engine (playwright-core + Chrome)',
+    status: motion.ok ? 'ok' : 'warning',
+    version: motion.playwrightVersion ? `playwright-core ${motion.playwrightVersion}` : undefined,
+    details: motion.ok
+      ? `engine "motion" can render with ${motion.chromePath}.`
+      : `engine "motion" unavailable: ${motion.errors.join(' ')}`
+  });
+
   // 4. SVG rasterizer (needed for title cards, lower thirds, overlays and renders)
   const rasterizers = ['rsvg-convert', 'resvg', 'magick', 'convert', ...(process.platform === 'darwin' ? ['sips'] : [])];
   const foundRasterizer = await firstOnPath(rasterizers);
@@ -157,6 +171,43 @@ export async function runDoctor(): Promise<{ passed: boolean; items: HealthCheck
     status: 'ok',
     details: 'Informational: no external media APIs are integrated; per-project budgets are enforced by `mgvideo gate`.'
   });
+
+  // Sound-pass venv (optional). Checks the setup marker only, so it stays instant.
+  const sfxEnv = sfxEnvStatus();
+  items.push(
+    sfxEnv.ready
+      ? {
+          component: 'Sound Pass (librosa venv)',
+          status: 'ok',
+          version: sfxEnv.pythonVersion ? `Python ${sfxEnv.pythonVersion}` : undefined,
+          details: `Ready at ${sfxEnv.venvDir}.`
+        }
+      : {
+          component: 'Sound Pass (librosa venv)',
+          status: 'warning',
+          details: `Optional; not set up (${sfxEnv.reason}). Run \`mgvideo setup sfx\` to enable \`mgvideo sfx <video> --music\`.`
+        }
+  );
+
+  // Object separation venv (optional). Reads the marker written by `mgvideo setup separate`
+  // instead of importing torch, so the check stays instant.
+  const separateMarker = readSeparateMarker();
+  if (!separateMarker) {
+    items.push({
+      component: 'Object Separation (SAM 2.1)',
+      status: 'warning',
+      details: `Optional; not set up (${separateVenvDir()}). Run \`mgvideo setup separate\` to enable \`mgvideo separate\`.`
+    });
+  } else {
+    const s = separateMarker.scan;
+    const stale = JSON.stringify(separateMarker.pins) !== JSON.stringify(SEPARATE_PINS);
+    items.push({
+      component: 'Object Separation (SAM 2.1)',
+      status: stale ? 'warning' : 'ok',
+      version: `Python ${separateMarker.pythonVersion}${s.torch ? `, torch ${s.torch}` : ''}`,
+      details: `Device ${s.device}${s.gpu ? ` (${s.gpu})` : ''}, default model ${s.model}.${stale ? ' Pins changed since setup; re-run `mgvideo setup separate`.' : ''}`
+    });
+  }
 
   const passed = items.every(i => i.status !== 'error');
   return { passed, items };

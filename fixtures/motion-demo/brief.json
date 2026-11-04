@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0.0",
+  "project_id": "motion-demo",
+  "client_id": "lumo",
+  "workflow": "branded-promo",
+  "objective": "Show the motion engine: kinetic type, a card morph, a bar chart and a logo reveal in one 12 second promo",
+  "audience": "Producers evaluating the toolkit's motion renderer",
+  "language": "en",
+  "duration_seconds": 12,
+  "formats": ["16:9", "9:16"],
+  "engine": "motion",
+  "timing_authority": "template",
+  "budgets": { "agent_budget_usd": 5, "compute_budget_usd": 2, "media_budget_usd": 0, "max_retries": 2 }
+}

@@ -21,6 +21,7 @@ import {
 } from '../../../contracts/src/index.js';
 import { HyperFramesAdapter } from '../../../../adapters/hyperframes/index.js';
 import { HtmlSeekableAdapter } from '../../../../adapters/html/index.js';
+import { MotionAdapter } from '../../../../adapters/motion/index.js';
 import { PolicyChecker } from '../../../media/src/policy.js';
 import type { VideoRendererAdapter } from '../../../../adapters/interface.js';
 import { runPlan } from './plan.js';
@@ -39,6 +40,8 @@ function selectAdapter(engine: ProjectBrief['engine']): VideoRendererAdapter {
       return new HyperFramesAdapter();
     case 'html':
       return new HtmlSeekableAdapter();
+    case 'motion':
+      return new MotionAdapter();
     case 'remotion':
       throw new Error(
         "Engine 'remotion' is a profile-only adapter and cannot render. Set brief.engine to 'hyperframes' or 'html'."
@@ -48,12 +51,16 @@ function selectAdapter(engine: ProjectBrief['engine']): VideoRendererAdapter {
   }
 }
 
-/** Reads the approved HyperFrames source lock from registry/approved.lock.json. */
-function readApprovedSourceLock(): string {
+/**
+ * Reads the approved upstream source lock for the engine from registry/approved.lock.json:
+ * the vendored Barty-Bart motion-graphics baseline for `motion`, HyperFrames otherwise.
+ */
+function readApprovedSourceLock(engine: ProjectBrief['engine']): string {
+  const baseline = engine === 'motion' ? 'barty-motion-graphics' : 'hyperframes';
   const lock = readApprovedLock(findWorkspaceRoot());
-  const commit = lock.approved_baselines.hyperframes?.approved_commit;
+  const commit = lock.approved_baselines[baseline]?.approved_commit;
   if (!commit) {
-    throw new Error('No approved hyperframes baseline in registry/approved.lock.json; cannot stamp render provenance.');
+    throw new Error(`No approved ${baseline} baseline in registry/approved.lock.json; cannot stamp render provenance.`);
   }
   return commit;
 }
@@ -160,7 +167,7 @@ export async function runRender(projectDir: string, options?: RenderCliOptions):
   };
 
   const toolkitVersion = '0.1.0';
-  const approvedSourceLock = readApprovedSourceLock();
+  const approvedSourceLock = readApprovedSourceLock(brief.engine);
   const requestHash = computeCanonicalRenderHash(
     toolkitVersion,
     approvedSourceLock,

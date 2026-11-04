@@ -12,7 +12,7 @@ The `magnifito-storyboard` skill structures the narrative arc of the video, mapp
 Every storyboard translates into `scene-plan.json` conforming to `ScenePlanSchema`:
 
 - `plan_revision`: String identifier (e.g. `rev-1`).
-- `renderer`: Target renderer (`hyperframes`, `html`, `remotion`).
+- `renderer`: Target renderer (`hyperframes`, `html`, `remotion`, `motion`).
 - `timing_authority`: Clock master (`speech`, `music`, `template`, `manual`).
 - `scenes`: Array of scene objects:
   - `scene_id`: Unique identifier (e.g., `scene-01-hook`).
@@ -21,8 +21,19 @@ Every storyboard translates into `scene-plan.json` conforming to `ScenePlanSchem
   - `copy_text`: The exact text to appear on screen or be spoken.
   - `claims_refs`: Array of `claim_id` strings linking this scene to `claims.json`.
   - `asset_refs`: Array of `asset_id` strings from `assets.json`.
-  - `visual_recipe`: Chosen style recipe (e.g., `kinetic-typography`, `product-reveal`, `retail-card`).
+  - `visual_recipe`: Chosen style recipe (e.g., `kinetic-typography`, `product-reveal`, `retail-card`). With `renderer: "motion"` only the `motion-*` recipes are valid (see below).
   - `audio_events`: Keyframe-timed cues for voiceover, sound effects, or music.
+
+## Planning for the Motion Engine
+
+When `renderer` is `motion`, every scene uses one of the recipes in `styles/recipes/motion-*.json` (their `engines` field is `["motion"]`), and `copy_text` follows the recipe's convention, with `|` separating segments:
+
+- `motion-kinetic-type` (2.5–6 s): one phrase, up to 24 words.
+- `motion-card-morph` (3.4–7 s): `Headline | row | row | …`, up to 4 rows.
+- `motion-bars-chart` (2.8–6 s): `Title | Label: value | …`, every value backed by a `claims_refs` entry.
+- `motion-logo-reveal` (1.8–5 s): the tagline, with the logo in `asset_refs`. Put it last.
+
+Each clip opens from and closes on the same centred dot, so plan scenes back to back without transition scenes. See `fixtures/motion-demo/scene-plan.json`.
 
 ## Narrative Discipline
 
