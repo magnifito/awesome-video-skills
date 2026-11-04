@@ -6,7 +6,7 @@ import crypto from 'node:crypto';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { scenePlanFps } from '../../packages/contracts/src/index.js';
-import { rasterizeSvg, concatListLine, safeCssColor, safeJoin } from '../../packages/media/src/proc.js';
+import { rasterizeSvg, rasterizeSvgAsync, concatListLine, safeCssColor, safeJoin } from '../../packages/media/src/proc.js';
 import type {
   VideoRendererAdapter,
   AdapterCapabilities,
@@ -17,14 +17,19 @@ import type {
 import { inspectMedia, measureAudioLoudness, MediaProbeResult } from '../../packages/media/src/inspector.js';
 import { loadSceneImages, renderRecipeSvg, type SceneImage } from './recipes.js';
 import { renderStyleRecipeSvg } from './style-recipes.js';
+import { composeFrame, frameState, motionProfile, splitSvg } from './animate.js';
+
+/** Frames rasterized at the same time. */
+const PARALLEL_FRAMES = 8;
 
 const execFileAsync = promisify(execFile);
 
 export class HyperFramesAdapter implements VideoRendererAdapter {
   readonly id: string = 'hyperframes';
-  // Honest description: each scene is rendered as one static SVG card held for its duration.
-  // The seekable composition.html is emitted as a contract artifact but is not frame-captured.
-  readonly name: string = 'HyperFrames Static Card Renderer';
+  // Each scene is a recipe SVG card animated frame by frame (staggered entrance, optional
+  // camera drift, fade before the cut; see animate.ts). The seekable composition.html is
+  // emitted as a contract artifact but is not frame-captured.
+  readonly name: string = 'HyperFrames Animated Card Renderer';
   readonly capabilities: AdapterCapabilities = {
     formats: ['mp4', 'webm', 'mov_prores'],
     transparency: true,
@@ -385,17 +390,19 @@ export class HyperFramesAdapter implements VideoRendererAdapter {
 
     // Pick active scene at frameNumber
     const seconds = frameNumber / settings.fps;
+    const scenes = context.scenePlan.scenes;
     let accumulated = 0;
-    let targetScene = context.scenePlan.scenes[0];
-    for (const sc of context.scenePlan.scenes) {
-      if (seconds >= accumulated && seconds < (accumulated + sc.duration_seconds)) {
-        targetScene = sc;
-        break;
-      }
-      accumulated += sc.duration_seconds;
+    let index = scenes.length - 1;
+    for (let i = 0; i < scenes.length; i++) {
+      if (seconds < accumulated + scenes[i].duration_seconds) { index = i; break; }
+      if (i < scenes.length - 1) accumulated += scenes[i].duration_seconds;
     }
-
-    const svgContent = this.generateSceneSvg(targetScene, context.brand, settings.width, settings.height, false, context);
+    const targetScene = scenes[index];
+    const local = Math.min(Math.max(0, seconds - accumulated), targetScene.duration_seconds);
+    const baseSvg = this.generateSceneSvg(targetScene, context.brand, settings.width, settings.height, false, context);
+    const parts = splitSvg(baseSvg, settings.width, settings.height);
+    const profile = motionProfile(targetScene, context.brand, index === scenes.length - 1);
+    const svgContent = composeFrame(parts, frameState(parts, profile, local, targetScene.duration_seconds, settings.height), settings.width, settings.height);
     const svgPath = path.join(outputDir, `temp_still_${frameNumber}.svg`);
     await fs.writeFile(svgPath, svgContent, 'utf-8');
     try {
@@ -424,6 +431,7 @@ export class HyperFramesAdapter implements VideoRendererAdapter {
     // 2. Render each scene into a video segment
     const segmentPaths: string[] = [];
     const tempFiles: string[] = [];
+    const tempDirs: string[] = [];
 
     if (settings.transparent && settings.format === 'mp4') {
       throw new Error('HyperFrames: transparent output requires webm or mov_prores; H.264 mp4 cannot carry alpha.');
@@ -447,17 +455,13 @@ export class HyperFramesAdapter implements VideoRendererAdapter {
         const scene = context.scenePlan.scenes[i];
         logs.push(`[HyperFrames] Rendering scene ${i + 1}/${context.scenePlan.scenes.length}: ${scene.scene_id} (${scene.duration_seconds}s)`);
 
-        const svgContent = this.generateSceneSvg(scene, context.brand, settings.width, settings.height, isTransparent, context);
-        const svgPath = path.join(outputDir, `scene_${i}.svg`);
-        const pngPath = path.join(outputDir, `scene_${i}.png`);
         const segPath = path.join(outputDir, `segment_${i}.${fileExt}`);
+        const frameDir = path.join(outputDir, `scene_${i}_frames`);
+        tempDirs.push(frameDir);
+        const frames = await this.renderSceneFrames(context, i, settings.width, settings.height, fps, isTransparent, frameDir, renderFontEnv);
+        logs.push(`[HyperFrames]   ${frames.total} frames, ${frames.unique} distinct`);
 
-        await fs.writeFile(svgPath, svgContent, 'utf-8');
-        tempFiles.push(svgPath);
-        tempFiles.push(pngPath);
-        rasterizeSvg(svgPath, pngPath, settings.width, settings.height, renderFontEnv);
-
-        const common = ['-y', '-loop', '1', '-framerate', String(fps), '-i', pngPath, ...audioIn, '-t', scene.duration_seconds.toString()];
+        const common = ['-y', '-framerate', String(fps), '-i', path.join(frameDir, 'frame_%05d.png'), ...audioIn, '-t', scene.duration_seconds.toString()];
         const scale = `scale=${settings.width}:${settings.height}`;
         let segArgs: string[];
         if (isProRes) {
@@ -514,7 +518,7 @@ export class HyperFramesAdapter implements VideoRendererAdapter {
       logs.push(`[HyperFrames] Successfully assembled final video: ${finalOutputPath}`);
     } finally {
       // Always clean up intermediate files, also when a scene fails.
-      await Promise.all(tempFiles.map(f => fs.rm(f, { force: true })));
+      await Promise.all([...tempFiles, ...tempDirs].map(f => fs.rm(f, { force: true, recursive: true })));
     }
 
     // 4. Measure output and calculate hash
@@ -537,6 +541,59 @@ export class HyperFramesAdapter implements VideoRendererAdapter {
       },
       logs
     };
+  }
+
+  /**
+   * Renders every frame of one scene into `frameDir` as frame_00001.png, frame_00002.png, ...
+   * Frames with the same animated state (the hold) are hard links to one rendered image.
+   */
+  private async renderSceneFrames(
+    context: ProjectContext,
+    index: number,
+    width: number,
+    height: number,
+    fps: number,
+    transparent: boolean,
+    frameDir: string,
+    env: NodeJS.ProcessEnv | undefined
+  ): Promise<{ total: number; unique: number }> {
+    const scenes = context.scenePlan.scenes;
+    const scene = scenes[index];
+    await fs.mkdir(frameDir, { recursive: true });
+    const parts = splitSvg(this.generateSceneSvg(scene, context.brand, width, height, transparent, context), width, height);
+    const profile = motionProfile(scene, context.brand, index === scenes.length - 1);
+    const total = Math.max(1, Math.round(scene.duration_seconds * fps));
+
+    const byState = new Map<string, string>();
+    const jobs: { svg: string; png: string }[] = [];
+    const frameSource: string[] = [];
+    for (let f = 0; f < total; f++) {
+      const state = frameState(parts, profile, f / fps, scene.duration_seconds, height);
+      const key = JSON.stringify(state);
+      let png = byState.get(key);
+      if (!png) {
+        png = path.join(frameDir, `state_${byState.size}.png`);
+        byState.set(key, png);
+        jobs.push({ svg: composeFrame(parts, state, width, height), png });
+      }
+      frameSource.push(png);
+    }
+
+    let next = 0;
+    const worker = async () => {
+      for (;;) {
+        const j = next++;
+        if (j >= jobs.length) return;
+        const svgPath = jobs[j].png.replace(/\.png$/, '.svg');
+        await fs.writeFile(svgPath, jobs[j].svg, 'utf-8');
+        await rasterizeSvgAsync(svgPath, jobs[j].png, width, height, env);
+      }
+    };
+    await Promise.all(Array.from({ length: Math.min(PARALLEL_FRAMES, jobs.length) }, worker));
+    for (let f = 0; f < total; f++) {
+      await fs.link(frameSource[f], path.join(frameDir, `frame_${String(f + 1).padStart(5, '0')}.png`));
+    }
+    return { total, unique: jobs.length };
   }
 
   async inspectOutput(outputPath: string): Promise<MediaProbeResult> {

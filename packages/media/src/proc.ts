@@ -268,6 +268,34 @@ export function rasterizeSvg(
   );
 }
 
+let rsvgOnPath: boolean | undefined;
+
+/**
+ * Async rasterizer for frame sequences: runs rsvg-convert without blocking, so callers can
+ * render several frames at once. Falls back to the synchronous chain when rsvg-convert is
+ * not installed.
+ */
+export async function rasterizeSvgAsync(
+  svgPath: string,
+  pngPath: string,
+  width: number,
+  height: number,
+  env?: NodeJS.ProcessEnv,
+): Promise<void> {
+  rsvgOnPath ??= onPath('rsvg-convert');
+  if (!rsvgOnPath) {
+    rasterizeSvg(svgPath, pngPath, width, height, env);
+    return;
+  }
+  const { execFile } = await import('node:child_process');
+  await new Promise<void>((resolve, reject) => {
+    execFile('rsvg-convert', ['-w', String(width), '-h', String(height), '-o', pngPath, svgPath], { ...(env ? { env } : {}), maxBuffer: 16 * 1024 * 1024 }, err => {
+      if (err) reject(new Error(`rsvg-convert failed for ${path.basename(svgPath)}: ${extractStderr(err).slice(0, 200)}`));
+      else resolve();
+    });
+  });
+}
+
 /** Fails fast on non-finite or non-positive numbers. */
 export function requirePositive(value: number, label: string): number {
   if (!Number.isFinite(value) || value <= 0) throw new Error(`${label} must be a positive number, got ${value}`);
