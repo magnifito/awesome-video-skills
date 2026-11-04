@@ -14,7 +14,7 @@ The interview-speaker-card recipe: a split frame with left-aligned name, role an
 
 Install the plugin (see the repository README), open this folder, and give Claude this prompt:
 
-> I have a talking-head clip (synthetic here: make it with node make-footage.mjs, presenter on the right half). Add an interview speaker card in the interview-speaker-card style for 4.5 seconds near the start: kicker "The Magnifito podcast", name "Elena Petrova", role "Social media lead, Magnifito", topic "Episode 3: Posting with a plan". The presenter is fictional, so record the name and role in claims.json as placeholders. Render the card transparent and lay it over the footage. Logo on the panel (assets/magnifito-logo.svg). Brand: cream panel, warm browns, dark ink, green #8acf31 accent, Geist from fonts/.
+> I have a talking-head clip (synthetic here: make it with node make-footage.mjs, presenter on the right half). Add an interview speaker card in the interview-speaker-card style for 4.5 seconds near the start: kicker "The Magnifito podcast", name "Mira", role "Social media lead, Magnifito", topic "Episode 3: Posting with a plan". The presenter is fictional, so record the name and role in claims.json as placeholders. Render the card transparent and lay it over the footage. Logo on the panel (assets/magnifito-logo.svg). Brand: cream panel, warm browns, dark ink, green #8acf31 accent, Geist from fonts/.
 
 ## Recreate it by hand
 

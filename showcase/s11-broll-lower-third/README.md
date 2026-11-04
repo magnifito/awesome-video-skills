@@ -14,7 +14,7 @@ The broll-lower-third recipe: a quiet name and affiliation plate with an accent 
 
 Install the plugin (see the repository README), open this folder, and give Claude this prompt:
 
-> I have a talking-head clip (synthetic here: make it with node make-footage.mjs, presenter right of centre). Add a lower third in the broll-lower-third style for 4.5 seconds, starting after one second: "Elena Petrova", "Social media lead, Magnifito". She is a fictional presenter, so record the name and role in claims.json as placeholders. Render it transparent and lay it over the footage, bottom-left, clear of her face. Brand: dark ink plate, cream text, green #8acf31 accent line, Geist from fonts/.
+> I have a talking-head clip (synthetic here: make it with node make-footage.mjs, presenter right of centre). Add a lower third in the broll-lower-third style for 4.5 seconds, starting after one second: "Mira", "Social media lead, Magnifito". She is a fictional presenter, so record the name and role in claims.json as placeholders. Render it transparent and lay it over the footage, bottom-left, clear of her face. Brand: dark ink plate, cream text, green #8acf31 accent line, Geist from fonts/.
 
 ## Recreate it by hand
 

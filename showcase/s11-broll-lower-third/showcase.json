@@ -5,7 +5,7 @@
   "skill": "magnifito-broll",
   "engine": "hyperframes",
   "caption": "The broll-lower-third recipe: a quiet name and affiliation plate with an accent line, 80 px in from the bottom-left corner and clear of the speaker's face, rendered transparent for any footage.",
-  "prompt": "I have a talking-head clip (synthetic here: make it with node make-footage.mjs, presenter right of centre). Add a lower third in the broll-lower-third style for 4.5 seconds, starting after one second: \"Elena Petrova\", \"Social media lead, Magnifito\". She is a fictional presenter, so record the name and role in claims.json as placeholders. Render it transparent and lay it over the footage, bottom-left, clear of her face. Brand: dark ink plate, cream text, green #8acf31 accent line, Geist from fonts/.",
+  "prompt": "I have a talking-head clip (synthetic here: make it with node make-footage.mjs, presenter right of centre). Add a lower third in the broll-lower-third style for 4.5 seconds, starting after one second: \"Mira\", \"Social media lead, Magnifito\". She is a fictional presenter, so record the name and role in claims.json as placeholders. Render it transparent and lay it over the footage, bottom-left, clear of her face. Brand: dark ink plate, cream text, green #8acf31 accent line, Geist from fonts/.",
   "commands": [
     "node make-footage.mjs 6 1180 center",
     "mgvideo render . --codec mov_prores --force",

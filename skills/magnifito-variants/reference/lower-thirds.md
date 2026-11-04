@@ -14,9 +14,11 @@ mgvideo lower-third talk.mp4 -n "Maya Chen" -t "Head of Research" \
 It **burns** a badge into a new H.264 MP4 (CRF 20, audio copied). Facts from the code
 (`packages/media/src/lower_third.ts`):
 
-- The badge is a fixed **680 × 120 px** rounded panel at **x = 80 px**, `--bottom` px above the
-  bottom edge (default 120). It does not scale with the video resolution.
-- Name: white, bold, 28 px. Role: the `-c/--color` accent, 600 weight, 18 px. A thin accent bar
+- The badge is a **680 × 120 px** rounded panel at 1080p and scales with the short side of the
+  frame (×2 at 4K, ×0.67 at 720p). Its left edge is 80 px at 1080p, never less than 5% of the
+  width. It sits `--bottom` px above the bottom edge; the default is 120 px at 1080p, scaled,
+  and never less than 5% of the height. An explicit `--bottom` is used as given.
+- Name: white, bold, 28 px at 1080p. Role: the `-c/--color` accent, 600 weight, 18 px. A thin accent bar
   runs down the left edge. `-b/--bg` fills the panel at 95% opacity fading to 75%.
 - Font is the rasterizer's `sans-serif` (rsvg-convert, resvg, ImageMagick or Chrome, whichever
   is found first), so the face depends on the machine.
@@ -30,15 +32,15 @@ toolkit cannot make one yet; say so instead of improvising.
 
 Keep every pixel of the strap at least **5% in from each edge** (title-safe). On vertical
 platforms the bottom ~20% is covered by app UI (see `SKILL.md`), so the strap must sit above it.
-Badge numbers below are for our fixed 680 × 120 badge.
+Numbers below are for our badge (680 × 120 at 1080p, scaled with the frame).
 
-| Frame | Left edge (x = 80) | Suggested `--bottom` | Notes |
-|---|---|---|---|
-| 1920 × 1080 (16:9) | 4.2%, inside action-safe, outside title-safe | 120 (default, 11%) | Fine for web; flag it for broadcast |
-| 1280 × 720 (16:9) | 6.3% | 80-120 | Badge is 53% of the width: large |
-| 1080 × 1080 (1:1) | 7.4% | 140-160 | Clear of feed captions and UI |
-| 1080 × 1920 (9:16) | 7.4% | 400 or more | Bottom 20% = 384 px is app UI; right edge at 70% clears the side buttons |
-| 3840 × 2160 (4K) | 2.1%, outside title-safe | n/a | Badge is 18% wide and text 28 px: too small, render at 1080p or skip |
+| Frame | Left edge | Default bottom gap | Suggested `--bottom` | Notes |
+|---|---|---|---|---|
+| 1920 × 1080 (16:9) | 96 px (5%) | 120 px | default | Badge is 35% of the width |
+| 1280 × 720 (16:9) | 64 px (5%) | 80 px | default | Same proportions as 1080p |
+| 1080 × 1080 (1:1) | 80 px (7.4%) | 120 px | 140-160 | Clear of feed captions and UI |
+| 1080 × 1920 (9:16) | 80 px (7.4%) | 120 px | 400 or more | Bottom 20% = 384 px is app UI; right edge at 70% clears the side buttons |
+| 3840 × 2160 (4K) | 192 px (5%) | 240 px | default | Badge and text double in size |
 
 With burned-in captions, measure their top and set `--bottom` so the badge sits above them:
 
@@ -53,8 +55,8 @@ lower third at the same time will collide.
 ## Type size and legibility
 
 - Upstream guidance: name about **50-80 px tall at 1080p**, role about half that, and the strap
-  covering only a few percent of the frame. Our 28/18 px is small for 1080p TV viewing and
-  acceptable on phones; at 4K it is too small. Manual check: look at a full-frame still.
+  covering only a few percent of the frame. Our 28/18 px (at 1080p, scaled with the frame) is small for TV
+  viewing and acceptable on phones. Manual check: look at a full-frame still.
 - Text must sit on its own backing. Our panel does that; keep `-b` dark (name is always white)
   and pick `-c` so the role line contrasts with `-b`. Manual check on a still over the
   brightest shot in the clip.
