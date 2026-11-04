@@ -2,16 +2,28 @@ name: Upstream Source Check
 
 on:
   schedule:
-    - cron: '0 6 * * 1' # Weekly Monday review
+    - cron: '0 3 * * *' # Nightly at 03:00 UTC
   workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Print issue bodies without creating, editing or closing issues'
+        type: boolean
+        default: false
 
 permissions:
   contents: read
+
+concurrency:
+  group: upstream-check
+  cancel-in-progress: false
 
 jobs:
   check-upstreams:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    permissions:
+      contents: read
+      issues: write
     steps:
       - name: Checkout Repository
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
@@ -32,3 +44,11 @@ jobs:
 
       - name: Compare remote HEADs against pinned commits
         run: npx tsx tools/upstreams/remote_check.ts
+
+      # Reads commits and changed files through the GitHub API (no clone, no upstream code runs)
+      # and keeps one open `upstream-update` issue per upstream with new commits.
+      - name: Sync upstream-update issues
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DRY_RUN: ${{ inputs.dry_run && '--dry-run' || '' }}
+        run: npx tsx tools/upstreams/sync_issues.ts $DRY_RUN
