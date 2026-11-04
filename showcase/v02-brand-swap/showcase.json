@@ -7,8 +7,8 @@
   "caption": "The 01 launch-film brief, claims and scene plan rendered with Magnifito's brand.json on the left and a fictional second brand, Quillfern Studio, on the right: colours, typeface (Geist against Geist Mono), logo and icon colours all come from the brand profile. Both profiles pass a brand check first.",
   "prompt": "Use the magnifito-brand skill to show that one brief works for any brand. Take the 01-branded-promo launch film (brief, claims and the four brand-title scenes) and render it twice with HyperFrames: once with Magnifito's brand.json (magnifito/), once with a second, clearly fictional brand, Quillfern Studio (quillfern/): deep teal and amber, Geist Mono Medium from the repository's OFL fonts, a simple fern-quill SVG logo, its own tagline and a quillfern.example address. Check both brand profiles first (schema, WCAG contrast of the text and mark colours, font files, licences and Cyrillic coverage) and keep the reports. Then put the two films side by side with mgvideo multicam and label each half with its brand in Geist (labels.svg).",
   "commands": [
-    "node brand-check.mjs magnifito work/brand-check-magnifito.json",
-    "node brand-check.mjs quillfern work/brand-check-quillfern.json",
+    "mgvideo brand check magnifito --json --out work/brand-check-magnifito.json",
+    "mgvideo brand check quillfern --json --out work/brand-check-quillfern.json",
     "mgvideo render magnifito --force",
     "node collect-run.mjs magnifito/runs work/magnifito.mp4",
     "mgvideo render quillfern --force",

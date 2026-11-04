@@ -1,4 +1,4 @@
-import { runFfmpeg } from './proc.js';
+import { ffmpegStderr, runFfmpeg } from './proc.js';
 import path from 'node:path';
 import fs from 'node:fs';
 
@@ -10,6 +10,11 @@ export interface CompressorOptions {
   ratio?: number;
   attackMs?: number;
   releaseMs?: number;
+  /**
+   * Fixed makeup gain in dB. When omitted, makeup is loudness-matched: the input and the
+   * compressed signal are measured (EBU R128 integrated) and the difference is added back,
+   * so the output keeps the input's integrated loudness with less dynamic range.
+   */
   makeupGainDb?: number;
   outputPath?: string;
 }
@@ -20,15 +25,32 @@ export interface CompressorResult {
   preset: string;
   thresholdDb: number;
   ratio: number;
+  /** Makeup gain actually applied in dB (measured when loudness-matched). */
   makeupGainDb: number;
+  /** True when makeup was derived from measured loudness rather than given. */
+  makeupAuto: boolean;
+  /** Integrated loudness of the input and output, in LUFS (only measured when loudness-matched). */
+  inputLufs?: number;
+  outputLufs?: number;
   filterApplied: string;
 }
 
+/** EBU R128 integrated loudness (LUFS) of a file after an optional filter chain; -Infinity for silence. */
+function integratedLufs(file: string, filter?: string): number {
+  const err = ffmpegStderr(['-nostats', '-i', file, '-af', `${filter ? `${filter},` : ''}ebur128`, '-f', 'null', '-']);
+  const summary = err.slice(err.lastIndexOf('Summary:'));
+  const m = /I:\s+(-?[\d.]+|-inf)\s+LUFS/.exec(summary);
+  if (!m) throw new Error(`Could not measure loudness of ${file}`);
+  return m[1] === '-inf' ? -Infinity : parseFloat(m[1]);
+}
+
 export class AudioCompressor {
-  private static readonly PRESETS: Record<CompressorPreset, { threshold: number; ratio: number; attack: number; release: number; makeup: number }> = {
-    'broadcast-master': { threshold: -18, ratio: 3.5, attack: 15, release: 180, makeup: 2.5 },
-    'vocal-leveler': { threshold: -22, ratio: 4.0, attack: 8, release: 120, makeup: 3.5 },
-    'punchy-bass': { threshold: -14, ratio: 2.5, attack: 30, release: 250, makeup: 1.5 }
+  // Presets carry no fixed makeup: the gain reduction depends on the input level, so a fixed
+  // value left speech up to ~6 dB quieter (vocal-leveler) or louder. Makeup is measured instead.
+  private static readonly PRESETS: Record<CompressorPreset, { threshold: number; ratio: number; attack: number; release: number }> = {
+    'broadcast-master': { threshold: -18, ratio: 3.5, attack: 15, release: 180 },
+    'vocal-leveler': { threshold: -22, ratio: 4.0, attack: 8, release: 120 },
+    'punchy-bass': { threshold: -14, ratio: 2.5, attack: 30, release: 250 }
   };
 
   /**
@@ -49,7 +71,7 @@ export class AudioCompressor {
     const ratio = options.ratio ?? cfg.ratio;
     const attack = options.attackMs ?? cfg.attack;
     const release = options.releaseMs ?? cfg.release;
-    const makeup = options.makeupGainDb ?? cfg.makeup;
+    const fixedMakeup = options.makeupGainDb;
 
     const outPath = options.outputPath ?? path.join(
       path.dirname(audioPath),
@@ -67,8 +89,23 @@ export class AudioCompressor {
     if (!(ratio >= 1 && ratio <= 20)) throw new Error(`ratio must be in [1, 20], got ${ratio}`);
     if (!(attack >= 0.01 && attack <= 2000)) throw new Error(`attackMs must be in [0.01, 2000], got ${attack}`);
     if (!(release >= 0.01 && release <= 9000)) throw new Error(`releaseMs must be in [0.01, 9000], got ${release}`);
-    if (!(makeup >= 0 && makeup <= 36)) throw new Error(`makeupGainDb must be in [0, 36], got ${makeup}`);
-    const filter = `acompressor=threshold=${threshold}dB:ratio=${ratio.toFixed(1)}:attack=${attack}:release=${release}:makeup=${makeup}dB:knee=2.5`;
+    if (fixedMakeup !== undefined && !(fixedMakeup >= 0 && fixedMakeup <= 36)) throw new Error(`makeupGainDb must be in [0, 36], got ${fixedMakeup}`);
+    const compressor = `acompressor=threshold=${threshold}dB:ratio=${ratio.toFixed(1)}:attack=${attack}:release=${release}:knee=2.5`;
+
+    let makeup = fixedMakeup ?? 0;
+    let inputLufs: number | undefined;
+    let outputLufs: number | undefined;
+    if (fixedMakeup === undefined) {
+      // Loudness-matched makeup: measure input and the compressed signal, add the difference.
+      inputLufs = integratedLufs(audioPath);
+      const compressedLufs = integratedLufs(audioPath, compressor);
+      if (Number.isFinite(inputLufs) && Number.isFinite(compressedLufs)) {
+        makeup = Math.round((inputLufs - compressedLufs) * 100) / 100;
+      }
+    }
+    // volume (not acompressor's makeup) so a negative correction is possible; alimiter catches
+    // the few transients that slip past the attack time once the makeup is added.
+    const filter = `${compressor},volume=${makeup.toFixed(2)}dB,alimiter=limit=0.966:level=false:latency=true`;
 
     runFfmpeg([
       '-i', audioPath,
@@ -77,6 +114,7 @@ export class AudioCompressor {
       '-c:a', 'pcm_s16le',
       outPath
     ]);
+    if (fixedMakeup === undefined) outputLufs = integratedLufs(outPath);
 
     if (!fs.existsSync(outPath)) {
       throw new Error(`Failed to compress audio at: ${outPath}`);
@@ -89,6 +127,9 @@ export class AudioCompressor {
       thresholdDb: threshold,
       ratio,
       makeupGainDb: makeup,
+      makeupAuto: fixedMakeup === undefined,
+      inputLufs,
+      outputLufs,
       filterApplied: filter
     };
   }

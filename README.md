@@ -142,7 +142,7 @@ mgvideo plan projects/my-promo
 mgvideo render projects/my-promo --format 9:16
 
 # 6. Validate Output Files, ffprobe Specs & Claims Verification
-mgvideo validate <run-id> --project projects/my-promo
+mgvideo validate latest --project projects/my-promo   # or a run id; --out report.txt saves the report
 
 # 7. Package and Sign Delivery Bundle with Three-Role Sign-off & Cost Breakdown
 mgvideo package <run-id> --project projects/my-promo --reviewer "Kiril Kirov"

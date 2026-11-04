@@ -21,6 +21,35 @@ export function resolveRunDir(runPathOrId: string, projectDir?: string): string 
   return path.resolve(process.cwd(), runPathOrId);
 }
 
+/**
+ * Newest render run in <projectDir>/runs: a run-* directory that holds render-result.json.
+ * Run directories are named run-<epochMs>-<hash>, so the name gives the creation time and touching
+ * an old run's files cannot make it the latest; other names fall back to the earlier of birth and
+ * modification time.
+ */
+export function findLatestRunDir(projectDir: string): string {
+  const runsDir = path.join(path.resolve(projectDir), 'runs');
+  const runs = (fs.existsSync(runsDir) ? fs.readdirSync(runsDir, { withFileTypes: true }) : [])
+    .filter(e => e.isDirectory() && e.name.startsWith('run-') && fs.existsSync(path.join(runsDir, e.name, 'render-result.json')))
+    .map(e => {
+      const fromName = Number(/^run-(\d+)-/.exec(e.name)?.[1]);
+      const stat = fs.statSync(path.join(runsDir, e.name));
+      const fsTime = Math.min(...[stat.birthtimeMs, stat.mtimeMs].filter(t => t > 0));
+      return { dir: path.join(runsDir, e.name), time: Number.isFinite(fromName) ? fromName : Number.isFinite(fsTime) ? fsTime : 0 };
+    })
+    .sort((a, b) => b.time - a.time);
+  if (!runs.length) throw new Error(`No rendered run (runs/run-*/render-result.json) in ${path.resolve(projectDir)}; render the project first`);
+  return runs[0].dir;
+}
+
+/** Writes a command's report to a file, creating parent directories. */
+export function writeOutputFile(file: string, text: string): string {
+  const full = path.resolve(process.cwd(), file);
+  fs.mkdirSync(path.dirname(full), { recursive: true });
+  fs.writeFileSync(full, text.endsWith('\n') ? text : `${text}\n`, 'utf-8');
+  return full;
+}
+
 /** Project directory for a run: explicit, or two levels above the run directory. */
 export function resolveProjectDir(runDir: string, projectDir?: string): string {
   return projectDir ? path.resolve(projectDir) : path.resolve(runDir, '..', '..');

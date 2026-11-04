@@ -1,6 +1,6 @@
 import path from 'node:path';
 import fs from 'node:fs';
-import { runFfmpeg, probe } from './proc.js';
+import { runFfmpeg, probe, type StreamProbe } from './proc.js';
 
 export interface SpeedOptions {
   outputPath?: string;
@@ -34,6 +34,14 @@ export function buildAtempoChain(factor: number): string {
   return stages.map(s => `atempo=${s.toFixed(6)}`).join(',');
 }
 
+/** The source frame rate as ffprobe's rational string (e.g. 30000/1001), so fps= stays exact. */
+function sourceRate(info: StreamProbe): string {
+  const streams = (info.raw.streams as Record<string, unknown>[] | undefined) ?? [];
+  const v = streams.find(st => st.codec_type === 'video');
+  const rate = (v?.avg_frame_rate && v.avg_frame_rate !== '0/0' ? v.avg_frame_rate : v?.r_frame_rate) as string | undefined;
+  return rate && /^\d+\/[1-9]\d*$/.test(rate) ? rate : String(info.fps);
+}
+
 export class VideoSpeedEngine {
   /**
    * Adjusts playback speed of video while preserving pitch and audio synchrony.
@@ -63,21 +71,28 @@ export class VideoSpeedEngine {
       fs.mkdirSync(parentDir, { recursive: true });
     }
 
-    // Use the exact reciprocal so video and audio durations stay in sync.
-    const videoFilter = `setpts=PTS/${speedFactor}`;
+    // setpts alone keeps the source frame spacing scaled by 1/factor, so the last frame still
+    // spans a full (scaled) frame interval and the container runs about one frame long; for
+    // slow-downs it also halves the frame rate. Resampling to the source rate with `fps` gives
+    // exactly round(frames / factor) frames, and `-t` pins the container to source / factor.
+    const fpsStage = info.fps > 0 ? `,fps=${sourceRate(info)}` : '';
+    const videoFilter = `setpts=(PTS-STARTPTS)/${speedFactor}${fpsStage}`;
     const videoArgs = ['-c:v', 'libx264', '-preset', 'fast', '-crf', '20', '-pix_fmt', 'yuv420p'];
+    const durationArgs = ['-t', newDuration.toFixed(6)];
 
     if (info.hasAudio) {
+      // atempo can end a few milliseconds short; apad plus -t makes audio end with the video.
       runFfmpeg([
         '-i', videoPath,
-        '-filter_complex', `[0:v]${videoFilter}[v];[0:a]${buildAtempoChain(speedFactor)}[a]`,
+        '-filter_complex', `[0:v]${videoFilter}[v];[0:a]${buildAtempoChain(speedFactor)},apad[a]`,
         '-map', '[v]', '-map', '[a]',
+        ...durationArgs,
         ...videoArgs,
         '-c:a', 'aac', '-b:a', '192k',
         outPath,
       ]);
     } else {
-      runFfmpeg(['-i', videoPath, '-vf', videoFilter, '-an', ...videoArgs, outPath]);
+      runFfmpeg(['-i', videoPath, '-vf', videoFilter, '-an', ...durationArgs, ...videoArgs, outPath]);
     }
 
     if (!fs.existsSync(outPath)) {

@@ -8,7 +8,7 @@ import type {
 } from '../../../contracts/src/index.js';
 import { inspectMedia } from '../../../media/src/inspector.js';
 import { LayoutAuditor } from '../../../media/src/layout.js';
-import { resolveRunDir, resolveProjectDir, sha256String } from './_shared.js';
+import { resolveRunDir, resolveProjectDir, sha256String, findLatestRunDir } from './_shared.js';
 
 export interface ValidationItem {
   check: string;
@@ -28,8 +28,13 @@ export interface ValidationReport {
   unresolved_review_items: string[];
 }
 
-export async function runValidate(runPathOrId: string, projectDir?: string): Promise<ValidationReport> {
-  const runDir = resolveRunDir(runPathOrId, projectDir);
+/** Run reference that selects the newest run of the project (the -p directory, else cwd). */
+export const LATEST_RUN = 'latest';
+
+export async function runValidate(runPathOrId: string = LATEST_RUN, projectDir?: string): Promise<ValidationReport> {
+  const runDir = runPathOrId === LATEST_RUN
+    ? findLatestRunDir(projectDir ?? process.cwd())
+    : resolveRunDir(runPathOrId, projectDir);
 
   const resultPath = path.join(runDir, 'render-result.json');
   const requestPath = path.join(runDir, 'render-request.json');
@@ -197,3 +202,22 @@ export async function runValidate(runPathOrId: string, projectDir?: string): Pro
   return report;
 }
 
+
+/** Human-readable report, as printed by `mgvideo validate`. */
+export function formatValidationReport(report: ValidationReport): string {
+  const lines = [
+    `🔎 Validation Report for Run: ${report.run_id}`,
+    `Overall Result: ${report.passed ? 'PASSED ✅' : 'FAILED ❌'} (${report.passed_checks}/${report.total_checks} checks passed)`,
+    ''
+  ];
+  for (const it of report.items) {
+    lines.push(` ${it.passed ? '✅' : '❌'} ${it.check.padEnd(35)}: ${it.details}`);
+  }
+  if (report.unresolved_review_items.length > 0) {
+    lines.push('', 'Unresolved Review Items:');
+    for (const un of report.unresolved_review_items) {
+      lines.push(` • ⚠️ ${un}`);
+    }
+  }
+  return lines.join('\n');
+}

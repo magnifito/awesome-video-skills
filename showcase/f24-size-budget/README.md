@@ -32,11 +32,9 @@ node rasterize.mjs work/labels.svg work/labels.png 1920 1080
 ffmpeg -i ../videos/01-branded-promo.mp4 -i work/budget.mp4 -i work/labels.png -filter_complex "[0:v]crop=960:1080:0:0[l];[1:v]crop=960:1080:960:0[r];[l][r]hstack=inputs=2,drawbox=x=958:y=0:w=4:h=1080:color=0xf0eadf:t=fill[c];[c][2:v]overlay=0:0,format=yuv420p[v]" -map [v] -map 1:a -c:v libx264 -crf 14 -preset medium -c:a aac -b:a 160k work/compare.mp4
 node copy-project.mjs ../01-branded-promo work/promo
 mgvideo render work/promo --codec mp4
-node pin-run.mjs work/promo/runs latest
-mgvideo validate latest -p work/promo
-mgvideo chapters work/promo
-node save-output.mjs work/validate.txt validate latest -p work/promo
-node save-output.mjs work/chapters.txt chapters work/promo
+mgvideo validate latest -p work/promo --out work/validate.txt
+mgvideo validate latest -p work/promo --json --out work/validation-report.json
+mgvideo chapters work/promo --out work/chapters.txt
 ```
 
 The finished file is `work/compare.mp4`. The config files in this folder are the inputs.

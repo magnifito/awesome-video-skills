@@ -4,10 +4,10 @@
   "type": "Safe-zone guide",
   "skill": "magnifito-variants",
   "engine": "safezone",
-  "caption": "mgvideo safezone burns the Reels, Shorts and TikTok safe area onto the native 9:16 launch film (f07) for review: shaded top and bottom margins where the app UI sits, and the dashed area the cards must stay inside.",
+  "caption": "mgvideo safezone --platform reels burns the Reels safe area, the strictest of the Reels, Shorts and TikTok presets, onto the native 9:16 launch film (f07) for review: shaded top and bottom margins where the app UI sits, white labels on dark backings, and the dashed area the cards must stay inside.",
   "prompt": "Use the magnifito-variants skill to check the vertical launch film (../videos/f07-native-vertical.mp4) against the mobile safe zones before it goes to Reels and Shorts. Burn the safe-area guide over the whole clip so the client can see that every card stays clear of the top and bottom UI margins, and save the review copy as work/safezone.mp4.",
   "commands": [
-    "mgvideo safezone ../videos/f07-native-vertical.mp4 --out work/safezone.mp4"
+    "mgvideo safezone ../videos/f07-native-vertical.mp4 --platform reels --out work/safezone.mp4"
   ],
   "output": "work/safezone.mp4",
   "poster_at": 5.5,

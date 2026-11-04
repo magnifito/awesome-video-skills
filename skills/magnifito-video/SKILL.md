@@ -62,7 +62,7 @@ mgvideo catalog               # Inspect available capabilities and baseline lock
 mgvideo init <project-dir>    # Initialize private job workspace
 mgvideo plan <project-dir>    # Generate claims-linked scene plan
 mgvideo render <project-dir>  # Render frozen request to run directory
-mgvideo validate <run-id>     # Assert file integrity, claims match, and ffprobe specs
+mgvideo validate [run-id]     # Assert file integrity, claims match, and ffprobe specs (default: latest run)
 mgvideo package <run-id>      # Sign and assemble delivery bundle
 ```
 

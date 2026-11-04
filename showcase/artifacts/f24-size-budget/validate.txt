@@ -1,9 +1,7 @@
-$ mgvideo validate latest -p work/promo
-
-🔎 Validation Report for Run: run-1793804069687-d76388d1
+🔎 Validation Report for Run: run-1793811601891-d76388d1
 Overall Result: PASSED ✅ (6/6 checks passed)
 
- ✅ File integrity: final_output_run-1793804069687-d76388d1.mp4: File exists and SHA-256 matches render manifest.
+ ✅ File integrity: final_output_run-1793811601891-d76388d1.mp4: File exists and SHA-256 matches render manifest.
  ✅ Export Dimensions                  : Dimensions match render request settings exactly.
  ✅ Frame Rate (FPS)                   : Frame rate conforms to target standard.
  ✅ Audio Stream Presence              : Audio stream verified with valid codec.

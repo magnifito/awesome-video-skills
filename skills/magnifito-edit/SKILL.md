@@ -60,6 +60,34 @@ subject is missing, add a label-1 point there. Masks are hard-edged: clean on ob
 weaker on soft hair. The clip must be constant frame rate; convert it first with
 `ffmpeg -i in.mp4 -fps_mode cfr -r 30 out.mp4` if the command reports variable frame rate.
 
+## Title Cards and Review Watermarks (`mgvideo title`, `mgvideo watermark`)
+
+Both are designed at 1080p and scale with the short side of the frame (`min(w, h) / 1080`), so a
+720p export gets two-thirds of every size.
+
+- `mgvideo title clip.mp4 -t "Title" -s "Subtitle" -p top|center|bottom` burns a rounded card for the
+  whole clip. Defaults: navy `rgba(15, 23, 42, 0.85)`, white 36 px title, `#94A3B8` 20 px subtitle,
+  Inter. Brand it with `--bg`, `--color`, `--subtitle-color`, `--accent` (stripe along the top edge),
+  `--font <family>`, `--font-file <ttf/otf>` (its family is used unless `--font` is given; it is
+  loaded through fontconfig for rsvg-convert) and `--title-size` / `--subtitle-size` (px at 1080p).
+  The card grows with bigger text; a line too long for the card is shrunk to fit.
+- `mgvideo watermark clip.mp4 -t "REVIEW COPY" -r "Client" -p top_right|center|bottom_right` burns
+  a banner sized to its text (20 px at 1080p by default, `--font-size` to change). Text that would
+  not fit inside the frame margins is shrunk, never clipped. `--color` sets the text colour (default
+  `#F87171`), `--opacity` the dark backing (default 0.45).
+
+## Green Screen and Redaction (`mgvideo chromakey`, `mgvideo mask`)
+
+- `mgvideo chromakey take.mp4 --bg set.png` keys on chroma only, so dark browns, hair and shadows
+  survive at the defaults; start there before tuning. `--similarity` (default 0.65) and `--blend`
+  (default 0.15) are shares of the distance from the key colour to neutral grey, so they mean the
+  same for `--key 0x00FF00` and for a colour sampled off the wall. Raise `--similarity` if dark
+  corners of the screen stay; lower it if greenish wardrobe goes. Despill is on (`--no-despill`).
+- `mgvideo mask clip.mp4 --box x,y,w,h` redacts one region for the whole clip. For a field that
+  moves (a camera push, a scroll), give one `--box x,y,w,h,start,end` per time window, back to back
+  (`[start, end)` in seconds, either end may be left empty), each box covering where the field is
+  during its window plus a few pixels. Check frames at every window boundary before delivery.
+
 ## Stopping Conditions
 
 - Fail if an edit interval creates a negative duration or references source microseconds beyond media length.

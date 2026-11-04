@@ -7,7 +7,8 @@ import { runCatalog } from '../commands/catalog.js';
 import { runInit } from '../commands/init.js';
 import { runPlan } from '../commands/plan.js';
 import { runRender } from '../commands/render.js';
-import { runValidate } from '../commands/validate.js';
+import { runValidate, formatValidationReport, LATEST_RUN } from '../commands/validate.js';
+import { runBrandCheck, formatBrandCheck } from '../commands/brand.js';
 import { runPackage } from '../commands/package.js';
 import { runBatchCommerce } from '../commands/batch.js';
 import { startPreviewServer } from '../commands/preview.js';
@@ -29,7 +30,7 @@ import { runNotify } from '../commands/notify.js';
 import { ProductionBundleExporter } from '../../../media/src/bundle.js';
 import { runDashboard } from '../commands/dashboard.js';
 import { runVerifyBundle } from '../commands/verify_bundle.js';
-import { resolveRunDir, resolveProjectDir, findWorkspaceRoot } from '../commands/_shared.js';
+import { resolveRunDir, resolveProjectDir, findWorkspaceRoot, writeOutputFile } from '../commands/_shared.js';
 import { RENDER_FORMATS, RENDER_CODECS } from '../commands/render.js';
 import { PIPELINE_EVENTS } from '../../../media/src/notifications.js';
 import { safeColor } from '../../../media/src/proc.js';
@@ -48,7 +49,7 @@ import { FrameRateConverter } from '../../../media/src/framerate.js';
 import { DeinterlaceEngine } from '../../../media/src/deinterlace.js';
 import { AudioEqualizerEngine } from '../../../media/src/equalizer.js';
 import { MontageGenerator } from '../../../media/src/montage.js';
-import { MaskEngine } from '../../../media/src/mask.js';
+import { MaskEngine, parseMaskBox } from '../../../media/src/mask.js';
 import { AudioChannelMapper } from '../../../media/src/channel_map.js';
 import { BitrateOptimizer } from '../../../media/src/bitrate.js';
 import { MerkleManifest } from '../../../media/src/merkle.js';
@@ -245,24 +246,18 @@ program
 
 // mgvideo validate <run>
 program
-  .command('validate <run>')
+  .command('validate [run]')
   .description('Check files, facts, timing, layout evidence, and export specifications; record unresolved review items')
-  .option('-p, --project <project>', 'Project directory (optional if run is relative or absolute)')
+  .option('-p, --project <project>', 'Project directory (optional if run is relative or absolute; for "latest" defaults to cwd)')
+  .option('-o, --out <file>', 'Also write the printed report to this file')
+  .option('--json', 'Print (and write) the validation report as JSON', false)
+  .addHelpText('after', '\nRun: a run id, a run directory, or "latest" (the default) for the newest run in the project.')
   .action(async (runPath, opts) => {
     try {
-      const report = await runValidate(runPath, opts.project);
-      console.log(`\n🔎 Validation Report for Run: ${report.run_id}`);
-      console.log(`Overall Result: ${report.passed ? 'PASSED ✅' : 'FAILED ❌'} (${report.passed_checks}/${report.total_checks} checks passed)\n`);
-      for (const it of report.items) {
-        console.log(` ${it.passed ? '✅' : '❌'} ${it.check.padEnd(35)}: ${it.details}`);
-      }
-      if (report.unresolved_review_items.length > 0) {
-        console.log('\nUnresolved Review Items:');
-        for (const un of report.unresolved_review_items) {
-          console.log(` • ⚠️ ${un}`);
-        }
-      }
-      console.log('');
+      const report = await runValidate(runPath ?? LATEST_RUN, opts.project);
+      const text = opts.json ? JSON.stringify(report, null, 2) : formatValidationReport(report);
+      console.log(opts.json ? text : `\n${text}\n`);
+      if (opts.out) writeOutputFile(opts.out, text);
       if (!report.passed) process.exit(1);
     } catch (err) {
       console.error('Validate command failed:', err);
@@ -690,6 +685,9 @@ program
   .option('-w, --width <pixels>', 'Waveform width', '1200')
   .option('-H, --height <pixels>', 'Waveform height', '240')
   .option('-c, --color <hex>', 'Waveform stroke color', '#2563EB')
+  .addOption(new Option('--scale <scale>', 'Amplitude scale').choices(['lin', 'sqrt', 'cbrt', 'log']).default('lin'))
+  .option('--no-normalize', 'Draw at the recorded level instead of peak-normalising to the full height')
+  .option('--split-channels', 'Draw each channel in its own band instead of a mono downmix')
   .option('-o, --out <path>', 'Output image path')
   .action(async (media, opts) => {
     try {
@@ -697,10 +695,13 @@ program
         width: parseInt(opts.width, 10),
         height: parseInt(opts.height, 10),
         color: safeColor(opts.color),
+        scale: opts.scale,
+        normalize: opts.normalize,
+        splitChannels: Boolean(opts.splitChannels),
         out: opts.out
       });
       console.log(`\n🌊 Audio Waveform Generated!`);
-      console.log(`Output: ${res.outputPath} (${res.width}x${res.height})\n`);
+      console.log(`Output: ${res.outputPath} (${res.width}x${res.height}, gain +${res.gainDb} dB)\n`);
     } catch (err) {
       console.error('Waveform command failed:', err);
       process.exit(1);
@@ -830,6 +831,9 @@ program
   .option('-t, --text <text>', 'Watermark text', 'CONFIDENTIAL - REVIEW ONLY')
   .option('-r, --reviewer <name>', 'Reviewer name or identifier')
   .option('-p, --position <pos>', 'Watermark position: top_right, center, bottom_right', 'top_right')
+  .option('--font-size <px>', 'Text size in px on a 1080p frame, scaled with the frame (default 20)')
+  .option('--color <color>', 'Text colour, #hex or CSS name (default #F87171)')
+  .option('--opacity <0-1>', 'Opacity of the dark banner behind the text (default 0.45)')
   .option('-o, --out <path>', 'Custom output video path')
   .action((video, opts) => {
     try {
@@ -838,6 +842,9 @@ program
         text: opts.text,
         reviewer: opts.reviewer,
         position: opts.position,
+        fontSize: opts.fontSize === undefined ? undefined : parseFloat(opts.fontSize),
+        textColor: opts.color,
+        opacity: opts.opacity === undefined ? undefined : parseFloat(opts.opacity),
         outputPath: opts.out ? path.resolve(process.cwd(), opts.out) : undefined
       });
       console.log(`\n🛡️ Watermarked Video Created!`);
@@ -876,11 +883,15 @@ program
 program
   .command('safezone <video>')
   .description('Burn mobile platform safe area bounding guide onto video for QA analysis')
+  .option('--platform <name>', 'Margin preset: tiktok, reels, shorts, generic', 'tiktok')
+  .option('--color <color>', 'Safe-area outline colour, #hex or CSS name (default #EF4444)')
   .option('-o, --out <path>', 'Custom output video path')
   .action((video, opts) => {
     try {
       const fullVideo = path.resolve(process.cwd(), video);
       const res = SafeZoneOverlayGenerator.applySafeZoneGuide(fullVideo, {
+        platform: opts.platform,
+        strokeColor: opts.color,
         outputPath: opts.out ? path.resolve(process.cwd(), opts.out) : undefined
       });
       console.log(`\n📐 Safe Zone QA Guide Applied!`);
@@ -951,11 +962,34 @@ program
     }
   });
 
+// mgvideo brand check <brand.json|project>
+const brandCmd = program.command('brand').description('Check brand profiles (brand.json)');
+
+brandCmd
+  .command('check <brand>')
+  .description('Check a brand.json (or a project folder holding one): schema, WCAG contrast, font files, rights, licences, Cyrillic coverage and logos. Exits 1 on failures; warnings do not fail')
+  .option('-o, --out <file>', 'Also write the printed report to this file')
+  .option('--json', 'Print (and write) the report as JSON', false)
+  .action((target, opts) => {
+    try {
+      const report = runBrandCheck(target);
+      const text = opts.json ? JSON.stringify(report, null, 2) : formatBrandCheck(report);
+      console.log(opts.json ? text : `\n${text}\n`);
+      if (opts.out) writeOutputFile(opts.out, text);
+      if (!report.passed) process.exit(1);
+    } catch (err) {
+      console.error('Brand check failed:', err);
+      process.exit(1);
+    }
+  });
+
 // mgvideo chapters <project>
 program
   .command('chapters <project>')
   .description('Generate YouTube chapters, WebVTT cues, and QuickTime markers from scene plan')
-  .action((projectPath) => {
+  .addOption(new Option('-f, --format <format>', 'Chapter format to print').choices(['youtube', 'vtt', 'ffmetadata']).default('youtube'))
+  .option('-o, --out <file>', 'Also write the chapters (the selected format, without the banner) to this file')
+  .action((projectPath, opts) => {
     try {
       const targetDir = path.resolve(process.cwd(), projectPath);
       const planPath = path.join(targetDir, 'scene-plan.json');
@@ -964,10 +998,12 @@ program
       }
       const scenePlan = JSON.parse(nodeFs.readFileSync(planPath, 'utf8'));
       const rep = ChapterGenerator.generateChapters(scenePlan);
+      const text = { youtube: rep.youtubeText, vtt: rep.webVtt, ffmetadata: rep.ffmetadata }[opts.format as 'youtube' | 'vtt' | 'ffmetadata'];
       console.log(`\n📑 Chapters Generated for ${projectPath}:`);
       console.log('--------------------------------------------------');
-      console.log(rep.youtubeText);
+      console.log(text);
       console.log('--------------------------------------------------\n');
+      if (opts.out) writeOutputFile(opts.out, text);
     } catch (err) {
       console.error('Chapters command failed:', err);
       process.exit(1);
@@ -1157,27 +1193,25 @@ program
 program
   .command('mask <video>')
   .description('Redact sensitive on-screen client credentials, API keys, or PII')
-  .requiredOption('-b, --box <coords>', 'Bounding box "x,y,width,height"')
+  .requiredOption(
+    '-b, --box <coords>',
+    'Box "x,y,width,height" or "x,y,width,height,start,end" (seconds); repeat for several boxes or to follow a moving field',
+    (value: string, previous: string[] = []) => [...previous, value]
+  )
   .option('-m, --mode <mode>', 'Redaction mode: blur or solid', 'blur')
   .option('-o, --out <path>', 'Custom output video path')
   .action((video, opts) => {
     try {
       const fullVideo = path.resolve(process.cwd(), video);
-      const parts = opts.box.split(',').map(Number);
-      if (parts.length !== 4 || parts.some(isNaN)) {
-        throw new Error('Bounding box must be "x,y,width,height" with numeric values');
-      }
-      const res = MaskEngine.applyRedaction(fullVideo, {
-        x: parts[0],
-        y: parts[1],
-        width: parts[2],
-        height: parts[3],
-        mode: opts.mode
-      }, {
+      const boxes = (opts.box as string[]).map(spec => ({ ...parseMaskBox(spec), mode: opts.mode }));
+      const res = MaskEngine.applyRedactions(fullVideo, boxes, {
         outputPath: opts.out ? path.resolve(process.cwd(), opts.out) : undefined
       });
       console.log(`\n🛡️ Redaction Mask Applied!`);
-      console.log(`Region: [${res.box.x}, ${res.box.y}, ${res.box.width}x${res.box.height}] Mode: ${res.mode}`);
+      for (const b of res.boxes) {
+        const when = b.start !== undefined || b.end !== undefined ? ` from ${b.start ?? 0}s to ${b.end ?? 'end'}${b.end !== undefined ? 's' : ''}` : '';
+        console.log(`Region: [${b.x}, ${b.y}, ${b.width}x${b.height}]${when} Mode: ${res.mode}`);
+      }
       console.log(`Output: ${res.outputPath}\n`);
     } catch (err) {
       console.error('Mask command failed:', err);
@@ -1388,7 +1422,9 @@ program
   .command('chromakey <video>')
   .description('Key out green or blue screen background and composite over background plate')
   .option('-k, --key <color>', 'Chroma key color (default: 0x00FF00)', '0x00FF00')
-  .option('-s, --similarity <value>', 'Color similarity threshold (0.01 to 1.0)', '0.25')
+  .option('-s, --similarity <value>', 'Share of the key-to-neutral chroma distance keyed fully transparent (0.01 to 1.0)', '0.65')
+  .option('--blend <value>', 'Soft-edge width above the similarity, same scale (0 to 1)', '0.15')
+  .option('--no-despill', 'Keep green/blue spill on the foreground instead of neutralising it')
   .option('-b, --bg <path>', 'Optional background image or video path')
   .option('-o, --out <path>', 'Custom output video path')
   .action((video, opts) => {
@@ -1397,6 +1433,8 @@ program
       const res = ChromaKeyEngine.composite(fullVideo, {
         keyColor: safeColor(opts.key),
         similarity: parseFloat(opts.similarity),
+        blend: parseFloat(opts.blend),
+        despill: opts.despill,
         backgroundPath: opts.bg ? path.resolve(process.cwd(), opts.bg) : undefined,
         outputPath: opts.out ? path.resolve(process.cwd(), opts.out) : undefined
       });
@@ -1416,6 +1454,14 @@ program
   .requiredOption('-t, --title <text>', 'Main title text')
   .option('-s, --subtitle <text>', 'Optional subtitle text')
   .option('-p, --position <pos>', 'Position: top, center, bottom', 'center')
+  .option('--bg <color>', 'Card background: #hex, rgb()/rgba() or CSS name (default rgba(15, 23, 42, 0.85))')
+  .option('--color <color>', 'Title text colour (default #FFFFFF)')
+  .option('--subtitle-color <color>', 'Subtitle text colour (default #94A3B8)')
+  .option('--accent <color>', 'Accent stripe along the top of the card (default: none)')
+  .option('--font <family>', 'CSS font family (default "Inter, sans-serif")')
+  .option('--font-file <path>', 'TTF/OTF file to render with; its family is used unless --font is given')
+  .option('--title-size <px>', 'Title size in px on a 1080p frame, scaled with the frame (default 36)')
+  .option('--subtitle-size <px>', 'Subtitle size in px on a 1080p frame, scaled with the frame (default 20)')
   .option('-o, --out <path>', 'Custom output video path')
   .action((video, opts) => {
     try {
@@ -1424,6 +1470,14 @@ program
         titleText: opts.title,
         subtitleText: opts.subtitle,
         position: opts.position,
+        backgroundColor: opts.bg,
+        titleColor: opts.color,
+        subtitleColor: opts.subtitleColor,
+        accentColor: opts.accent,
+        fontFamily: opts.font,
+        fontFile: opts.fontFile ? path.resolve(process.cwd(), opts.fontFile) : undefined,
+        titleSize: opts.titleSize === undefined ? undefined : parseFloat(opts.titleSize),
+        subtitleSize: opts.subtitleSize === undefined ? undefined : parseFloat(opts.subtitleSize),
         outputPath: opts.out ? path.resolve(process.cwd(), opts.out) : undefined
       });
       console.log(`\n🔤 Title Card Burned!`);
@@ -1439,8 +1493,8 @@ program
 program
   .command('noise-gate <audio>')
   .description('Mute background noise floor and ambient hum during speech pauses')
-  .option('-t, --threshold <db>', 'Threshold in dB (e.g. -40)', '-40')
-  .option('-r, --ratio <ratio>', 'Expansion ratio', '4.0')
+  .option('-t, --threshold <db>', 'Gate threshold in dBFS, about 5 dB above the noise floor', '-35')
+  .option('-r, --ratio <ratio>', 'Expansion ratio below the threshold', '8')
   .option('-o, --out <path>', 'Custom output audio path')
   .action((audio, opts) => {
     try {
@@ -1557,7 +1611,7 @@ program
 // mgvideo compress-audio <audio>
 program
   .command('compress-audio <audio>')
-  .description('Apply professional broadcast dynamics compression and makeup gain')
+  .description('Apply dynamics compression with loudness-matched makeup gain (keeps input loudness)')
   .option('-p, --preset <preset>', 'Compressor preset: broadcast-master, vocal-leveler, punchy-bass', 'broadcast-master')
   .option('-t, --threshold <db>', 'Threshold in dB')
   .option('-o, --out <path>', 'Custom output audio path')
@@ -1570,7 +1624,8 @@ program
         outputPath: opts.out ? path.resolve(process.cwd(), opts.out) : undefined
       });
       console.log(`\n🎚️ Audio Compressor Applied!`);
-      console.log(`Preset: ${res.preset} (Threshold: ${res.thresholdDb}dB, Ratio: ${res.ratio}:1, Makeup: +${res.makeupGainDb}dB)`);
+      console.log(`Preset: ${res.preset} (Threshold: ${res.thresholdDb}dB, Ratio: ${res.ratio}:1, Makeup: ${res.makeupGainDb >= 0 ? '+' : ''}${res.makeupGainDb}dB${res.makeupAuto ? ', loudness-matched' : ''})`);
+      if (res.inputLufs !== undefined && res.outputLufs !== undefined) console.log(`Loudness: ${res.inputLufs} LUFS in, ${res.outputLufs} LUFS out`);
       console.log(`Output: ${res.outputPath}\n`);
     } catch (err) {
       console.error('Compress audio command failed:', err);

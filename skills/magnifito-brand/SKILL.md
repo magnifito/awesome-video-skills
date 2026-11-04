@@ -22,6 +22,23 @@ Every project workspace must maintain a validated `brand.json` conforming to `Br
   - `glassmorphism`: Boolean for card blur/translucency.
 - **Prohibited Treatments**: Explicit array of forbidden styles (e.g. `["unverified discount banners", "neon chromatic aberration"]`).
 
+## Checking a brand profile
+
+Run `mgvideo brand check <project-dir|brand.json>` before the first render and after every edit to
+`brand.json`. Paths inside the file resolve against its folder. It reports:
+
+- **Schema**: `brand.json` parses with `BrandProfileSchema`.
+- **Contrast** (WCAG): `text_primary` on `background` and on `secondary` (the brand-title card
+  gradient; `background` when no secondary) at 4.5:1, `primary` on `background` at 3:1. `accent` on
+  `background` below 3:1 is a warning only: keep that accent off text and information.
+- **Fonts**: rights evidence; the `file_path` exists with an `OFL*`/`LICENSE*` file next to it; for
+  TTF/OTF, the licence record and Cyrillic glyphs read by `FontAuditor`; for WOFF/WOFF2, family name
+  and Bulgarian coverage from `fc-scan`. A font without `file_path` is a warning (system font).
+- **Logos**: every declared logo file exists.
+
+It exits 1 when any error-level check fails; warnings do not fail it. `--json` prints the report as
+JSON and `--out <file>` also writes what it prints to a file (keep it as review evidence).
+
 ## Cyrillic & Bulgarian Typography Rules
 
 When `brief.language` is Bulgarian (`bg`), verify:

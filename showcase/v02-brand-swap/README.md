@@ -26,8 +26,8 @@ npm run showcase -- v02-brand-swap
 Or run the steps yourself from `showcase/v02-brand-swap/` (after `npm run build && npm link`):
 
 ```sh
-node brand-check.mjs magnifito work/brand-check-magnifito.json
-node brand-check.mjs quillfern work/brand-check-quillfern.json
+mgvideo brand check magnifito --json --out work/brand-check-magnifito.json
+mgvideo brand check quillfern --json --out work/brand-check-quillfern.json
 mgvideo render magnifito --force
 node collect-run.mjs magnifito/runs work/magnifito.mp4
 mgvideo render quillfern --force

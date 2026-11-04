@@ -4,10 +4,10 @@
   "type": "Review watermark",
   "skill": "magnifito-edit",
   "engine": "watermark",
-  "caption": "The Magnifito launch film as a client review copy: a dark banner reading \"REVIEW COPY\" with the reviewer's name is burned into the top-right corner of every frame, so a shared cut cannot pass as the final.",
+  "caption": "The Magnifito launch film as a client review copy: a dark banner reading \"REVIEW COPY\" with the reviewer's name, in white text sized for the 1080p frame, is burned into the top-right corner of every frame, so a shared cut cannot pass as the final. The banner is as wide as its text.",
   "prompt": "Make a review copy of ../videos/01-branded-promo.mp4 for the client: burn in a \"REVIEW COPY\" watermark with the reviewer name \"Magnifito client\" in the top-right corner, clear of the titles. Keep the sound.",
   "commands": [
-    "mgvideo watermark ../videos/01-branded-promo.mp4 --text 'REVIEW COPY' --reviewer 'Magnifito client' --position top_right --out work/review-copy.mp4"
+    "mgvideo watermark ../videos/01-branded-promo.mp4 --text 'REVIEW COPY' --reviewer 'Magnifito client' --position top_right --font-size 28 --color '#FFFFFF' --opacity 0.75 --out work/review-copy.mp4"
   ],
   "output": "work/review-copy.mp4",
   "poster_at": 5.5,

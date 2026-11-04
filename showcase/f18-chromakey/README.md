@@ -14,7 +14,7 @@ Mira recorded in front of an unevenly lit green screen, keyed onto a Magnifito-b
 
 Install the plugin (see the repository README), open this folder, and give Claude this prompt:
 
-> Generate 8 seconds of synthetic green-screen footage of our presenter Mira talking (make-footage.mjs, which also draws the Magnifito set: cream wall, dot grid, the logo on a panel and a light floor). Key out the green (key 0x22B33A, low similarity so her brown shirt and dark hair survive) and composite her onto the set. For the client, make a split: left half the green-screen take, right half the keyed result, a thin cream divider and "Green screen" and "Keyed onto set" labels in Geist from fonts/ (labels.svg). Keep her voice track.
+> Generate 8 seconds of synthetic green-screen footage of our presenter Mira talking (make-footage.mjs, which also draws the Magnifito set: cream wall, dot grid, the logo on a panel and a light floor). Key out the green with the default chroma key (her brown shirt and dark hair must survive) and composite her onto the set. For the client, make a split: left half the green-screen take, right half the keyed result, a thin cream divider and "Green screen" and "Keyed onto set" labels in Geist from fonts/ (labels.svg). Keep her voice track.
 
 ## Recreate it by hand
 
@@ -28,7 +28,7 @@ Or run the steps yourself from `showcase/f18-chromakey/` (after `npm run build &
 
 ```sh
 node make-footage.mjs
-mgvideo chromakey work/greenscreen.mp4 --key 0x22B33A --similarity 0.1 --bg work/set.png --out work/keyed.mp4
+mgvideo chromakey work/greenscreen.mp4 --bg work/set.png --out work/keyed.mp4
 node rasterize.mjs labels.svg work/labels.png 1920 1080
 ffmpeg -i work/greenscreen.mp4 -i work/keyed.mp4 -i work/labels.png -filter_complex "[0:v]crop=960:1080:0:0[l];[1:v]crop=960:1080:960:0[r];[l][r]hstack=inputs=2,drawbox=x=958:y=0:w=4:h=1080:color=0xf0eadf:t=fill[c];[c][2:v]overlay=0:0,format=yuv420p[v]" -map [v] -map 1:a -c:v libx264 -crf 16 -preset medium -c:a aac -b:a 160k work/compare.mp4
 ```

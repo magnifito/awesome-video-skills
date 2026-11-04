@@ -30,7 +30,7 @@ Or run the steps yourself from `showcase/f13-speed/` (after `npm run build && np
 ffmpeg -ss 2 -t 12 -i ../videos/03-talking-head-edit.mp4 -c:v libx264 -crf 16 -preset medium -c:a aac -b:a 160k work/source.mp4
 mgvideo speed work/source.mp4 --factor 1.5 --out work/fast.mp4
 node rasterize.mjs labels.svg work/labels.png 1920 1080
-ffmpeg -t 8 -i work/source.mp4 -i work/fast.mp4 -i work/labels.png -filter_complex "color=c=0x2b1c17:s=1920x1080:r=30:d=8[bg];[0:v]scale=912:513,setsar=1[l];[1:v]scale=912:513,setsar=1[r];[bg][l]overlay=32:300[a];[a][r]overlay=976:300[b];[b][2:v]overlay=0:0,format=yuv420p[v]" -map [v] -map 1:a -t 8 -c:v libx264 -crf 16 -preset medium -c:a aac -b:a 160k work/compare.mp4
+ffmpeg -t 8 -i work/source.mp4 -i work/fast.mp4 -i work/labels.png -filter_complex "color=c=0x2b1c17:s=1920x1080:r=30:d=8[bg];[0:v]scale=912:513,setsar=1[l];[1:v]scale=912:513,setsar=1[r];[bg][l]overlay=32:300[a];[a][r]overlay=976:300[b];[b][2:v]overlay=0:0,format=yuv420p[v]" -map [v] -map 1:a -c:v libx264 -crf 16 -preset medium -c:a aac -b:a 160k work/compare.mp4
 ```
 
 The finished file is `work/compare.mp4`. The config files in this folder are the inputs.

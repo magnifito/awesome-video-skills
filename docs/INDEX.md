@@ -2,7 +2,13 @@
 
 # Documentation index
 
-11 documents. Agents should read `docs/index.json` instead of this file.
+12 documents. Agents should read `docs/index.json` instead of this file.
+
+## engineering (1)
+
+| Document | Status | Updated | Summary |
+|---|---|---|---|
+| [Upstream sync](engineering/upstream-sync.md) | `draft` | 2026-11-04 | Nightly upstream detection, one upstream-update issue per source, and the label-gated agent that turns an issue into a pull request |
 
 ## plan (2)
 

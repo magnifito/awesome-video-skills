@@ -27,10 +27,10 @@ Or run the steps yourself from `showcase/f23-waveform/` (after `npm run build &&
 
 ```sh
 ffmpeg -ss 6 -t 6 -i ../videos/f22-dialogue-cleanup.mp4 -vn -ac 1 -ar 48000 -c:a pcm_s16le work/clean.wav
-mgvideo waveform work/clean.wav --width 1600 --height 1500 --color '#7a584c' --out work/wave-played.png
-mgvideo waveform work/clean.wav --width 1600 --height 1500 --color '#d8c6b4' --out work/wave-ahead.png
+mgvideo waveform work/clean.wav --width 1600 --height 360 --color '#7a584c' --out work/wave-played.png
+mgvideo waveform work/clean.wav --width 1600 --height 360 --color '#d8c6b4' --out work/wave-ahead.png
 node rasterize.mjs card.svg work/card.png 1920 1080
-ffmpeg -loop 1 -framerate 30 -t 6 -i work/card.png -loop 1 -framerate 30 -t 6 -i work/wave-played.png -loop 1 -framerate 30 -t 6 -i work/wave-ahead.png -i work/clean.wav -filter_complex "color=c=0xfbf8f3:s=1600x360:r=30:d=6,format=rgba,split[c1][c2];[c1][1:v]overlay=0:-570,format=gbrp[played];[c2][2:v]overlay=0:-570,format=gbrp[ahead];[played][ahead]blend=all_expr='if(lt(X,W*T/6),A,B)'[wave];[0:v][wave]overlay=160:390,format=yuv420p[v];[3:a]aformat=sample_rates=48000:channel_layouts=stereo[a]" -map [v] -map [a] -t 6 -c:v libx264 -crf 16 -preset medium -c:a aac -b:a 160k work/audiogram.mp4
+ffmpeg -loop 1 -framerate 30 -t 6 -i work/card.png -loop 1 -framerate 30 -t 6 -i work/wave-played.png -loop 1 -framerate 30 -t 6 -i work/wave-ahead.png -i work/clean.wav -filter_complex "color=c=0xfbf8f3:s=1600x360:r=30:d=6,format=rgba,split[c1][c2];[c1][1:v]overlay=0:0,format=gbrp[played];[c2][2:v]overlay=0:0,format=gbrp[ahead];[played][ahead]blend=all_expr='if(lt(X,W*T/6),A,B)'[wave];[0:v][wave]overlay=160:390,format=yuv420p[v];[3:a]aformat=sample_rates=48000:channel_layouts=stereo[a]" -map [v] -map [a] -t 6 -c:v libx264 -crf 16 -preset medium -c:a aac -b:a 160k work/audiogram.mp4
 ```
 
 The finished file is `work/audiogram.mp4`. The config files in this folder are the inputs.

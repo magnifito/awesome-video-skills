@@ -302,9 +302,10 @@ export class MagnifitoVideoEngine {
     return MontageGenerator.createAnimatic(resolvedImages, options);
   }
 
-  mask(videoPath: string, box: MaskBox, options: MaskOptions = {}): MaskResult {
+  /** Redacts one box, or several (each with an optional start/end window in seconds). */
+  mask(videoPath: string, box: MaskBox | MaskBox[], options: MaskOptions = {}): MaskResult {
     const fullPath = path.isAbsolute(videoPath) ? videoPath : path.resolve(this.workspaceRoot, videoPath);
-    return MaskEngine.applyRedaction(fullPath, box, options);
+    return MaskEngine.applyRedactions(fullPath, Array.isArray(box) ? box : [box], options);
   }
 
   channelMap(audioPath: string, options: ChannelMapOptions = {}): ChannelMapResult {

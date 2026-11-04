@@ -25,7 +25,8 @@ mgvideo <command> [options]
 | `preview` | `mgvideo preview <project>` | Starts interactive local HTTP server on port 3456 with live timeline scrubber. |
 | `storyboard` | `mgvideo storyboard <project>` | Generates high-res visual styleframes and responsive review contact sheet `storyboard.html`. |
 | `render` | `mgvideo render <project>` | Executes frozen render request and writes deterministic output file to `runs/<run_id>/`. |
-| `validate` | `mgvideo validate <run>` | Audits output files, duration, audio streams, platform safe zones, and claims integrity. |
+| `validate` | `mgvideo validate [run] [-p project] [--out file] [--json]` | Audits output files, duration, audio streams, platform safe zones, and claims integrity. `latest` (the default) picks the newest run; `--out` also writes the printed report to a file. |
+| `brand check` | `mgvideo brand check <brand.json\|project> [--out file] [--json]` | Checks brand.json: schema, WCAG contrast, font files, rights, licences, Cyrillic coverage, logos. Exits 1 on failures; warnings do not fail. |
 | `package` | `mgvideo package <run>` | Creates client deliverable folder with signed review record, notices, captions, and `SHA256SUMS.txt`. |
 | `report` | `mgvideo report <project>` | Generates executive Markdown (`DELIVERY_REPORT.md`) and JSON delivery summary for client handoff. |
 | `diff` | `mgvideo diff <targetA> <targetB>` | Compares two video files or images using SSIM/PSNR and perceptual frame hashes to detect visual drift. |
@@ -48,7 +49,7 @@ mgvideo <command> [options]
 | `safezone` | `mgvideo safezone <video>` | Overlays mobile platform safe margin bounding rectangles onto video for QA analysis. |
 | `concat` | `mgvideo concat <clips...>` | Concatenates video clips, normalizing resolution, framerate, and audio sample rates. |
 | `lower-third` | `mgvideo lower-third <video>` | Burns broadcast-quality lower-third speaker title badges with custom brand accents. |
-| `chapters` | `mgvideo chapters <project>` | Generates YouTube chapters, WebVTT cue markers, and QuickTime chapter metadata. |
+| `chapters` | `mgvideo chapters <project> [--format youtube\|vtt\|ffmetadata] [--out file]` | Generates YouTube chapters, WebVTT cue markers, or FFmetadata chapters; `--out` writes the chapters to a file. |
 | `loop` | `mgvideo loop <video>` | Creates seamless ping-pong loops (forward + reverse) for social reels and web hero banners. |
 | `freeze` | `mgvideo freeze <video>` | Holds start or final frame of video using native tpad clone filter and audio padding. |
 | `blur-bg` | `mgvideo blur-bg <video>` | Adapts 9:16 vertical video onto a 16:9 canvas with an aesthetic blurred backdrop. |
@@ -73,7 +74,7 @@ mgvideo <command> [options]
 | `pan` | `mgvideo pan <audio>` | Adjusts stereo pan position and soundfield width. |
 | `glitch` | `mgvideo glitch <video>` | Applies stylized chromatic aberration and digital glitch artifacts. |
 | `multicam` | `mgvideo multicam <videos...>` | Tiles multiple synchronized camera angles into a split-screen grid. |
-| `compress-audio` | `mgvideo compress-audio <audio>` | Applies professional broadcast dynamics compression and makeup gain. |
+| `compress-audio` | `mgvideo compress-audio <audio>` | Applies dynamics compression with loudness-matched makeup gain. |
 | `pip` | `mgvideo pip <main> <overlay>` | Inserts picture-in-picture overlay in screen corner. |
 | `vignette` | `mgvideo vignette <video>` | Applies subtle cinematic lens edge darkening. |
 | `declick` | `mgvideo declick <audio>` | Eliminates impulsive mouth clicks and electrical pops from dialogue. |
@@ -102,6 +103,7 @@ mgvideo <command> [options]
 
 ### `mgvideo speed <video>`
 - `-f, --factor <factor>`: Speed multiplier (`1.25`, `1.5`, `2.0`, `0.75`). Required.
+- Output keeps the source frame rate and lasts exactly source / factor (video and audio), so no extra `-t` trim is needed.
 
 ### `mgvideo safezone <video>`
 - Generates vertical 9:16 safe area QA overlays depicting TikTok, Reels, and Shorts interaction margins.
@@ -131,8 +133,11 @@ mgvideo <command> [options]
 
 ### `mgvideo waveform <media>`
 - `-w, --width <pixels>`: Waveform width (default: `1200`).
-- `-h, --height <pixels>`: Waveform height (default: `240`).
+- `-H, --height <pixels>`: Waveform height (default: `240`). The audio is peak-normalised first, so the loudest peak reaches the full height; draw it at the size you need, no oversizing and cropping.
 - `-c, --color <hex>`: Waveform stroke color (default: `#2563EB`).
+- `--scale <scale>`: Amplitude scale, `lin`, `sqrt`, `cbrt` or `log` (default: `lin`). `sqrt` lifts quiet passages.
+- `--no-normalize`: Draw at the recorded level (a quiet file stays small).
+- `--split-channels`: Draw each channel in its own band instead of a mono downmix.
 - `-o, --out <path>`: Output image path.
 
 ### `mgvideo bundle <deliveryDir>`
@@ -182,8 +187,8 @@ mgvideo <command> [options]
 - `-h, --height <pixels>`: Video canvas height (default: `1080`).
 
 ### `mgvideo mask <video>`
-- `-b, --box <coords>`: Required bounding box as `x,y,width,height`.
-- `-m, --mode <mode>`: Redaction style: `blur` or `solid` (default: `blur`).
+- `-b, --box <coords>`: Required bounding box as `x,y,width,height`, or `x,y,width,height,start,end` to limit it to a time window in seconds (`[start, end)`; leave either empty for "from the start" or "to the end", e.g. `10,10,200,40,,3.5`). Repeat `--box` for several regions; to follow a moving field, give consecutive boxes with back-to-back windows.
+- `-m, --mode <mode>`: Redaction style: `blur` or `solid` (default: `blur`), applied to every box.
 
 ### `mgvideo channel-map <audio>`
 - `-m, --mode <mode>`: Channel mapping mode (`mono-to-stereo`, `stereo-to-mono`, `left-only-to-stereo`, `right-only-to-stereo`).
@@ -215,7 +220,9 @@ mgvideo <command> [options]
 
 ### `mgvideo chromakey <video>`
 - `-k, --key <color>`: Key color (default: `0x00FF00`).
-- `-s, --similarity <val>`: Color distance threshold (default: `0.25`).
+- `-s, --similarity <val>`: How far toward neutral the key reaches, as a share of the key colour's own chroma (default: `0.65`). Keying uses chroma only (ffmpeg `chromakey`), so brightness does not matter: dark browns, hair and shadows stay opaque, and the same value works for `0x00FF00` and for a colour sampled off the screen.
+- `--blend <val>`: Soft-edge width above the similarity, same scale (default: `0.15`).
+- `--no-despill`: Keep green/blue spill on the foreground (despill is on by default).
 - `-b, --bg <path>`: Background image or video plate path.
 
 ### `mgvideo title <video>`
@@ -224,8 +231,9 @@ mgvideo <command> [options]
 - `-p, --position <pos>`: `top`, `center`, `bottom` (default: `center`).
 
 ### `mgvideo noise-gate <audio>`
-- `-t, --threshold <db>`: Noise gate threshold in dB (default: `-40`).
-- `-r, --ratio <ratio>`: Expansion ratio (default: `4.0`).
+- `-t, --threshold <db>`: Gate threshold in dBFS (default: `-35`). Set it about 5 dB above the noise floor in the pauses; a threshold at the noise level does nothing.
+- `-r, --ratio <ratio>`: Expansion ratio (default: `8`).
+- Uses `agate` with peak detection and at most 24 dB of attenuation. Hiss at -40 dBFS RMS drops by about 19 dB with the defaults; speech above about -32 dBFS RMS is unchanged.
 
 ### `mgvideo smart-crop <video>`
 - `-r, --ratio <ratio>`: Target aspect ratio (`9:16`, `1:1`, `4:5`, `16:9`).
@@ -245,6 +253,7 @@ mgvideo <command> [options]
 ### `mgvideo compress-audio <audio>`
 - `-p, --preset <preset>`: Mastering preset (`broadcast-master`, `vocal-leveler`, `punchy-bass`).
 - `-t, --threshold <db>`: Optional custom threshold.
+- Makeup gain is loudness-matched: the input and the compressed signal are measured (EBU R128) and the difference is added back, so every preset keeps the input's integrated loudness and only the dynamic range shrinks. A `-0.3 dBFS` limiter catches transients. The SDK option `makeupGainDb` sets a fixed makeup instead.
 
 ### `mgvideo pip <mainVideo> <overlayVideo>`
 - `-c, --corner <corner>`: Window corner (`bottom_right`, `top_right`, `bottom_left`, `top_left`).

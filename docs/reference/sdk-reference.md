@@ -102,7 +102,7 @@ Keys out green screen and composites over background plate.
 ```typescript
 const keyed = engine.chromakey('green.mp4', {
   keyColor: '0x00FF00',
-  similarity: 0.25,
+  similarity: 0.65, // share of the key-to-neutral chroma distance; blend 0.15, despill on by default
   backgroundPath: 'background.mp4'
 });
 ```
@@ -166,12 +166,17 @@ Normalizes interlaced footage to progressive frames via `yadif`.
 const progressive = engine.deinterlace('archival.mp4');
 ```
 
-#### `engine.mask(videoPath: string, box: MaskBox, options?: MaskOptions)`
-Redacts on-screen confidential credentials or PII.
+#### `engine.mask(videoPath: string, box: MaskBox | MaskBox[], options?: MaskOptions)`
+Redacts on-screen confidential credentials or PII. Pass several boxes, each with an optional
+`start`/`end` window in seconds, to cover a field that moves.
 ```typescript
 const redacted = engine.mask('demo.mp4', {
   x: 100, y: 150, width: 300, height: 60, mode: 'blur'
 });
+const followed = engine.mask('demo.mp4', [
+  { x: 100, y: 150, width: 300, height: 60, end: 2 },
+  { x: 140, y: 130, width: 300, height: 60, start: 2 }
+]);
 ```
 
 #### `engine.optimizeBitrate(videoPath: string, options?: BitrateOptimizeOptions)`

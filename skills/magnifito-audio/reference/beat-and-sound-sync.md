@@ -88,7 +88,9 @@ The cue types and their library mapping are in `../SKILL.md` (Sound Pass). How t
   is a level jump to fix. Clicks at edits: `mgvideo declick <audio>`.
 - **Holes in the bed:** `ffmpeg -v info -i dir/after.mp4 -af "silencedetect=n=-50dB:d=0.5" -f null - 2>&1 | grep silence_`
 - **Overview:** `mgvideo waveform dir/after.mp4 -o wave.png`. It has no beat lines; compare its
-  peaks with the cue times.
+  peaks with the cue times. The picture is peak-normalised (loudest peak at full height), so it
+  shows shape, not level; use `--no-normalize` to compare absolute levels between files, and
+  `--scale sqrt` to make quiet passages readable.
 - **Loudness:** the pass aims for -16 LUFS within 0.5 LU and true peak below -4 dBFS on the MP4,
   and reports a mono downmix. On the final master run `mgvideo inspect final.mp4`: fail beyond
   1 LU from -16 or with true peak above -0.5 dBFS; aim for -1 dBTP.

@@ -43,7 +43,7 @@ fs.mkdirSync(FRAMES, { recursive: true });
 const env = fontEnv(WORK);
 
 // Green screen: a flat chroma green with a soft hot spot and darker corners, like a lit cloth.
-// The key colour in showcase.json (0x22B33A) is the average of this wall.
+// Its average is about 0x22B33A; mgvideo chromakey keys it with the default 0x00FF00 key.
 const screen = `
   <defs>
     <radialGradient id="cloth" cx="0.5" cy="0.4" r="0.75">

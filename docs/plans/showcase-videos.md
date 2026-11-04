@@ -143,7 +143,7 @@ Each site card can link to the review artifacts its run produced, so the skills 
 video of their own are still shown:
 
 - `magnifito-storyboard`: the storyboard contact sheet from `mgvideo storyboard` (10).
-- `magnifito-brand`: the `brand.json` with its contrast and font checks.
+- `magnifito-brand`: the `mgvideo brand check` reports (schema, contrast, fonts) for both brands (v02).
 - `magnifito-deliver`: the `mgvideo validate` result and `mgvideo chapters` output for the
   size-budget copy of 01 (f24).
 

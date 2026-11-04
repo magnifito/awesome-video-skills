@@ -30,6 +30,11 @@ Before packaging, `mgvideo validate <run-id>` executes:
 3. **Claims Preservation**: Asserts that copy in rendered scenes matches `claims.json` verbatim.
 4. **Rights Clearance**: Verifies no assets carry `status: "unresolved"` or `status: "expired"`.
 
+The run id is optional: `mgvideo validate latest -p <project>` (or no run id) picks the newest
+`runs/run-*` of the project. `--out <file>` saves the printed report next to the delivery, and
+`--json --out <file>` saves the JSON report. `mgvideo chapters <project> --out chapters.txt`
+saves the YouTube chapters (`--format vtt|ffmetadata` for WebVTT or FFmetadata).
+
 For the full pre-delivery QA pass (determinism, frame sheets, text, contrast, dead air, captions, release checklist), follow [`reference/render-qa.md`](reference/render-qa.md).
 
 ## Signing Review Record

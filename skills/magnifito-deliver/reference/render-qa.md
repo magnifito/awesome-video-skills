@@ -14,7 +14,8 @@ Paths below use `<project>/runs/<run-id>/final_output_<run-id>.mp4` as `final.mp
 
 ## 0. What the tools already check
 
-`mgvideo validate <run>` does exactly this, and nothing more:
+`mgvideo validate <run>` (`latest` or no run id: the newest run of `-p <project>`; `--out <file>`
+saves the report, `--json` makes it JSON) does exactly this, and nothing more:
 - **[validate]** Every output file exists and its SHA-256 matches `render-result.json`.
 - **[validate]** Width and height match the render request; fps within 1.0 of it; an audio stream exists.
 - **[validate]** `scene-plan.json` and `claims.json` still hash to what the run was rendered from.
@@ -81,8 +82,11 @@ Never call a render done without looking at frames of the current render.
 - **[manual]** No truncated labels, no descenders cut by a mask (mask height at least 1.3x the font
   size), no text crossed by a moving element, no one-frame flash of a layer in its end position,
   no layer popping in or out without motion.
-- **[cmd]** Safe areas: `mgvideo safezone final.mp4 -o safezone.mp4` burns the platform guide on, then
-  make a sheet of it. Keep anything important about 60 px from every edge.
+- **[cmd]** Safe areas: `mgvideo safezone final.mp4 --platform reels -o safezone.mp4` burns the
+  platform guide on (`--platform tiktok|reels|shorts|generic`, default `tiktok`; `--color` sets the
+  dashed outline), then make a sheet of it. Margins are planning guides defined on 1080x1920 and
+  stretched to the frame; labels are white on dark backings, sized with the short side of the frame.
+  Keep anything important about 60 px from every edge.
 
 ## 4. Contrast
 

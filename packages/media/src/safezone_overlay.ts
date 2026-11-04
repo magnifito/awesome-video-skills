@@ -1,7 +1,8 @@
 import path from 'node:path';
 import fs from 'node:fs';
 import crypto from 'node:crypto';
-import { runFfmpeg, probe, rasterizeSvg, safeCssColor } from './proc.js';
+import { runFfmpeg, probe, rasterizeSvg, safeCssColor, escapeXml } from './proc.js';
+import { estimateTextWidth, fitFontSize } from './overlay_text.js';
 
 export type SafeZonePlatform = 'tiktok' | 'reels' | 'shorts' | 'generic';
 
@@ -35,47 +36,69 @@ const CANVAS_H = 1920;
 
 export class SafeZoneOverlayGenerator {
   /**
-   * Generates a 1080x1920 SVG overlay representing the platform's mobile safe margins.
+   * Generates the platform's mobile safe-margin overlay as SVG. Margins are defined on a
+   * 1080x1920 canvas and stretched to `width` x `height`; labels are sized from the short side
+   * of the frame (min(w, h) / 1080) so they never distort, and sit on dark backings so they read
+   * on any footage.
    */
-  static generateSvgOverlay(options: SafeZoneOverlayOptions = {}): string {
+  static generateSvgOverlay(options: SafeZoneOverlayOptions = {}, width = CANVAS_W, height = CANVAS_H): string {
     const stroke = safeCssColor(options.strokeColor ?? '#EF4444');
     const platform = options.platform ?? 'tiktok';
-    const m = SAFE_ZONE_MARGINS[platform];
-    if (!m) throw new Error(`Unknown safe-zone platform: ${String(platform)}`);
+    const base = SAFE_ZONE_MARGINS[platform];
+    if (!base) throw new Error(`Unknown safe-zone platform: ${String(platform)}`);
+    if (!(width > 0 && height > 0)) throw new Error(`Invalid overlay size ${width}x${height}`);
 
-    const safeW = CANVAS_W - m.left - m.right;
-    const safeH = CANVAS_H - m.top - m.bottom;
-    const railX = CANVAS_W - m.right;
+    const sx = width / CANVAS_W;
+    const sy = height / CANVAS_H;
+    const s = Math.min(width, height) / 1080;
+    const m = { top: base.top * sy, bottom: base.bottom * sy, left: base.left * sx, right: base.right * sx };
+    const safeW = width - m.left - m.right;
+    const safeH = height - m.top - m.bottom;
+    const railX = width - m.right;
     const railCx = railX + m.right / 2;
     const midY = m.top + safeH / 2;
+    const r = (n: number) => Math.round(n * 100) / 100;
 
-    return `<svg xmlns="http://www.w3.org/2000/svg" width="${CANVAS_W}" height="${CANVAS_H}" viewBox="0 0 ${CANVAS_W} ${CANVAS_H}">
+    /**
+     * A label: white bold text on a dark rounded backing, centred on (cx, cy). The font shrinks
+     * to fit `maxW` along the text and `maxH` across it. `rotate` turns it 90 degrees.
+     */
+    const label = (text: string, cx: number, cy: number, preferred: number, maxW: number, maxH: number, opts: { rotate?: boolean; border?: string; anchorLeft?: boolean } = {}): string => {
+      const padX = 14 * s;
+      const fs1 = fitFontSize(text, preferred * s, maxW - 2 * padX, { bold: true });
+      const fontSize = Math.min(fs1, maxH / 1.7);
+      const boxW = estimateTextWidth(text, fontSize, { bold: true }) + 2 * padX;
+      const boxH = fontSize * 1.6;
+      const left = opts.anchorLeft ? cx : cx - boxW / 2;
+      const tx = left + boxW / 2;
+      const transform = opts.rotate ? ` transform="rotate(90, ${r(cx)}, ${r(cy)})"` : '';
+      const border = opts.border ? ` stroke="${opts.border}" stroke-width="${r(2 * s)}"` : '';
+      return `<g${transform}>
+    <rect x="${r(left)}" y="${r(cy - boxH / 2)}" width="${r(boxW)}" height="${r(boxH)}" rx="${r(boxH / 4)}" fill="rgba(0, 0, 0, 0.72)"${border} />
+    <text x="${r(tx)}" y="${r(cy)}" text-anchor="middle" dominant-baseline="central" fill="#FFFFFF" font-family="sans-serif" font-size="${r(fontSize)}" font-weight="bold">${escapeXml(text)}</text>
+  </g>`;
+    };
+
+    const edge = 16 * s;
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
   <!-- Top Unsafe Ticker / Camera Header -->
-  <rect x="0" y="0" width="${CANVAS_W}" height="${m.top}" fill="rgba(239, 68, 68, 0.18)" />
-  <text x="${CANVAS_W / 2}" y="${Math.max(30, m.top / 2 + 10)}" text-anchor="middle" fill="#FCA5A5" font-family="sans-serif" font-size="20">
-    TOP SAFE MARGIN (Camera Notch &amp; Search Header)
-  </text>
+  <rect x="0" y="0" width="${r(width)}" height="${r(m.top)}" fill="rgba(239, 68, 68, 0.18)" />
+  ${label('TOP SAFE MARGIN (Camera Notch & Search Header)', width / 2, m.top / 2, 26, width - 2 * edge, m.top - edge)}
 
   <!-- Bottom Unsafe Area (Captions & Audio Marquee) -->
-  <rect x="0" y="${CANVAS_H - m.bottom}" width="${CANVAS_W}" height="${m.bottom}" fill="rgba(239, 68, 68, 0.18)" />
-  <text x="${CANVAS_W / 2}" y="${CANVAS_H - m.bottom / 2}" text-anchor="middle" fill="#FCA5A5" font-family="sans-serif" font-size="20">
-    BOTTOM SAFE MARGIN (Captions, Tags &amp; Audio Disc)
-  </text>
+  <rect x="0" y="${r(height - m.bottom)}" width="${r(width)}" height="${r(m.bottom)}" fill="rgba(239, 68, 68, 0.18)" />
+  ${label('BOTTOM SAFE MARGIN (Captions, Tags & Audio Disc)', width / 2, height - m.bottom / 2, 26, width - 2 * edge, m.bottom - edge)}
 
   <!-- Left Edge Margin -->
-  <rect x="0" y="${m.top}" width="${m.left}" height="${safeH}" fill="rgba(239, 68, 68, 0.08)" />
+  <rect x="0" y="${r(m.top)}" width="${r(m.left)}" height="${r(safeH)}" fill="rgba(239, 68, 68, 0.08)" />
 
   <!-- Right Side Interaction Rail -->
-  <rect x="${railX}" y="${m.top}" width="${m.right}" height="${safeH}" fill="rgba(239, 68, 68, 0.12)" />
-  <text x="${railCx}" y="${midY}" text-anchor="middle" fill="#FCA5A5" font-family="sans-serif" font-size="16" transform="rotate(90, ${railCx}, ${midY})">
-    RIGHT INTERACTION RAIL
-  </text>
+  <rect x="${r(railX)}" y="${r(m.top)}" width="${r(m.right)}" height="${r(safeH)}" fill="rgba(239, 68, 68, 0.12)" />
+  ${label('RIGHT INTERACTION RAIL', railCx, midY, 22, safeH - 2 * edge, m.right - edge / 2, { rotate: true })}
 
   <!-- Active Creative Safe Rectangle -->
-  <rect x="${m.left}" y="${m.top}" width="${safeW}" height="${safeH}" fill="none" stroke="${stroke}" stroke-width="3" stroke-dasharray="10 8" />
-  <text x="${m.left + 40}" y="${m.top + 40}" fill="${stroke}" font-family="sans-serif" font-size="22" font-weight="bold">
-    SAFE CONTENT AREA (${safeW} x ${safeH})
-  </text>
+  <rect x="${r(m.left)}" y="${r(m.top)}" width="${r(safeW)}" height="${r(safeH)}" fill="none" stroke="${stroke}" stroke-width="${r(3 * s)}" stroke-dasharray="${r(10 * s)} ${r(8 * s)}" />
+  ${label(`SAFE CONTENT AREA (${Math.round(safeW)} x ${Math.round(safeH)})`, m.left + 24 * s, m.top + 40 * s, 24, safeW - 48 * s, 60 * s, { border: stroke, anchorLeft: true })}
 </svg>`;
   }
 
@@ -103,12 +126,15 @@ export class SafeZoneOverlayGenerator {
     const tag = `${Date.now()}-${crypto.randomBytes(4).toString('hex')}`;
     const svgPath = path.join(parentDir, `safezone-guide-${tag}.svg`);
     const pngPath = path.join(parentDir, `safezone-guide-${tag}.png`);
-    fs.writeFileSync(svgPath, this.generateSvgOverlay(options));
+    // Draw the guide at the displayed frame size (autorotation is applied to the input by
+    // ffmpeg), so labels keep their proportions on any aspect ratio.
+    const w = info.displayWidth;
+    const h = info.displayHeight;
+    fs.writeFileSync(svgPath, this.generateSvgOverlay(options, w, h));
 
     try {
-      rasterizeSvg(svgPath, pngPath, CANVAS_W, CANVAS_H);
-      // Scale the guide to the displayed frame size (autorotation is applied to the input by ffmpeg).
-      const filter = `[1:v]scale=${info.displayWidth}:${info.displayHeight},format=rgba[g];[0:v][g]overlay=0:0:format=auto[outv]`;
+      rasterizeSvg(svgPath, pngPath, w, h);
+      const filter = `[1:v]scale=${w}:${h},format=rgba[g];[0:v][g]overlay=0:0:format=auto[outv]`;
       runFfmpeg([
         '-i', videoPath,
         '-i', pngPath,

@@ -1,7 +1,8 @@
 import path from 'node:path';
 import fs from 'node:fs';
 import crypto from 'node:crypto';
-import { runFfmpeg, rasterizeSvg, escapeXml } from './proc.js';
+import { runFfmpeg, probe, rasterizeSvg, escapeXml, safeCssColor } from './proc.js';
+import { estimateTextWidth, fitFontSize } from './overlay_text.js';
 
 export type WatermarkPosition = 'top_right' | 'center' | 'bottom_right';
 
@@ -9,7 +10,12 @@ export interface WatermarkOptions {
   text?: string;
   reviewer?: string;
   position?: WatermarkPosition;
+  /** Opacity of the dark banner behind the text, 0..1. Default 0.45. The text stays opaque. */
   opacity?: number;
+  /** Text colour (#hex or a CSS colour name). Default #F87171. */
+  textColor?: string;
+  /** Font size in px on a 1080p frame (scaled with the frame). Default 20. */
+  fontSize?: number;
   outputPath?: string;
 }
 
@@ -18,6 +24,11 @@ export interface WatermarkResult {
   outputPath: string;
   text: string;
   position: WatermarkPosition;
+  /** Banner size in output pixels. */
+  bannerWidth: number;
+  bannerHeight: number;
+  /** Font size actually used, in output pixels (after scaling and fit-to-frame). */
+  fontSize: number;
 }
 
 export class SecurityWatermarker {
@@ -40,6 +51,13 @@ export class SecurityWatermarker {
     if (!['top_right', 'center', 'bottom_right'].includes(position)) {
       throw new Error(`Unsupported watermark position: ${String(position)}`);
     }
+    const textColor = safeCssColor(options.textColor ?? '#F87171');
+    const baseFont = options.fontSize ?? 20;
+    if (!(Number.isFinite(baseFont) && baseFont > 0)) throw new Error(`fontSize must be a positive number, got ${baseFont}`);
+    const info = probe(videoPath);
+    if (!info.hasVideo) throw new Error(`No video stream in ${videoPath}`);
+    const frameW = info.displayWidth;
+    const frameH = info.displayHeight;
     const tag = `${Date.now()}-${crypto.randomBytes(4).toString('hex')}`;
 
     const outPath = options.outputPath ?? path.join(
@@ -52,16 +70,22 @@ export class SecurityWatermarker {
       fs.mkdirSync(parentDir, { recursive: true });
     }
 
-    // Generate SVG watermark banner
-    const svgWidth = 480;
-    const svgHeight = 60;
+    // The banner is designed at 1080p and scales with the short side of the frame. Its width
+    // follows the (estimated) text width; text that would not fit inside the frame margins is
+    // shrunk instead of clipped.
+    const s = Math.min(frameW, frameH) / 1080;
+    const margin = Math.round(40 * s);
+    const padX = 24 * s;
+    const letterSpacing = 1 * s;
+    const maxBannerW = frameW - 2 * margin;
+    const fontSize = fitFontSize(fullText, baseFont * s, maxBannerW - 2 * padX, { bold: true, letterSpacing });
+    const svgWidth = Math.min(maxBannerW, Math.ceil(estimateTextWidth(fullText, fontSize, { bold: true, letterSpacing }) + 2 * padX));
+    const svgHeight = Math.ceil(Math.max(60 * s, fontSize * 2.4));
     const svgPath = path.join(parentDir, `watermark-${tag}.svg`);
     const svgContent = `<svg xmlns="http://www.w3.org/2000/svg" width="${svgWidth}" height="${svgHeight}" viewBox="0 0 ${svgWidth} ${svgHeight}">
-  <rect width="100%" height="100%" fill="rgba(15, 23, 42, ${opacity.toFixed(2)})" rx="8" />
+  <rect width="100%" height="100%" fill="rgba(15, 23, 42, ${opacity.toFixed(2)})" rx="${(8 * s).toFixed(2)}" />
   <text x="50%" y="55%" text-anchor="middle" dominant-baseline="middle"
-        fill="#F87171" font-family="sans-serif" font-size="14" font-weight="bold" letter-spacing="1">
-    ${escapeXml(fullText)}
-  </text>
+        fill="${textColor}" font-family="sans-serif" font-size="${fontSize.toFixed(2)}" font-weight="bold" letter-spacing="${letterSpacing.toFixed(2)}">${escapeXml(fullText)}</text>
 </svg>`;
 
     fs.writeFileSync(svgPath, svgContent);
@@ -70,11 +94,11 @@ export class SecurityWatermarker {
     const pngPath = path.join(parentDir, `watermark-${tag}.png`);
 
     // Position overlay coords
-    let overlayExpr = 'W-w-40:40';
+    let overlayExpr = `W-w-${margin}:${margin}`;
     if (position === 'center') {
       overlayExpr = '(W-w)/2:(H-h)/2';
     } else if (position === 'bottom_right') {
-      overlayExpr = 'W-w-40:H-h-120';
+      overlayExpr = `W-w-${margin}:H-h-${Math.round(120 * s)}`;
     }
 
     try {
@@ -105,7 +129,10 @@ export class SecurityWatermarker {
       sourceVideo: videoPath,
       outputPath: outPath,
       text: fullText,
-      position
+      position,
+      bannerWidth: svgWidth,
+      bannerHeight: svgHeight,
+      fontSize,
     };
   }
 }

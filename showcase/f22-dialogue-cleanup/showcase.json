@@ -12,10 +12,10 @@
     "mgvideo eq work/declicked.wav --preset rumble-reduction --out work/eq.wav",
     "mgvideo noise-gate work/eq.wav --threshold -26 --ratio 8 --out work/gated.wav",
     "mgvideo compress-audio work/gated.wav --preset broadcast-master --out work/clean.wav",
-    "mgvideo waveform work/noisy.wav --width 1600 --height 900 --color '#7a584c' --out work/wave-before.png",
-    "mgvideo waveform work/clean.wav --width 1600 --height 900 --color '#7a584c' --out work/wave-after.png",
+    "mgvideo waveform work/noisy.wav --width 1600 --height 280 --color '#7a584c' --out work/wave-before.png",
+    "mgvideo waveform work/clean.wav --width 1600 --height 280 --color '#7a584c' --out work/wave-after.png",
     "node rasterize.mjs panels.svg work/panels.png 1920 1080",
-    "ffmpeg -loop 1 -framerate 30 -t 12 -i work/panels.png -i work/wave-before.png -i work/wave-after.png -i work/noisy.wav -i work/clean.wav -filter_complex \"[1:v]crop=1600:280[wb];[2:v]crop=1600:280[wa];[0:v][wb]overlay=160:210[v1];[v1][wa]overlay=160:660,drawbox=x=140:y=640:w=1640:h=320:color=0xf0eadf@0.6:t=fill:enable='lt(t,6)',drawbox=x=140:y=190:w=1640:h=320:color=0xf0eadf@0.6:t=fill:enable='gte(t,6)',drawbox=x=140:y=190:w=10:h=320:color=0x8acf31:t=fill:enable='lt(t,6)',drawbox=x=140:y=640:w=10:h=320:color=0x8acf31:t=fill:enable='gte(t,6)'[bg];color=c=0x2b1c17:s=4x300:r=30:d=12,split[p1][p2];[bg][p1]overlay=x='160+1600*t/6':y=200:enable='lt(t,6)'[bg2];[bg2][p2]overlay=x='160+1600*(t-6)/6':y=650:enable='gte(t,6)',format=yuv420p[v];[3:a][4:a]concat=n=2:v=0:a=1,aformat=sample_rates=48000:channel_layouts=stereo[a]\" -map [v] -map [a] -t 12 -c:v libx264 -crf 16 -preset medium -c:a aac -b:a 160k work/compare.mp4"
+    "ffmpeg -loop 1 -framerate 30 -t 12 -i work/panels.png -i work/wave-before.png -i work/wave-after.png -i work/noisy.wav -i work/clean.wav -filter_complex \"[0:v][1:v]overlay=160:210[v1];[v1][2:v]overlay=160:660,drawbox=x=140:y=640:w=1640:h=320:color=0xf0eadf@0.6:t=fill:enable='lt(t,6)',drawbox=x=140:y=190:w=1640:h=320:color=0xf0eadf@0.6:t=fill:enable='gte(t,6)',drawbox=x=140:y=190:w=10:h=320:color=0x8acf31:t=fill:enable='lt(t,6)',drawbox=x=140:y=640:w=10:h=320:color=0x8acf31:t=fill:enable='gte(t,6)'[bg];color=c=0x2b1c17:s=4x300:r=30:d=12,split[p1][p2];[bg][p1]overlay=x='160+1600*t/6':y=200:enable='lt(t,6)'[bg2];[bg2][p2]overlay=x='160+1600*(t-6)/6':y=650:enable='gte(t,6)',format=yuv420p[v];[3:a][4:a]concat=n=2:v=0:a=1,aformat=sample_rates=48000:channel_layouts=stereo[a]\" -map [v] -map [a] -t 12 -c:v libx264 -crf 16 -preset medium -c:a aac -b:a 160k work/compare.mp4"
   ],
   "output": "work/compare.mp4",
   "poster_at": 8.5,

@@ -9,6 +9,9 @@ export async function runWaveform(
     width?: number;
     height?: number;
     color?: string;
+    scale?: WaveformOptions['scale'];
+    normalize?: boolean;
+    splitChannels?: boolean;
   }
 ): Promise<WaveformResult> {
   const resolvedMedia = path.resolve(process.cwd(), mediaPath);
@@ -22,7 +25,10 @@ export async function runWaveform(
     outputPath: outPath,
     width: options.width,
     height: options.height,
-    colorHex: options.color
+    colorHex: options.color,
+    scale: options.scale,
+    normalize: options.normalize,
+    splitChannels: options.splitChannels
   });
 }
 

@@ -1,7 +1,7 @@
 {
   "brand_id": "quillfern",
   "name": "Quillfern Studio",
-  "project": "quillfern",
+  "brand_file": "/Users/kirov/dev/magnifito/awesome-video-skills/showcase/v02-brand-swap/quillfern/brand.json",
   "passed": true,
   "passed_checks": 11,
   "total_checks": 11,
@@ -17,6 +17,7 @@
       "check": "Contrast: text_primary on background (headlines and body)",
       "level": "error",
       "passed": true,
+      "details": "11.86:1 (minimum 4.5:1)",
       "foreground": "#f6f1e4",
       "background": "#0d343a",
       "ratio": 11.86,
@@ -26,6 +27,7 @@
       "check": "Contrast: text_primary on secondary (gradient end of the brand-title card)",
       "level": "error",
       "passed": true,
+      "details": "7.58:1 (minimum 4.5:1)",
       "foreground": "#f6f1e4",
       "background": "#17545b",
       "ratio": 7.58,
@@ -35,6 +37,7 @@
       "check": "Contrast: primary on background (marks, icons, large text)",
       "level": "error",
       "passed": true,
+      "details": "6.51:1 (minimum 3:1)",
       "foreground": "#f0a63a",
       "background": "#0d343a",
       "ratio": 6.51,
@@ -44,6 +47,7 @@
       "check": "Contrast: accent on background (highlights; keep it off text and information)",
       "level": "warning",
       "passed": true,
+      "details": "9.28:1 (minimum 3:1)",
       "foreground": "#ffd166",
       "background": "#0d343a",
       "ratio": 9.28,
@@ -59,8 +63,8 @@
       "check": "Font file: Geist Mono",
       "level": "error",
       "passed": true,
-      "file": "fonts/GeistMono-Medium.woff2",
-      "bytes": 51500
+      "details": "fonts/GeistMono-Medium.woff2 (51500 bytes)",
+      "file": "fonts/GeistMono-Medium.woff2"
     },
     {
       "check": "Font licence text shipped: Geist Mono",
@@ -72,6 +76,7 @@
       "check": "Font family name in file: Geist Mono",
       "level": "error",
       "passed": true,
+      "details": "Geist Mono,Geist Mono Medium",
       "source": "fc-scan",
       "file_family": "Geist Mono,Geist Mono Medium",
       "style": "Medium,Regular"
@@ -80,14 +85,16 @@
       "check": "Cyrillic coverage as declared: Geist Mono",
       "level": "error",
       "passed": true,
+      "details": "covers Bulgarian",
       "source": "fc-scan",
       "declared": true,
       "covers_bulgarian": true
     },
     {
-      "check": "Primary logo file exists",
+      "check": "Logo file exists: primary",
       "level": "error",
       "passed": true,
+      "details": "assets/quillfern-logo.svg",
       "file": "assets/quillfern-logo.svg"
     }
   ]
