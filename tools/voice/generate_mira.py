@@ -5,7 +5,8 @@ committed voice files the showcase recipes read (they never need the model):
     showcase/<project>/voice/mira.wav    24 kHz mono 16-bit PCM, the whole voice track of the clip
     showcase/<project>/voice/mira.json   timing: every word (start/end in seconds), every placed
                                          segment, and a per-video-frame mouth track (open, wide)
-                                         computed from the audio for lip sync
+                                         computed from the audio for lip sync, and the
+                                         phoneme/viseme timing from tools/voice/visemes.py
 
 and, for 03-talking-head-edit, the edit inputs that depend on the real word times:
 transcript.json (the raw take's word-level transcript) and edl.json (the cut list).
@@ -166,6 +167,17 @@ PROJECTS: dict[str, Project] = {
         timeline=[("pause", 0.5), ("take", "s-main")],
     ),
 }
+
+
+def visemes():
+    """tools/voice/visemes.py (phoneme and viseme timing), loaded by path since `python -I` keeps
+    the script's folder off sys.path."""
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location("mira_visemes", Path(__file__).with_name("visemes.py"))
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
 
 
 # --- model and STT ----------------------------------------------------------------------------
@@ -546,6 +558,7 @@ def build(name: str, p: Project) -> dict:
         "segments": segments,
         "words": words,
         "mouth": {"fps": FPS, "open": opened, "wide": wide},
+        "visemes": visemes().compute(audio, sr, words),
     }
     for folder in p.folders:
         out = SHOWCASE / folder / "voice"

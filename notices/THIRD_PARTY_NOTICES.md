@@ -82,3 +82,12 @@ As established in the Magnifito Super Video Blueprint (2 November 2026), all ups
 - **Use**: `tools/voice/generate_mira.py` designs a new voice from a text description (no cloning, not
   based on a real person) and writes `showcase/<project>/voice/mira.wav` and `mira.json`. Only these
   outputs are committed; the weights and the Python environment stay outside the repository.
+
+### Mira's lip-sync timing
+- **Data**: CMUdict, the Carnegie Mellon Pronouncing Dictionary (`cmusphinx/cmudict`)
+- **Pinned Commit**: `74790861f652b15e4ac49015a90074ad62a27690` (`cmudict.dict`, SHA-256 checked)
+- **License**: BSD-2-Clause, Copyright (C) 1993-2015 Carnegie Mellon University
+- **Use**: `tools/voice/visemes.py` downloads the dictionary into the cache outside the repository,
+  looks up each spoken word's phonemes and times them against the committed `mira.wav`. Only the
+  derived timing (the `visemes` block of `showcase/<project>/voice/mira.json`: phoneme symbols with
+  start and end times and a mouth shape) is committed, not the dictionary. No model is involved.

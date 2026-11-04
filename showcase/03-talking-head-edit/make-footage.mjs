@@ -3,7 +3,7 @@
  * voice from voice/mira.wav (AI-generated with Qwen3-TTS VoiceDesign; a designed voice, not a
  * real person). The raw take really says its "um"s, "uh", false start and long pauses, and
  * transcript.json holds the measured word times, so the EDL cuts land between words. Her lips
- * follow the audio (the mouth track in voice/mira.json).
+ * follow the audio (phoneme timing and loudness in voice/mira.json).
  *
  * Usage (from this folder): node make-footage.mjs
  */

@@ -51,7 +51,7 @@ for (let f = 0; f < frames; f++) {
   const t = f / FPS;
   fs.writeFileSync(svgFile, `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
   <g transform="${cameraTransform(t, W, H)}">${screen}
-  ${presenterSvg({ t, cx: W / 2, baseY: H + 60, scale: 1.25, voice })}
+  ${presenterSvg({ t, cx: W / 2, baseY: H + 60, scale: 1.25, voice, shadow: false, pin: BRAND.gold })}
   </g></svg>`);
   rasterize(svgFile, path.join(FRAMES, `${String(f).padStart(5, '0')}.png`), env);
 }

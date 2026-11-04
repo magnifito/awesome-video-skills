@@ -196,7 +196,10 @@ other file a command names is committed.
   never committed. Credits and captions say the voice is AI-generated. Mixkit audio is never used.
 - Each clip is 4–15 s. Each MP4 stays under 3 MB where possible; the suite fails above 6 MiB.
   At about 54 clips the videos folder grows from 22 MB to about 45 MB.
-- One presenter name ("Mira") across all talking-head clips.
+- One presenter name ("Mira") across all talking-head clips. She is an illustrated, clearly
+  fictional character drawn by each project's `presenter.mjs`. Her lip sync uses phoneme timing
+  that `tools/voice/visemes.py` computes once from the committed WAV and word times (CMUdict,
+  BSD-2-Clause, no model) and stores in the timing JSON, so renders stay plain Node.
 
 ## Build order
 
