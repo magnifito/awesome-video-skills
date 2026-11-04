@@ -63,9 +63,12 @@ export async function runClean(projectDir: string, options: CleanOptions = {}): 
         // name so touching an old run's files cannot make it look like the latest one.
         const fromName = Number(/^run-(\d+)-/.exec(entry.name)?.[1]);
         const stat = nodeFs.statSync(path.join(runsDir, entry.name));
+        // Other names: the earlier of birth and modification time. Birth time alone ties on
+        // Linux when runs are created in the same millisecond, and it ignores a backdated mtime.
+        const fsTime = Math.min(...[stat.birthtimeMs, stat.mtimeMs].filter(t => t > 0));
         return {
           name: entry.name,
-          time: Number.isFinite(fromName) ? fromName : stat.birthtimeMs || stat.mtimeMs || 0
+          time: Number.isFinite(fromName) ? fromName : Number.isFinite(fsTime) ? fsTime : 0
         };
       })
       .sort((a, b) => a.time - b.time);
