@@ -1,329 +1,329 @@
 {
   "schema_version": "1.0.0",
-  "source_audio_hash": "synthetic-raw-take-v1",
+  "source_audio_hash": "qwen3-tts-mira-raw-take-v1",
   "language": "en",
   "correction_version": "v1",
   "words": [
     {
       "word": "Hi,",
-      "start_ms": 700,
-      "end_ms": 960,
-      "confidence": 0.97,
+      "start_ms": 740,
+      "end_ms": 1060,
+      "confidence": 0.7,
       "speaker": "Mira"
     },
     {
       "word": "I'm",
-      "start_ms": 1160,
-      "end_ms": 1480,
-      "confidence": 0.97,
+      "start_ms": 1440,
+      "end_ms": 1700,
+      "confidence": 0.99,
       "speaker": "Mira"
     },
     {
       "word": "Mira",
-      "start_ms": 1540,
-      "end_ms": 1920,
-      "confidence": 0.97,
+      "start_ms": 1700,
+      "end_ms": 2000,
+      "confidence": 0.7,
       "speaker": "Mira"
     },
     {
       "word": "from",
-      "start_ms": 1980,
-      "end_ms": 2360,
-      "confidence": 0.97,
+      "start_ms": 2000,
+      "end_ms": 2220,
+      "confidence": 0.95,
       "speaker": "Mira"
     },
     {
       "word": "Magnifito.",
-      "start_ms": 2420,
-      "end_ms": 3100,
-      "confidence": 0.97,
+      "start_ms": 2220,
+      "end_ms": 2970,
+      "confidence": 0.4,
       "speaker": "Mira"
     },
     {
       "word": "Um,",
-      "start_ms": 4700,
-      "end_ms": 5200,
-      "confidence": 0.81,
+      "start_ms": 4550,
+      "end_ms": 4990,
+      "confidence": 0.53,
       "speaker": "Mira"
     },
     {
       "word": "so,",
-      "start_ms": 5400,
+      "start_ms": 5390,
       "end_ms": 5660,
-      "confidence": 0.97,
+      "confidence": 0.96,
       "speaker": "Mira"
     },
     {
       "word": "we're",
-      "start_ms": 6010,
-      "end_ms": 6450,
-      "confidence": 0.97,
+      "start_ms": 6090,
+      "end_ms": 6230,
+      "confidence": 0.91,
       "speaker": "Mira"
     },
     {
       "word": "a",
-      "start_ms": 6510,
-      "end_ms": 6710,
-      "confidence": 0.97,
+      "start_ms": 6230,
+      "end_ms": 6370,
+      "confidence": 0.99,
       "speaker": "Mira"
     },
     {
       "word": "digital",
-      "start_ms": 6770,
-      "end_ms": 7330,
-      "confidence": 0.97,
+      "start_ms": 6370,
+      "end_ms": 6650,
+      "confidence": 0.99,
       "speaker": "Mira"
     },
     {
       "word": "marketing",
-      "start_ms": 7390,
-      "end_ms": 8070,
-      "confidence": 0.97,
+      "start_ms": 6650,
+      "end_ms": 7070,
+      "confidence": 0.98,
       "speaker": "Mira"
     },
     {
       "word": "agency",
-      "start_ms": 8130,
-      "end_ms": 8630,
-      "confidence": 0.97,
+      "start_ms": 7070,
+      "end_ms": 7570,
+      "confidence": 1.0,
       "speaker": "Mira"
     },
     {
       "word": "in",
-      "start_ms": 8690,
-      "end_ms": 8950,
-      "confidence": 0.97,
+      "start_ms": 7570,
+      "end_ms": 7790,
+      "confidence": 0.98,
       "speaker": "Mira"
     },
     {
       "word": "Sofia.",
-      "start_ms": 9010,
-      "end_ms": 9450,
-      "confidence": 0.97,
+      "start_ms": 7790,
+      "end_ms": 8270,
+      "confidence": 0.81,
       "speaker": "Mira"
     },
     {
       "word": "We",
-      "start_ms": 10850,
-      "end_ms": 11110,
-      "confidence": 0.97,
+      "start_ms": 9650,
+      "end_ms": 9780,
+      "confidence": 1.0,
       "speaker": "Mira"
     },
     {
       "word": "build",
-      "start_ms": 11170,
-      "end_ms": 11610,
-      "confidence": 0.97,
+      "start_ms": 9780,
+      "end_ms": 9980,
+      "confidence": 1.0,
       "speaker": "Mira"
     },
     {
       "word": "websites,",
-      "start_ms": 11670,
-      "end_ms": 12290,
-      "confidence": 0.97,
+      "start_ms": 9980,
+      "end_ms": 10690,
+      "confidence": 0.98,
       "speaker": "Mira"
     },
     {
       "word": "uh,",
-      "start_ms": 12540,
-      "end_ms": 13040,
-      "confidence": 0.81,
+      "start_ms": 11070,
+      "end_ms": 11840,
+      "confidence": 0.38,
       "speaker": "Mira"
     },
     {
       "word": "run",
-      "start_ms": 13340,
-      "end_ms": 13660,
-      "confidence": 0.97,
+      "start_ms": 12220,
+      "end_ms": 12390,
+      "confidence": 1.0,
       "speaker": "Mira"
     },
     {
       "word": "social",
-      "start_ms": 13720,
-      "end_ms": 14220,
-      "confidence": 0.97,
+      "start_ms": 12390,
+      "end_ms": 12710,
+      "confidence": 1.0,
       "speaker": "Mira"
     },
     {
       "word": "media,",
-      "start_ms": 14280,
-      "end_ms": 14720,
-      "confidence": 0.97,
+      "start_ms": 12710,
+      "end_ms": 13110,
+      "confidence": 1.0,
       "speaker": "Mira"
     },
     {
       "word": "email",
-      "start_ms": 14920,
-      "end_ms": 15360,
+      "start_ms": 13450,
+      "end_ms": 13650,
       "confidence": 0.97,
       "speaker": "Mira"
     },
     {
       "word": "and",
-      "start_ms": 15420,
-      "end_ms": 15740,
-      "confidence": 0.97,
+      "start_ms": 13650,
+      "end_ms": 13950,
+      "confidence": 0.53,
       "speaker": "Mira"
     },
     {
       "word": "ads,",
-      "start_ms": 15800,
-      "end_ms": 16120,
-      "confidence": 0.97,
+      "start_ms": 13950,
+      "end_ms": 14720,
+      "confidence": 0.99,
       "speaker": "Mira"
     },
     {
       "word": "and",
-      "start_ms": 17220,
-      "end_ms": 17540,
-      "confidence": 0.97,
+      "start_ms": 15700,
+      "end_ms": 15860,
+      "confidence": 0.34,
       "speaker": "Mira"
     },
     {
       "word": "we,",
-      "start_ms": 17600,
-      "end_ms": 17860,
-      "confidence": 0.97,
+      "start_ms": 15860,
+      "end_ms": 16160,
+      "confidence": 0.51,
       "speaker": "Mira"
     },
     {
       "word": "and",
-      "start_ms": 18160,
-      "end_ms": 18480,
-      "confidence": 0.97,
+      "start_ms": 16740,
+      "end_ms": 16850,
+      "confidence": 1.0,
       "speaker": "Mira"
     },
     {
       "word": "we",
-      "start_ms": 18540,
-      "end_ms": 18800,
-      "confidence": 0.97,
+      "start_ms": 16850,
+      "end_ms": 16990,
+      "confidence": 1.0,
       "speaker": "Mira"
     },
     {
       "word": "automate",
-      "start_ms": 18860,
-      "end_ms": 19480,
-      "confidence": 0.97,
+      "start_ms": 16990,
+      "end_ms": 17330,
+      "confidence": 1.0,
       "speaker": "Mira"
     },
     {
       "word": "the",
-      "start_ms": 19540,
-      "end_ms": 19860,
-      "confidence": 0.97,
+      "start_ms": 17330,
+      "end_ms": 17510,
+      "confidence": 1.0,
       "speaker": "Mira"
     },
     {
       "word": "boring",
-      "start_ms": 19920,
-      "end_ms": 20420,
-      "confidence": 0.97,
+      "start_ms": 17510,
+      "end_ms": 17750,
+      "confidence": 0.99,
       "speaker": "Mira"
     },
     {
       "word": "parts,",
-      "start_ms": 20480,
-      "end_ms": 20920,
-      "confidence": 0.97,
+      "start_ms": 17750,
+      "end_ms": 18210,
+      "confidence": 1.0,
       "speaker": "Mira"
     },
     {
       "word": "so",
-      "start_ms": 21220,
-      "end_ms": 21480,
-      "confidence": 0.97,
+      "start_ms": 18210,
+      "end_ms": 18690,
+      "confidence": 0.58,
       "speaker": "Mira"
     },
     {
       "word": "your",
-      "start_ms": 21540,
-      "end_ms": 21920,
-      "confidence": 0.97,
+      "start_ms": 18690,
+      "end_ms": 18890,
+      "confidence": 1.0,
       "speaker": "Mira"
     },
     {
       "word": "team",
-      "start_ms": 21980,
-      "end_ms": 22360,
-      "confidence": 0.97,
+      "start_ms": 18890,
+      "end_ms": 19190,
+      "confidence": 1.0,
       "speaker": "Mira"
     },
     {
       "word": "can",
-      "start_ms": 22420,
-      "end_ms": 22740,
-      "confidence": 0.97,
+      "start_ms": 19190,
+      "end_ms": 19430,
+      "confidence": 1.0,
       "speaker": "Mira"
     },
     {
       "word": "um,",
-      "start_ms": 23040,
-      "end_ms": 23540,
-      "confidence": 0.81,
+      "start_ms": 19810,
+      "end_ms": 20250,
+      "confidence": 0.53,
       "speaker": "Mira"
     },
     {
       "word": "focus",
-      "start_ms": 23890,
-      "end_ms": 24330,
-      "confidence": 0.97,
+      "start_ms": 20680,
+      "end_ms": 20880,
+      "confidence": 1.0,
       "speaker": "Mira"
     },
     {
       "word": "on",
-      "start_ms": 24390,
-      "end_ms": 24650,
-      "confidence": 0.97,
+      "start_ms": 20880,
+      "end_ms": 21160,
+      "confidence": 1.0,
       "speaker": "Mira"
     },
     {
       "word": "growth.",
-      "start_ms": 24710,
-      "end_ms": 25210,
-      "confidence": 0.97,
+      "start_ms": 21160,
+      "end_ms": 21550,
+      "confidence": 1.0,
       "speaker": "Mira"
     },
     {
       "word": "Let's",
-      "start_ms": 26510,
-      "end_ms": 26950,
-      "confidence": 0.97,
+      "start_ms": 23150,
+      "end_ms": 23600,
+      "confidence": 1.0,
       "speaker": "Mira"
     },
     {
       "word": "talk",
-      "start_ms": 27010,
-      "end_ms": 27390,
-      "confidence": 0.97,
+      "start_ms": 23600,
+      "end_ms": 23760,
+      "confidence": 1.0,
       "speaker": "Mira"
     },
     {
       "word": "about",
-      "start_ms": 27450,
-      "end_ms": 27890,
-      "confidence": 0.97,
+      "start_ms": 23760,
+      "end_ms": 23980,
+      "confidence": 1.0,
       "speaker": "Mira"
     },
     {
       "word": "your",
-      "start_ms": 27950,
-      "end_ms": 28330,
-      "confidence": 0.97,
+      "start_ms": 23980,
+      "end_ms": 24120,
+      "confidence": 1.0,
       "speaker": "Mira"
     },
     {
       "word": "next",
-      "start_ms": 28390,
-      "end_ms": 28770,
-      "confidence": 0.97,
+      "start_ms": 24120,
+      "end_ms": 24320,
+      "confidence": 1.0,
       "speaker": "Mira"
     },
     {
       "word": "campaign.",
-      "start_ms": 28830,
-      "end_ms": 29450,
-      "confidence": 0.97,
+      "start_ms": 24320,
+      "end_ms": 24920,
+      "confidence": 1.0,
       "speaker": "Mira"
     }
   ]

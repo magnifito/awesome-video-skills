@@ -14,7 +14,7 @@ mgvideo multicam tiles four clips that start on the same frame of the talking-he
 
 Install the plugin (see the repository README), open this folder, and give Claude this prompt:
 
-> Put four versions of the talking-head edit in one 2x2 grid for a client review: the original from 2 s (cut from ../videos/03-talking-head-edit.mp4), the colour grade (../videos/f04-color-grade.mp4), the vignette (../videos/f10-vignette.mp4) and the 1.5x speed-up (../videos/f13-speed.mp4). They all start at 2 s of the edit, so keep them in sync, use the original's audio, and name each cell with a small Geist label (labels.svg, fonts/).
+> Put four versions of the talking-head edit in one 2x2 grid for a client review: the original from 2.5 s (cut from ../videos/03-talking-head-edit.mp4), the colour grade (../videos/f04-color-grade.mp4), the vignette (../videos/f10-vignette.mp4) and the 1.5x speed-up (../videos/f13-speed.mp4). They all start at 2.5 s of the edit, so keep them in sync, use the original's audio, and name each cell with a small Geist label (labels.svg, fonts/).
 
 ## Recreate it by hand
 
@@ -27,7 +27,7 @@ npm run showcase -- f17-multicam
 Or run the steps yourself from `showcase/f17-multicam/` (after `npm run build && npm link`):
 
 ```sh
-ffmpeg -ss 2 -t 7 -i ../videos/03-talking-head-edit.mp4 -c:v libx264 -crf 16 -preset medium -c:a aac -b:a 160k work/original.mp4
+ffmpeg -ss 2.5 -t 7 -i ../videos/03-talking-head-edit.mp4 -c:v libx264 -crf 16 -preset medium -c:a aac -b:a 160k work/original.mp4
 mgvideo multicam work/original.mp4 ../videos/f04-color-grade.mp4 ../videos/f10-vignette.mp4 ../videos/f13-speed.mp4 --layout quad-2x2 --out work/grid.mp4
 node rasterize.mjs labels.svg work/labels.png 1920 1080
 ffmpeg -i work/grid.mp4 -i work/labels.png -filter_complex "[0:v][1:v]overlay=0:0,format=yuv420p[v]" -map [v] -map 0:a -c:v libx264 -crf 16 -preset medium -c:a aac -b:a 160k work/final.mp4
@@ -37,6 +37,6 @@ The finished file is `work/final.mp4`. The config files in this folder are the i
 
 ## Credits
 
-- Video and audio: 03-talking-head-edit, f04-color-grade, f10-vignette and f13-speed from this showcase (synthetic presenter and generated voice-like tone track; Geist typeface by Vercel, SIL OFL 1.1)
+- Video and audio: 03-talking-head-edit, f04-color-grade, f10-vignette and f13-speed from this showcase (synthetic presenter; voice AI-generated with the Apache-2.0 Qwen3-TTS VoiceDesign model, a designed voice not based on a real person; Geist typeface by Vercel, SIL OFL 1.1)
 - Magnifito logo: owned by Magnifito, the demo client; used with permission
 - Labels: Geist typeface by Vercel, SIL Open Font License 1.1 (fonts/OFL-Geist.txt)

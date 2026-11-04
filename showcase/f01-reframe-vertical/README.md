@@ -14,7 +14,7 @@ The 16:9 talking-head edit reframed to a 1080x1920 vertical for Reels, Shorts an
 
 Install the plugin (see the repository README), open this folder, and give Claude this prompt:
 
-> Use the magnifito-variants skill to turn the Magnifito talking-head edit (showcase/videos/03-talking-head-edit.mp4) into a vertical 9:16 clip for Reels and Shorts. Take 8 seconds from 2.7 s, centre-crop so the presenter and her captions stay in frame, and save it as work/vertical.mp4.
+> Use the magnifito-variants skill to turn the Magnifito talking-head edit (showcase/videos/03-talking-head-edit.mp4) into a vertical 9:16 clip for Reels and Shorts. Take 8 seconds from 2.5 s, centre-crop so the presenter and her captions stay in frame, and save it as work/vertical.mp4.
 
 ## Recreate it by hand
 
@@ -27,7 +27,7 @@ npm run showcase -- f01-reframe-vertical
 Or run the steps yourself from `showcase/f01-reframe-vertical/` (after `npm run build && npm link`):
 
 ```sh
-ffmpeg -ss 2.7 -t 8 -i ../videos/03-talking-head-edit.mp4 -c:v libx264 -crf 16 -preset medium -c:a aac -b:a 160k work/source.mp4
+ffmpeg -ss 2.5 -t 8 -i ../videos/03-talking-head-edit.mp4 -c:v libx264 -crf 16 -preset medium -c:a aac -b:a 160k work/source.mp4
 mgvideo reframe work/source.mp4 --ratio 9:16 --strategy crop --out work/vertical.mp4
 ```
 
@@ -35,5 +35,5 @@ The finished file is `work/vertical.mp4`. The config files in this folder are th
 
 ## Credits
 
-- Video and audio: 03-talking-head-edit from this showcase (synthetic presenter and generated voice track; Geist typeface by Vercel, SIL OFL 1.1)
+- Video and audio: 03-talking-head-edit from this showcase (synthetic presenter; voice AI-generated with the Apache-2.0 Qwen3-TTS VoiceDesign model, a designed voice not based on a real person; Geist typeface by Vercel, SIL OFL 1.1)
 - Magnifito logo: owned by Magnifito, the demo client; used with permission

@@ -72,3 +72,13 @@ As established in the Magnifito Super Video Blueprint (2 November 2026), all ups
 - **Audited Commit**: `7b91435c301d530351dcf5ebb91dd139c002e405`
 - **License**: Core MIT; `@motion-canvas/ffmpeg` exporter is GPL-3.0.
 
+
+## Generated media (model outputs, no model files committed)
+
+### Mira's voice in the showcase
+- **Model**: `Qwen/Qwen3-TTS-12Hz-1.7B-VoiceDesign` (Hugging Face)
+- **Pinned Revision**: `5ecdb67327fd37bb2e042aab12ff7391903235d3`
+- **License**: Apache-2.0
+- **Use**: `tools/voice/generate_mira.py` designs a new voice from a text description (no cloning, not
+  based on a real person) and writes `showcase/<project>/voice/mira.wav` and `mira.json`. Only these
+  outputs are committed; the weights and the Python environment stay outside the repository.

@@ -14,7 +14,7 @@ A title card burned into the top of the talking-head edit with mgvideo title, in
 
 Install the plugin (see the repository README), open this folder, and give Claude this prompt:
 
-> Burn a title card into 7 seconds of ../videos/03-talking-head-edit.mp4 (from 2 s to 9 s): "Meet Mira from Magnifito" with the subtitle "Digital marketing agency, Sofia", placed at the top so it does not cover her face or the captions. Use the Magnifito brand: cream card (#f0eadf), dark brown title (#2b1c17), brown subtitle (#7a584c), a green accent (#8acf31) and Geist from fonts/. Keep the audio and save it as work/titled.mp4.
+> Burn a title card into 7 seconds of ../videos/03-talking-head-edit.mp4 (from 2.5 s to 9.5 s): "Meet Mira from Magnifito" with the subtitle "Digital marketing agency, Sofia", placed at the top so it does not cover her face or the captions. Use the Magnifito brand: cream card (#f0eadf), dark brown title (#2b1c17), brown subtitle (#7a584c), a green accent (#8acf31) and Geist from fonts/. Keep the audio and save it as work/titled.mp4.
 
 ## Recreate it by hand
 
@@ -27,7 +27,7 @@ npm run showcase -- f12-title-card
 Or run the steps yourself from `showcase/f12-title-card/` (after `npm run build && npm link`):
 
 ```sh
-ffmpeg -ss 2 -t 7 -i ../videos/03-talking-head-edit.mp4 -c:v libx264 -crf 16 -preset medium -c:a aac -b:a 160k work/source.mp4
+ffmpeg -ss 2.5 -t 7 -i ../videos/03-talking-head-edit.mp4 -c:v libx264 -crf 16 -preset medium -c:a aac -b:a 160k work/source.mp4
 mgvideo title work/source.mp4 --title "Meet Mira from Magnifito" --subtitle "Digital marketing agency, Sofia" --position top --bg '#f0eadf' --color '#2b1c17' --subtitle-color '#7a584c' --accent '#8acf31' --font-file fonts/Geist-Variable.ttf --title-size 44 --subtitle-size 24 --out work/titled.mp4
 ```
 
@@ -35,5 +35,5 @@ The finished file is `work/titled.mp4`. The config files in this folder are the 
 
 ## Credits
 
-- Video and audio: 03-talking-head-edit from this showcase (synthetic presenter and generated voice-like tone track; Geist typeface by Vercel, SIL OFL 1.1)
+- Video and audio: 03-talking-head-edit from this showcase (synthetic presenter; voice AI-generated with the Apache-2.0 Qwen3-TTS VoiceDesign model, a designed voice not based on a real person; Geist typeface by Vercel, SIL OFL 1.1)
 - Magnifito logo: owned by Magnifito, the demo client; used with permission

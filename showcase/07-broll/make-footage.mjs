@@ -3,18 +3,19 @@
  * (1920x1080, 30 fps, 15 s). The presenter stands on the left third of a warm studio so the
  * right side is free for B-roll panels, with burned-in captions under her.
  *
- * Mouth, voice-like tone track and captions all follow work/transcript.json, which
- * `mgvideo broll words captions.srt` writes first, so the B-roll plan and the footage share
- * one set of word times.
+ * Her voice is voice/mira.wav (AI-generated with Qwen3-TTS VoiceDesign; a designed voice, not a
+ * real person). Her lips follow the audio and the burned-in captions follow the measured word
+ * times, both from voice/mira.json. captions.srt holds the same lines with their measured start
+ * and end, so `mgvideo broll words` and the B-roll plan line up with what she says.
  *
- * Usage (from this folder, after broll words): node make-footage.mjs
+ * Usage (from this folder): node make-footage.mjs
  */
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
-  BRAND, cameraTransform, esc, fontEnv, presenterSvg, rasterize, roomSvg, smooth, synthVoice, syllables, writeWav,
+  BRAND, cameraTransform, esc, fontEnv, loadVoice, presenterSvg, rasterize, roomSvg, smooth,
 } from './presenter.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -26,8 +27,9 @@ const FPS = 30;
 const DURATION = 15;
 const CX = 520;
 
-const words = JSON.parse(fs.readFileSync(path.join(WORK, 'transcript.json'), 'utf8')).words;
-const sylls = syllables(words, 21);
+const voice = loadVoice();
+if (Math.abs(voice.duration - DURATION) > 0.001) throw new Error(`voice/mira.wav is ${voice.duration} s, expected ${DURATION} s`);
+const words = voice.words.map(w => ({ word: w.word, start_ms: Math.round(w.start * 1000), end_ms: Math.round(w.end * 1000) }));
 
 // Caption chunks: at most 26 characters, never across a cue boundary (a gap of 0.25 s or more).
 const chunks = [];
@@ -65,17 +67,16 @@ for (let f = 0; f < frames; f++) {
   const t = f / FPS;
   fs.writeFileSync(svgFile, `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
   <g transform="${cameraTransform(t, W, H)}">${room}
-  ${presenterSvg({ t, cx: CX, baseY: H + 60, scale: 1.25, sylls, gesture: gesture(t), shirt: BRAND.brown })}
+  ${presenterSvg({ t, cx: CX, baseY: H + 60, scale: 1.25, voice, gesture: gesture(t), shirt: BRAND.brown })}
   </g>${captionSvg(t)}</svg>`);
   rasterize(svgFile, path.join(FRAMES, `${String(f).padStart(5, '0')}.png`), env);
 }
 fs.rmSync(svgFile);
 
-writeWav(path.join(WORK, 'voice.wav'), synthVoice(sylls, DURATION));
 execFileSync('ffmpeg', [
   '-y', '-hide_banner', '-loglevel', 'error',
   '-framerate', String(FPS), '-i', path.join(FRAMES, '%05d.png'),
-  '-i', path.join(WORK, 'voice.wav'),
+  '-i', voice.wav,
   '-c:v', 'libx264', '-preset', 'medium', '-crf', '16', '-pix_fmt', 'yuv420p', '-r', String(FPS),
   '-c:a', 'aac', '-b:a', '160k', '-ar', '48000', '-ac', '2',
   '-t', String(DURATION), path.join(WORK, 'source.mp4'),

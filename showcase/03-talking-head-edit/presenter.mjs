@@ -1,10 +1,9 @@
 /**
- * Synthetic presenter: a stylised speaker in a small studio room, drawn as SVG frames, plus a
- * voice-like tone track that follows the transcript. Everything is deterministic: the same
- * transcript always produces the same frames and samples.
- *
- * There is no speech here. The "voice" is a pitched harmonic tone per syllable, shaped like
- * speech rhythm, so the mouth, the audio and the captions line up and cuts are audible.
+ * Synthetic presenter: Mira, a stylised speaker in a small studio room, drawn as SVG frames. Her
+ * voice is committed audio (voice/mira.wav, AI-generated with Qwen3-TTS VoiceDesign, a designed
+ * voice not based on a real person) and her lips follow that audio: voice/mira.json carries an
+ * open/wide mouth track per video frame computed from the waveform. Everything here is
+ * deterministic: the same voice files always produce the same frames.
  */
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
@@ -47,123 +46,33 @@ export function logoSvg({ x, y, height, part = 'full', wordmark }) {
   return `<svg x="${x}" y="${y}" width="${(height * box[2]) / box[3]}" height="${height}" viewBox="${box.join(' ')}">${body}</svg>`;
 }
 
-/** Small seeded PRNG (mulberry32) so every run draws the same noise. */
-export function rng(seed) {
-  let a = seed >>> 0;
-  return () => {
-    a = (a + 0x6d2b79f5) >>> 0;
-    let t = a;
-    t = Math.imul(t ^ (t >>> 15), t | 1);
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
-
 export const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v));
 export const smooth = t => { const x = clamp(t); return x * x * (3 - 2 * x); };
 export const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
-const FILLERS = new Set(['um', 'uh', 'erm', 'hmm']);
-export const isFiller = w => FILLERS.has(w.toLowerCase().replace(/[^a-z]/g, ''));
-
 /**
- * Splits transcript words into syllables with start/end in seconds. Each syllable carries
- * a pitch and a vowel colour so the tone track sounds like speech rhythm, not a beep.
+ * Mira's voice for this clip, from the committed voice/ folder: voice/mira.wav (the audio) and
+ * voice/mira.json (word times, and a mouth track per video frame computed from the audio).
+ * Both are written by tools/voice/generate_mira.py; recipes never need the TTS model.
  */
-export function syllables(words, seed = 7) {
-  const rand = rng(seed);
-  const out = [];
-  for (const w of words) {
-    const s = w.start_ms / 1000;
-    const e = w.end_ms / 1000;
-    const clean = w.word.toLowerCase().replace(/[^a-z']/g, '');
-    const filler = isFiller(clean);
-    const n = filler ? 1 : Math.max(1, (clean.match(/[aeiouy]+/g) ?? []).length - (/[^aeiou]e$/.test(clean) && clean.length > 3 ? 1 : 0));
-    const end = /[.,!?]$/.test(w.word);
-    for (let i = 0; i < n; i++) {
-      const a = s + ((e - s) * i) / n;
-      const b = s + ((e - s) * (i + 1)) / n;
-      out.push({
-        start: a,
-        end: b,
-        filler,
-        // Lips stay almost closed on "um"; "uh" is a lazy half-open vowel.
-        open: filler ? (clean.startsWith('u') && clean.endsWith('m') ? 0.12 : 0.45) : 0.65 + rand() * 0.35,
-        f0: filler ? 150 : 185 + rand() * 40 - (end && i === n - 1 ? 30 : 0),
-        formant: filler ? 380 : 550 + rand() * 650,
-      });
-    }
-  }
-  return out;
+export function loadVoice(dir = HERE) {
+  const meta = JSON.parse(fs.readFileSync(path.join(dir, 'voice', 'mira.json'), 'utf8'));
+  return { ...meta, wav: path.join(dir, 'voice', 'mira.wav') };
 }
 
-/** Mouth opening 0..1 at time t. */
-export function mouthOpen(t, sylls) {
-  for (const s of sylls) {
-    if (t < s.start - 0.03 || t > s.end + 0.03) continue;
-    const ph = clamp((t - s.start) / Math.max(0.04, s.end - s.start));
-    return s.filler ? s.open * (0.6 + 0.4 * Math.sin(Math.PI * ph)) : s.open * Math.pow(Math.sin(Math.PI * ph), 0.7);
-  }
-  return 0;
+/** Lip shape at time t, from the audio: `open` 0..1 (jaw) and `wide` 0..1 (ee wide, oo rounded). */
+export function mouthAt(t, voice) {
+  const { fps, open, wide } = voice.mouth;
+  const x = clamp(t * fps, 0, open.length - 1);
+  const i = Math.floor(x);
+  const j = Math.min(open.length - 1, i + 1);
+  const k = x - i;
+  return { open: open[i] + (open[j] - open[i]) * k, wide: wide[i] + (wide[j] - wide[i]) * k };
 }
 
 /** True while the speaker is producing a filler sound (eyes drift up, as people do). */
-export function inFiller(t, sylls) {
-  return sylls.some(s => s.filler && t >= s.start - 0.15 && t <= s.end + 0.2);
-}
-
-/** Voice-like tone track: harmonics of f0 shaped by one moving formant, plus room tone. */
-export function synthVoice(sylls, duration, rate = 48000, seed = 11) {
-  const n = Math.ceil(duration * rate);
-  const out = new Float32Array(n);
-  const rand = rng(seed);
-  for (let i = 0; i < n; i++) out[i] = (rand() * 2 - 1) * 0.0015;
-  for (const s of sylls) {
-    const i0 = Math.max(0, Math.floor(s.start * rate));
-    const i1 = Math.min(n, Math.ceil(s.end * rate));
-    const len = Math.max(1, i1 - i0);
-    let phase = 0;
-    for (let i = i0; i < i1; i++) {
-      const p = (i - i0) / len;
-      const t = (i - i0) / rate;
-      const env = Math.min(1, t / 0.018) * Math.min(1, (i1 - i) / rate / 0.05) * (s.filler ? 0.8 : 1);
-      const f0 = s.f0 * (1 + 0.04 * Math.sin(Math.PI * p) - 0.03 * p);
-      phase += (2 * Math.PI * f0) / rate;
-      let v = 0;
-      for (let k = 1; k <= 14; k++) {
-        const fk = f0 * k;
-        const w = 1 / (1 + Math.pow((fk - s.formant) / 260, 2)) + 0.35 / k;
-        v += Math.sin(phase * k) * w;
-      }
-      // A short noise burst at the onset reads as a consonant.
-      const burst = !s.filler && t < 0.025 ? (rand() * 2 - 1) * 0.5 * (1 - t / 0.025) : 0;
-      out[i] += (v * 0.07 + burst * 0.15) * env;
-    }
-  }
-  let peak = 0;
-  for (const v of out) peak = Math.max(peak, Math.abs(v));
-  const g = peak > 0 ? 0.8 / peak : 1;
-  for (let i = 0; i < n; i++) out[i] *= g;
-  return out;
-}
-
-/** Writes 16-bit mono PCM WAV. */
-export function writeWav(file, samples, rate = 48000) {
-  const buf = Buffer.alloc(44 + samples.length * 2);
-  buf.write('RIFF', 0);
-  buf.writeUInt32LE(36 + samples.length * 2, 4);
-  buf.write('WAVEfmt ', 8);
-  buf.writeUInt32LE(16, 16);
-  buf.writeUInt16LE(1, 20);
-  buf.writeUInt16LE(1, 22);
-  buf.writeUInt32LE(rate, 24);
-  buf.writeUInt32LE(rate * 2, 28);
-  buf.writeUInt16LE(2, 32);
-  buf.writeUInt16LE(16, 34);
-  buf.write('data', 36);
-  buf.writeUInt32LE(samples.length * 2, 40);
-  for (let i = 0; i < samples.length; i++) buf.writeInt16LE(Math.round(clamp(samples[i], -1, 1) * 32767), 44 + i * 2);
-  fs.writeFileSync(file, buf);
+export function inFiller(t, voice) {
+  return voice.words.some(w => w.filler && t >= w.start - 0.15 && t <= w.end + 0.2);
 }
 
 /**
@@ -231,12 +140,13 @@ export function roomSvg(W, H, layout = 'center') {
 
 /**
  * The presenter at time t. `cx` is the body centre, `scale` the figure size.
- * `gesture` 0..1 raises the right hand into view (counting on fingers, pointing).
+ * `voice` comes from loadVoice(); `gesture` 0..1 raises the right hand into view (counting on
+ * fingers, pointing).
  */
-export function presenterSvg({ t, cx, baseY = 1080, scale = 1, sylls, gesture = 0, shirt = BRAND.brown }) {
-  const open = mouthOpen(t, sylls);
-  const filler = inFiller(t, sylls);
-  const talking = sylls.some(s => t >= s.start - 0.2 && t <= s.end + 0.2);
+export function presenterSvg({ t, cx, baseY = 1080, scale = 1, voice, gesture = 0, shirt = BRAND.brown }) {
+  const { open, wide } = mouthAt(t, voice);
+  const filler = inFiller(t, voice);
+  const talking = voice.words.some(w => t >= w.start - 0.2 && t <= w.end + 0.2);
   // Head sway and a small nod that follows the voice.
   const sway = Math.sin(t * 0.9) * 3 + Math.sin(t * 2.3) * 1.5;
   const nod = open * 5 + Math.sin(t * 1.7) * 2;
@@ -248,7 +158,8 @@ export function presenterSvg({ t, cx, baseY = 1080, scale = 1, sylls, gesture = 
   const lookY = filler ? -7 : 0;
   const brow = talking ? open * 4 : 0;
   const mouthH = 3 + open * 30;
-  const mouthW = 40 - open * 8;
+  // Wide vowels (ee) stretch the lips, rounded ones (oo) pull them in.
+  const mouthW = 40 - open * 8 + (wide - 0.5) * 16;
   const g = smooth(gesture);
   const handX = 175 - g * 20;
   const handY = 80 - g * 400;

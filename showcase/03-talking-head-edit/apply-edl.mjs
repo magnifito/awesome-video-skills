@@ -50,8 +50,11 @@ for (const c of edl.cuts) {
   const frames = c.output_end_frame - c.output_start_frame;
   const dur = mapper.framesToSeconds(frames);
   execFileSync('ffmpeg', [
-    '-y', '-hide_banner', '-loglevel', 'error', '-i', raw,
-    '-ss', start.toFixed(6), '-frames:v', String(frames), '-t', dur.toFixed(6),
+    // Seek on the input (frame-exact, since the cut is re-encoded) so the audio filter starts at
+    // the cut: with an output-side seek the fade-out time would land in the source timeline and
+    // silence every cut that starts later than its own length.
+    '-y', '-hide_banner', '-loglevel', 'error', '-ss', start.toFixed(6), '-i', raw,
+    '-frames:v', String(frames), '-t', dur.toFixed(6),
     '-af', `afade=t=in:d=0.01,afade=t=out:st=${(dur - 0.01).toFixed(4)}:d=0.01`,
     '-c:v', 'libx264', '-preset', 'medium', '-crf', '16', '-pix_fmt', 'yuv420p',
     '-c:a', 'aac', '-b:a', '160k', '-ar', '48000', '-ac', '2',

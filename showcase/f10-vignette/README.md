@@ -14,7 +14,7 @@ A lens vignette on the talking-head edit, shown as a split screen: the left half
 
 Install the plugin (see the repository README), open this folder, and give Claude this prompt:
 
-> Add a noticeable lens vignette (angle 0.9 rad) to 7 seconds of ../videos/03-talking-head-edit.mp4 (from 2 s to 9 s) so the corners fall off and the eye goes to Mira. Then make a before/after split: left half the original, right half the vignetted clip, a thin cream divider and small "Before" and "After: vignette" labels in Geist from fonts/ (labels.svg). Keep the audio.
+> Add a noticeable lens vignette (angle 0.9 rad) to 7 seconds of ../videos/03-talking-head-edit.mp4 (from 2.5 s to 9.5 s) so the corners fall off and the eye goes to Mira. Then make a before/after split: left half the original, right half the vignetted clip, a thin cream divider and small "Before" and "After: vignette" labels in Geist from fonts/ (labels.svg). Keep the audio.
 
 ## Recreate it by hand
 
@@ -27,7 +27,7 @@ npm run showcase -- f10-vignette
 Or run the steps yourself from `showcase/f10-vignette/` (after `npm run build && npm link`):
 
 ```sh
-ffmpeg -ss 2 -t 7 -i ../videos/03-talking-head-edit.mp4 -c:v libx264 -crf 16 -preset medium -c:a aac -b:a 160k work/source.mp4
+ffmpeg -ss 2.5 -t 7 -i ../videos/03-talking-head-edit.mp4 -c:v libx264 -crf 16 -preset medium -c:a aac -b:a 160k work/source.mp4
 mgvideo vignette work/source.mp4 --angle 0.9 --out work/vignette.mp4
 node rasterize.mjs labels.svg work/labels.png 1920 1080
 ffmpeg -i work/source.mp4 -i work/vignette.mp4 -i work/labels.png -filter_complex "[0:v]crop=960:1080:0:0[l];[1:v]crop=960:1080:960:0[r];[l][r]hstack=inputs=2,drawbox=x=958:y=0:w=4:h=1080:color=0xf0eadf:t=fill[c];[c][2:v]overlay=0:0,format=yuv420p[v]" -map [v] -map 1:a -c:v libx264 -crf 16 -preset medium -c:a aac -b:a 160k work/compare.mp4
@@ -37,6 +37,6 @@ The finished file is `work/compare.mp4`. The config files in this folder are the
 
 ## Credits
 
-- Video and audio: 03-talking-head-edit from this showcase (synthetic presenter and generated voice-like tone track; Geist typeface by Vercel, SIL OFL 1.1)
+- Video and audio: 03-talking-head-edit from this showcase (synthetic presenter; voice AI-generated with the Apache-2.0 Qwen3-TTS VoiceDesign model, a designed voice not based on a real person; Geist typeface by Vercel, SIL OFL 1.1)
 - Magnifito logo: owned by Magnifito, the demo client; used with permission
 - Labels: Geist typeface by Vercel, SIL Open Font License 1.1 (fonts/OFL-Geist.txt)

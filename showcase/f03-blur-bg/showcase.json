@@ -19,7 +19,7 @@
   },
   "synthetic_footage": true,
   "credits": [
-    "Video and audio: f01-reframe-vertical from this showcase, cut from 03-talking-head-edit (synthetic presenter and generated voice track; Geist typeface by Vercel, SIL OFL 1.1)",
+    "Video and audio: f01-reframe-vertical from this showcase, cut from 03-talking-head-edit (synthetic presenter; voice AI-generated with the Apache-2.0 Qwen3-TTS VoiceDesign model, a designed voice not based on a real person; Geist typeface by Vercel, SIL OFL 1.1)",
     "Magnifito logo: owned by Magnifito, the demo client; used with permission"
   ]
 }

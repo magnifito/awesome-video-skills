@@ -8,8 +8,8 @@
       "id": "01",
       "title": "One plan",
       "line": "Websites, social media, email and ads, all in one plan.",
-      "in": 2.5,
-      "out": 7.2,
+      "in": 2.52,
+      "out": 7.58,
       "kind": "panel",
       "area": { "x": 990, "y": 70, "w": 860, "h": 860 },
       "recipe": "motion-card-morph",
@@ -20,8 +20,8 @@
       "id": "02",
       "title": "Automate the follow-up",
       "line": "Then we automate the follow-up.",
-      "in": 7.3,
-      "out": 9.6,
+      "in": 7.86,
+      "out": 9.78,
       "kind": "full",
       "recipe": "motion-kinetic-type",
       "scene": { "copy": "Then we automate the follow-up" },
@@ -31,8 +31,8 @@
       "id": "03",
       "title": "Every new lead",
       "line": "Every new lead gets a welcome email, and your sales team hears about it.",
-      "in": 9.7,
-      "out": 14.9,
+      "in": 9.96,
+      "out": 14.48,
       "kind": "panel",
       "area": { "x": 990, "y": 70, "w": 860, "h": 860 },
       "recipe": "motion-card-morph",
@@ -41,7 +41,7 @@
     }
   ],
   "notes": [
-    "work/source.mp4 is synthetic: a generated presenter on the left third with a voice-like tone track, made by make-footage.mjs.",
+    "work/source.mp4 is synthetic: a generated presenter on the left third, made by make-footage.mjs, speaking with an AI-generated voice (Qwen3-TTS VoiceDesign, a designed voice not based on a real person).",
     "No figures are shown; every panel row is taken from the spoken line."
   ]
 }

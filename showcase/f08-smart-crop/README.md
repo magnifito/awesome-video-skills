@@ -14,7 +14,7 @@ The 16:9 talking-head edit cut down to a 1080x1350 portrait for the Instagram an
 
 Install the plugin (see the repository README), open this folder, and give Claude this prompt:
 
-> Use the magnifito-variants skill to make a 4:5 portrait version of the Magnifito talking-head edit (../videos/03-talking-head-edit.mp4) for the Instagram feed. Take 8 seconds from 2.7 s, smart-crop to 4:5 with a centre focus so Mira stays in frame, keep the audio, and save it as work/portrait.mp4.
+> Use the magnifito-variants skill to make a 4:5 portrait version of the Magnifito talking-head edit (../videos/03-talking-head-edit.mp4) for the Instagram feed. Take 8 seconds from 2.5 s, smart-crop to 4:5 with a centre focus so Mira stays in frame, keep the audio, and save it as work/portrait.mp4.
 
 ## Recreate it by hand
 
@@ -27,7 +27,7 @@ npm run showcase -- f08-smart-crop
 Or run the steps yourself from `showcase/f08-smart-crop/` (after `npm run build && npm link`):
 
 ```sh
-ffmpeg -ss 2.7 -t 8 -i ../videos/03-talking-head-edit.mp4 -c:v libx264 -crf 16 -preset medium -c:a aac -b:a 160k work/source.mp4
+ffmpeg -ss 2.5 -t 8 -i ../videos/03-talking-head-edit.mp4 -c:v libx264 -crf 16 -preset medium -c:a aac -b:a 160k work/source.mp4
 mgvideo smart-crop work/source.mp4 --ratio 4:5 --focus center --out work/portrait.mp4
 ```
 
@@ -35,5 +35,5 @@ The finished file is `work/portrait.mp4`. The config files in this folder are th
 
 ## Credits
 
-- Video and audio: 03-talking-head-edit from this showcase (synthetic presenter and generated voice-like tone track; Geist typeface by Vercel, SIL OFL 1.1)
+- Video and audio: 03-talking-head-edit from this showcase (synthetic presenter; voice AI-generated with the Apache-2.0 Qwen3-TTS VoiceDesign model, a designed voice not based on a real person; Geist typeface by Vercel, SIL OFL 1.1)
 - Magnifito logo: owned by Magnifito, the demo client; used with permission

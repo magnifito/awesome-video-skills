@@ -1,8 +1,9 @@
 /**
  * Generates the inputs for showcase f18 (all under work/):
  *   - greenscreen.mp4  1920x1080, 30 fps, 8 s: the synthetic presenter (presenter.mjs) in front
- *                      of a green screen with soft, uneven studio lighting, plus a voice-like
- *                      tone track. Nothing is said; the line below only drives mouth and rhythm.
+ *                      of a green screen with soft, uneven studio lighting, saying one line in
+ *                      Mira's voice (voice/mira.wav, AI-generated with Qwen3-TTS VoiceDesign; a
+ *                      designed voice, not a real person). Her lips follow the audio.
  *   - set.png          the Magnifito-branded background plate she is keyed onto: a cream set
  *                      wall with a dot grid, the real Magnifito logo and a wooden floor strip.
  *
@@ -15,7 +16,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
-  BRAND, cameraTransform, fontEnv, logoSvg, presenterSvg, rasterize, synthVoice, syllables, writeWav,
+  BRAND, cameraTransform, fontEnv, loadVoice, logoSvg, presenterSvg, rasterize,
 } from './presenter.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -26,17 +27,9 @@ const H = 1080;
 const FPS = 30;
 const DURATION = 8;
 
-// Word timings for a made-up line, spaced like relaxed speech.
-const LINE = 'Hi, I am Mira. Today we shot this in front of a green screen, and the set behind me was added afterwards.';
-const words = [];
-let ms = 400;
-for (const word of LINE.split(' ')) {
-  const len = 140 + word.replace(/[^a-z]/gi, '').length * 55;
-  if (ms + len > DURATION * 1000 - 400) break;
-  words.push({ word, start_ms: ms, end_ms: ms + len });
-  ms += len + (/[.,]$/.test(word) ? 380 : 70);
-}
-const sylls = syllables(words, 9);
+// Mira's line, from voice/ (her lips follow the audio).
+const voice = loadVoice();
+if (Math.abs(voice.duration - DURATION) > 0.001) throw new Error(`voice/mira.wav is ${voice.duration} s, expected ${DURATION} s`);
 
 fs.rmSync(FRAMES, { recursive: true, force: true });
 fs.mkdirSync(FRAMES, { recursive: true });
@@ -58,7 +51,7 @@ for (let f = 0; f < frames; f++) {
   const t = f / FPS;
   fs.writeFileSync(svgFile, `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
   <g transform="${cameraTransform(t, W, H)}">${screen}
-  ${presenterSvg({ t, cx: W / 2, baseY: H + 60, scale: 1.25, sylls })}
+  ${presenterSvg({ t, cx: W / 2, baseY: H + 60, scale: 1.25, voice })}
   </g></svg>`);
   rasterize(svgFile, path.join(FRAMES, `${String(f).padStart(5, '0')}.png`), env);
 }
@@ -87,11 +80,10 @@ fs.writeFileSync(svgFile, `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" 
 rasterize(svgFile, path.join(WORK, 'set.png'), env);
 fs.rmSync(svgFile);
 
-writeWav(path.join(WORK, 'voice.wav'), synthVoice(sylls, DURATION));
 execFileSync('ffmpeg', [
   '-y', '-hide_banner', '-loglevel', 'error',
   '-framerate', String(FPS), '-i', path.join(FRAMES, '%05d.png'),
-  '-i', path.join(WORK, 'voice.wav'),
+  '-i', voice.wav,
   '-c:v', 'libx264', '-preset', 'medium', '-crf', '16', '-pix_fmt', 'yuv420p', '-r', String(FPS),
   '-c:a', 'aac', '-b:a', '160k', '-ar', '48000', '-ac', '2',
   '-t', String(DURATION), path.join(WORK, 'greenscreen.mp4'),

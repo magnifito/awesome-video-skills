@@ -14,7 +14,7 @@ The talking-head edit sped up 1.5x with pitch-preserved audio, playing next to t
 
 Install the plugin (see the repository README), open this folder, and give Claude this prompt:
 
-> Speed up 12 seconds of ../videos/03-talking-head-edit.mp4 (from 2 s) by 1.5x with pitch-preserved audio, so it plays in 8 s. To show the client the difference, put the first 8 s of the original and the sped-up clip side by side on a dark brown frame, each with a small Geist label (labels.svg, fonts/), and use the sped-up audio.
+> Speed up 12 seconds of ../videos/03-talking-head-edit.mp4 (from 2.5 s) by 1.5x with pitch-preserved audio, so it plays in 8 s. To show the client the difference, put the first 8 s of the original and the sped-up clip side by side on a dark brown frame, each with a small Geist label (labels.svg, fonts/), and use the sped-up audio.
 
 ## Recreate it by hand
 
@@ -27,7 +27,7 @@ npm run showcase -- f13-speed
 Or run the steps yourself from `showcase/f13-speed/` (after `npm run build && npm link`):
 
 ```sh
-ffmpeg -ss 2 -t 12 -i ../videos/03-talking-head-edit.mp4 -c:v libx264 -crf 16 -preset medium -c:a aac -b:a 160k work/source.mp4
+ffmpeg -ss 2.5 -t 12 -i ../videos/03-talking-head-edit.mp4 -c:v libx264 -crf 16 -preset medium -c:a aac -b:a 160k work/source.mp4
 mgvideo speed work/source.mp4 --factor 1.5 --out work/fast.mp4
 node rasterize.mjs labels.svg work/labels.png 1920 1080
 ffmpeg -t 8 -i work/source.mp4 -i work/fast.mp4 -i work/labels.png -filter_complex "color=c=0x2b1c17:s=1920x1080:r=30:d=8[bg];[0:v]scale=912:513,setsar=1[l];[1:v]scale=912:513,setsar=1[r];[bg][l]overlay=32:300[a];[a][r]overlay=976:300[b];[b][2:v]overlay=0:0,format=yuv420p[v]" -map [v] -map 1:a -c:v libx264 -crf 16 -preset medium -c:a aac -b:a 160k work/compare.mp4
@@ -37,6 +37,6 @@ The finished file is `work/compare.mp4`. The config files in this folder are the
 
 ## Credits
 
-- Video and audio: 03-talking-head-edit from this showcase (synthetic presenter and generated voice-like tone track; Geist typeface by Vercel, SIL OFL 1.1)
+- Video and audio: 03-talking-head-edit from this showcase (synthetic presenter; voice AI-generated with the Apache-2.0 Qwen3-TTS VoiceDesign model, a designed voice not based on a real person; Geist typeface by Vercel, SIL OFL 1.1)
 - Magnifito logo: owned by Magnifito, the demo client; used with permission
 - Labels: Geist typeface by Vercel, SIL Open Font License 1.1 (fonts/OFL-Geist.txt)

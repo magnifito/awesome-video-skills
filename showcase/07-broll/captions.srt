@@ -1,15 +1,15 @@
 1
-00:00:00,400 --> 00:00:02,700
+00:00:00,440 --> 00:00:02,520
 At Magnifito, we run your whole funnel.
 
 2
-00:00:03,000 --> 00:00:07,000
+00:00:03,020 --> 00:00:07,380
 Websites, social media, email and ads, all in one plan.
 
 3
-00:00:07,400 --> 00:00:09,500
+00:00:07,960 --> 00:00:09,380
 Then we automate the follow-up.
 
 4
-00:00:09,900 --> 00:00:14,400
+00:00:10,160 --> 00:00:13,980
 Every new lead gets a welcome email, and your sales team hears about it.
