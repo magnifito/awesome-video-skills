@@ -1,0 +1,14 @@
+{
+  "name": "magnifito-video",
+  "owner": { "name": "Kiril Kirov", "url": "https://github.com/magnifito" },
+  "metadata": {
+    "description": "Magnifito video production skills for Claude Code, driven by the mgvideo CLI."
+  },
+  "plugins": [
+    {
+      "name": "magnifito-video-skills",
+      "source": "./",
+      "description": "Ten Magnifito skills for branded promos, product demos, footage edits, audio, variants and delivery. Requires the mgvideo CLI, ffmpeg and rsvg-convert."
+    }
+  ]
+}

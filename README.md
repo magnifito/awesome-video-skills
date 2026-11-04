@@ -62,6 +62,32 @@ All 12 audited repositories are tracked by immutable commit hash in `registry/up
 9. **`magnifito-variants`**: Adapts layouts to `9:16`, `16:9`, `1:1`, processes Cyrillic copy, and runs commerce batches.
 10. **`magnifito-deliver`**: Audits render outputs with ffprobe, verifies rights, and packages signed deliveries.
 
+### Install the skills in Claude Code
+
+The repository is a Claude Code plugin marketplace. Install all ten skills in one step:
+
+```
+/plugin install magnifito-video-skills --marketplace magnifito/awesome-video-skills
+```
+
+On Claude Code older than 2.1.275, add the marketplace first:
+
+```
+/plugin marketplace add magnifito/awesome-video-skills
+/plugin install magnifito-video-skills@magnifito-video
+```
+
+The skills drive the `mgvideo` CLI, so install it and the media tools too:
+
+```sh
+git clone https://github.com/magnifito/awesome-video-skills && cd awesome-video-skills
+npm ci && npm run build && npm link
+brew install ffmpeg librsvg   # or your platform's packages
+mgvideo doctor
+```
+
+Update later with `/plugin marketplace update magnifito-video`.
+
 ---
 
 ## CLI Surface (`mgvideo`)

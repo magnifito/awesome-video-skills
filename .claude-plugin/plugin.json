@@ -1,0 +1,9 @@
+{
+  "name": "magnifito-video-skills",
+  "description": "Magnifito video production for Claude Code. Ten skills: magnifito-video (router), magnifito-brand, magnifito-storyboard, magnifito-promo, magnifito-product-demo, magnifito-edit, magnifito-broll, magnifito-audio, magnifito-variants, magnifito-deliver. Requires the mgvideo CLI, ffmpeg and rsvg-convert.",
+  "version": "0.1.0",
+  "author": { "name": "Kiril Kirov" },
+  "repository": "https://github.com/magnifito/awesome-video-skills",
+  "license": "Apache-2.0",
+  "keywords": ["video", "ffmpeg", "motion-graphics", "marketing", "skills"]
+}
