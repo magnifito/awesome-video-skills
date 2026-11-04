@@ -1,0 +1,21 @@
+{
+  "id": "f02-reframe-square",
+  "title": "Square 1:1 reframe of the motion promo",
+  "type": "Square reframe",
+  "skill": "magnifito-variants",
+  "engine": "reframe",
+  "caption": "The silent 16:9 motion promo reframed to a 1080x1080 square for feed posts. The fit strategy keeps the full-width headline and chart, and the cream padding matches the promo's own background.",
+  "prompt": "Make a 1:1 square version of ../videos/06-motion-graphics.mp4 for an Instagram and LinkedIn feed post. Use the first 9.6 seconds (headline, button, service card and the leads chart). The headline and the chart are wider than a square, so fit the frame rather than crop it, and pad with the Magnifito cream #f0eadf so the bands blend into the background. Output 1080x1080.",
+  "commands": [
+    "ffmpeg -t 9.6 -i ../videos/06-motion-graphics.mp4 -c:v libx264 -crf 16 -preset medium work/source.mp4",
+    "mgvideo reframe work/source.mp4 --ratio 1:1 --strategy fit --color '#f0eadf' --out work/square.mp4"
+  ],
+  "output": "work/square.mp4",
+  "poster_at": 8.8,
+  "expect": { "width": 1080, "height": 1080, "duration_seconds": 9.6, "audio": false },
+  "synthetic_footage": false,
+  "credits": [
+    "Video: 06-motion-graphics from this showcase (Geist and Geist Mono fonts by Vercel, SIL OFL 1.1; motion engine adapted from Barty-Bart/motion-graphics, MIT)",
+    "Magnifito logo: owned by Magnifito, the demo client; used with permission"
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "id": "f01-reframe-vertical",
+  "title": "Vertical 9:16 reframe of the talking-head edit",
+  "type": "Vertical reframe",
+  "skill": "magnifito-variants",
+  "engine": "reframe",
+  "caption": "The 16:9 talking-head edit reframed to a 1080x1920 vertical for Reels, Shorts and TikTok. The centre crop keeps the presenter; long caption lines and the wide edit timeline are cut, which is why a real vertical cut re-flows its captions.",
+  "prompt": "Use the magnifito-variants skill to turn the Magnifito talking-head edit (showcase/videos/03-talking-head-edit.mp4) into a vertical 9:16 clip for Reels and Shorts. Take 8 seconds from 2.7 s, centre-crop so the presenter and her captions stay in frame, and save it as work/vertical.mp4.",
+  "commands": [
+    "ffmpeg -ss 2.7 -t 8 -i ../videos/03-talking-head-edit.mp4 -c:v libx264 -crf 16 -preset medium -c:a aac -b:a 160k work/source.mp4",
+    "mgvideo reframe work/source.mp4 --ratio 9:16 --strategy crop --out work/vertical.mp4"
+  ],
+  "output": "work/vertical.mp4",
+  "poster_at": 5,
+  "expect": {
+    "width": 1080,
+    "height": 1920,
+    "duration_seconds": 8,
+    "audio": true
+  },
+  "synthetic_footage": true,
+  "credits": [
+    "Video and audio: 03-talking-head-edit from this showcase (synthetic presenter and generated voice track; Geist typeface by Vercel, SIL OFL 1.1)",
+    "Magnifito logo: owned by Magnifito, the demo client; used with permission"
+  ]
+}

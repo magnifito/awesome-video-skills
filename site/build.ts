@@ -74,12 +74,12 @@ function page(metas: ShowcaseMeta[]): string {
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
 <style>
 :root {
-  --bg: #f6f3ee; --surface: #ffffff; --ink: #1b1a17; --muted: #615d55; --line: #e3ddd2;
-  --accent: #d2452f; --code-bg: #f1ece4;
+  --bg: #f0eadf; --surface: #fbf8f3; --ink: #2b1c17; --muted: #6a5a50; --line: #d8c6b4;
+  --accent: #7a584c; --code-bg: #ece3d6;
 }
 @media (prefers-color-scheme: dark) {
-  :root { --bg: #121110; --surface: #1c1a18; --ink: #f2eee8; --muted: #a7a196; --line: #2e2b27;
-    --accent: #ff7a5c; --code-bg: #26231f; }
+  :root { --bg: #1d1411; --surface: #2b1c17; --ink: #f0eadf; --muted: #c2ad9b; --line: #573a30;
+    --accent: #d8c6b4; --code-bg: #3a2820; }
 }
 * { box-sizing: border-box; }
 body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.55 Inter, system-ui, sans-serif; }

@@ -16,7 +16,9 @@ if (!input || !output || !width || !height) {
   process.exit(2);
 }
 fs.mkdirSync(path.dirname(output), { recursive: true });
-const conf = path.join(path.dirname(output), 'fonts.conf');
+// Absolute path: fontconfig resolves a relative FONTCONFIG_FILE against its own config dir,
+// not the working directory, and would silently fall back to the default fonts.
+const conf = path.resolve(path.dirname(output), 'fonts.conf');
 const includes = ['/opt/homebrew/etc/fonts/fonts.conf', '/usr/local/etc/fonts/fonts.conf', '/etc/fonts/fonts.conf']
   .map(p => `  <include ignore_missing="yes">${p}</include>`)
   .join('\n');

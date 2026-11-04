@@ -93,7 +93,9 @@ Update later with `/plugin marketplace update magnifito-video`.
 ## Showcase
 
 Nine example videos, one per video type, made with these skills for Magnifito as the demo
-client. Watch them on the [showcase site](https://magnifito.github.io/awesome-video-skills/).
+client. The [showcase site](https://magnifito.github.io/awesome-video-skills/) also has a style
+gallery (12 clips, one per visual recipe, `showcase/s*`) and 6 format and finishing clips
+(`reframe`, `blur-bg`, `grade`, `lower-third`, `loop`, `showcase/f*`).
 
 | | | |
 | :---: | :---: | :---: |
@@ -107,7 +109,7 @@ example exactly as committed:
 
 ```sh
 npm run showcase -- 06-motion-graphics   # one example
-npm run showcase                         # all nine
+npm run showcase                         # all 27
 ```
 
 The `showcase` test suite checks every recipe and runs ffprobe on every committed video. Set

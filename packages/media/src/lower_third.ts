@@ -9,6 +9,8 @@ export interface LowerThirdOptions {
   durationSeconds?: number;
   primaryColor?: string;
   backgroundColor?: string;
+  /** Gap between the bottom edge of the frame and the badge, in pixels. Default 120. */
+  bottomMargin?: number;
   outputPath?: string;
 }
 
@@ -36,6 +38,8 @@ export class LowerThirdGenerator {
     const bg = safeCssColor(options.backgroundColor ?? '#0F172A');
     if (!(start >= 0)) throw new Error(`startSeconds must be >= 0, got ${start}`);
     requirePositive(duration, 'durationSeconds');
+    const bottom = options.bottomMargin ?? 120;
+    if (!(Number.isFinite(bottom) && bottom >= 0)) throw new Error(`bottomMargin must be >= 0, got ${bottom}`);
 
     const outPath = options.outputPath ?? path.join(
       path.dirname(videoPath),
@@ -75,7 +79,7 @@ export class LowerThirdGenerator {
 </svg>`;
 
     const end = start + duration;
-    const overlayFilter = `overlay=80:H-h-120:enable='between(t,${start.toFixed(2)},${end.toFixed(2)})'`;
+    const overlayFilter = `overlay=80:H-h-${Math.round(bottom)}:enable='between(t,${start.toFixed(2)},${end.toFixed(2)})'`;
 
     try {
       fs.writeFileSync(svgPath, svgContent);

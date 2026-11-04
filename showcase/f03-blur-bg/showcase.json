@@ -1,0 +1,25 @@
+{
+  "id": "f03-blur-bg",
+  "title": "Vertical cut back on a 16:9 canvas with a blurred backdrop",
+  "type": "Blurred-background landscape",
+  "skill": "magnifito-variants",
+  "engine": "blur-bg",
+  "caption": "The 9:16 vertical from f01 placed on a 1920x1080 canvas for YouTube, a website or a presentation screen: the clip sits sharp in the centre, and a blurred, scaled copy of itself fills the sides instead of black bars.",
+  "prompt": "I only have the vertical cut ../videos/f01-reframe-vertical.mp4 and need a 16:9 version for YouTube and our website. Do not stretch or crop it: put the vertical clip in the middle of a 1920x1080 canvas and fill the sides with a blurred copy of the same video, no black bars. Keep the audio.",
+  "commands": [
+    "mgvideo blur-bg ../videos/f01-reframe-vertical.mp4 --out work/landscape.mp4"
+  ],
+  "output": "work/landscape.mp4",
+  "poster_at": 5,
+  "expect": {
+    "width": 1920,
+    "height": 1080,
+    "duration_seconds": 8,
+    "audio": true
+  },
+  "synthetic_footage": true,
+  "credits": [
+    "Video and audio: f01-reframe-vertical from this showcase, cut from 03-talking-head-edit (synthetic presenter and generated voice track; Geist typeface by Vercel, SIL OFL 1.1)",
+    "Magnifito logo: owned by Magnifito, the demo client; used with permission"
+  ]
+}

@@ -924,6 +924,9 @@ program
   .requiredOption('-t, --title <title>', 'Speaker job title or role')
   .option('-s, --start <seconds>', 'Start timestamp in seconds', '1.5')
   .option('-d, --duration <seconds>', 'Display duration in seconds', '5.0')
+  .option('-c, --color <hex>', 'Accent color: side bar and role line', '#3B82F6')
+  .option('-b, --bg <hex>', 'Badge background color', '#0F172A')
+  .option('--bottom <pixels>', 'Gap between the bottom edge of the frame and the badge (raise it above burned-in captions)', '120')
   .option('-o, --out <path>', 'Custom output video path')
   .action((video, opts) => {
     try {
@@ -933,6 +936,9 @@ program
         speakerTitle: opts.title,
         startSeconds: parseFloat(opts.start),
         durationSeconds: parseFloat(opts.duration),
+        primaryColor: opts.color,
+        backgroundColor: opts.bg,
+        bottomMargin: parseFloat(opts.bottom),
         outputPath: opts.out ? path.resolve(process.cwd(), opts.out) : undefined
       });
       console.log(`\n🏷️ Lower Third Applied!`);

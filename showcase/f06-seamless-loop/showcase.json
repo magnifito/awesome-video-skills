@@ -1,0 +1,20 @@
+{
+  "id": "f06-seamless-loop",
+  "title": "Ping-pong loop of the leads chart",
+  "type": "Seamless loop",
+  "skill": "magnifito-edit",
+  "engine": "loop",
+  "caption": "A 2.6 s moment from the motion promo, where the leads chart opens and its bars grow, turned into a seamless ping-pong loop: it plays forward, then backward, so the last frame flows straight back into the first with no jump.",
+  "prompt": "Take the leads chart moment from ../videos/06-motion-graphics.mp4 (6.9 s to 9.5 s, where the pill opens into the chart card and the bars grow) and turn it into a seamless loop for a website hero background and a looping social post. Use a forward-then-reverse ping-pong so there is no jump at the seam, with no repeated frame at either turn.",
+  "commands": [
+    "ffmpeg -ss 6.9 -t 2.6 -i ../videos/06-motion-graphics.mp4 -c:v libx264 -crf 16 -preset medium work/moment.mp4",
+    "mgvideo loop work/moment.mp4 --out work/loop.mp4"
+  ],
+  "output": "work/loop.mp4",
+  "poster_at": 2.4,
+  "expect": { "width": 1920, "height": 1080, "duration_seconds": 5.13, "audio": false },
+  "synthetic_footage": false,
+  "credits": [
+    "Video: 06-motion-graphics from this showcase (Geist and Geist Mono fonts by Vercel, SIL OFL 1.1; motion engine adapted from Barty-Bart/motion-graphics, MIT)"
+  ]
+}
