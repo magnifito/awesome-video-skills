@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { readApprovedLock } from './lock.js';
 import {
-  AGENT_LABEL, ISSUE_LABEL, decideAction, findTrackingIssue, issueTitle, parseIssueState, renderCloseComment,
+  ISSUE_LABEL, decideAction, findTrackingIssue, issueTitle, parseIssueState, renderCloseComment,
   renderIssueBody, renderUpdateComment, type ChangedFile, type FileStatus, type UpstreamCommit, type UpstreamDelta,
 } from './sync_report.js';
 
@@ -161,7 +161,6 @@ async function main(): Promise<void> {
   const now = new Date().toISOString();
 
   await ensureLabel(gh, args.repo, ISSUE_LABEL, '0e8a16', 'New upstream commits to review and adopt', args.dryRun);
-  await ensureLabel(gh, args.repo, AGENT_LABEL, 'd93f0b', 'Maintainer approval: let the agent work on this upstream-update issue', args.dryRun);
 
   let issues: Issue[] = [];
   try {

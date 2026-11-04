@@ -7,7 +7,6 @@ import { classifyFileChange } from './diff_classifier.js';
  */
 
 export const ISSUE_LABEL = 'upstream-update';
-export const AGENT_LABEL = 'agent-go';
 
 /** GitHub rejects issue bodies above 65536 characters; stay well below. */
 export const MAX_BODY_CHARS = 60_000;
@@ -313,7 +312,7 @@ export function renderIssueBody(d: UpstreamDelta, generatedAt: string): string {
   parts.push(
     '## Task for the agent',
     '',
-    `Adopt what is useful from \`${d.owner}/${d.repo}\` between \`${d.base_commit.slice(0, 12)}\` and \`${d.head_commit.slice(0, 12)}\`, following this repository's vendoring process. A maintainer starts the agent by adding the \`${AGENT_LABEL}\` label; the agent works on a new branch and opens a pull request.`,
+    `Adopt what is useful from \`${d.owner}/${d.repo}\` between \`${d.base_commit.slice(0, 12)}\` and \`${d.head_commit.slice(0, 12)}\`, following this repository's vendoring process. A maintainer asks a local Claude Code session to work on this issue; it works on a new branch and opens a pull request.`,
     '',
     ...CHECKLIST.map(c => `- [ ] ${c}`),
     '',

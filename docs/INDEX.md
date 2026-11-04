@@ -8,7 +8,7 @@
 
 | Document | Status | Updated | Summary |
 |---|---|---|---|
-| [Upstream sync](engineering/upstream-sync.md) | `draft` | 2026-11-04 | Nightly upstream detection, one upstream-update issue per source, and the label-gated agent that turns an issue into a pull request |
+| [Upstream sync](engineering/upstream-sync.md) | `draft` | 2026-11-04 | Nightly upstream detection opens one upstream-update issue per source; a maintainer asks a local Claude Code session to turn an issue into a pull request |
 
 ## plan (2)
 
