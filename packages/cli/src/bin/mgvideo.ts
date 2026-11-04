@@ -1785,8 +1785,9 @@ broll
   .command('render <plan>')
   .description('Render every plan clip with the motion engine at the source resolution and fps')
   .option('--only <ids>', 'Comma-separated clip ids to render')
+  .option('--pages <dir>', 'Preview page folder, relative to the plan folder (default: dist)')
   .action((plan, opts) => {
-    runBrollRender(path.resolve(process.cwd(), plan), { only: opts.only }).catch(brollFail('render'));
+    runBrollRender(path.resolve(process.cwd(), plan), { only: opts.only, pages: opts.pages }).catch(brollFail('render'));
   });
 
 broll

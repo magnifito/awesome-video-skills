@@ -1,0 +1,26 @@
+{
+  "cues": [
+    { "t": 0.16, "type": "movement", "desc": "06 scene 1: the brand dot sparks into a line" },
+    { "t": 0.42, "type": "hover_or_small_ui", "desc": "word 1 lands: Great" },
+    { "t": 0.80, "type": "hover_or_small_ui", "desc": "word 2 lands: businesses" },
+    { "t": 1.19, "type": "hover_or_small_ui", "desc": "word 3 lands: stay" },
+    { "t": 1.57, "type": "hover_or_small_ui", "desc": "word 4 lands: invisible" },
+    { "t": 1.95, "type": "appear", "desc": "word 5 lands: online" },
+    { "t": 3.20, "type": "scene_cut", "desc": "cut to scene 2, the service card" },
+    { "t": 4.06, "type": "movement", "desc": "pill opens into the service card" },
+    { "t": 4.34, "type": "hover_or_small_ui", "desc": "row 1: Websites" },
+    { "t": 4.46, "type": "hover_or_small_ui", "desc": "row 2: Social media" },
+    { "t": 4.58, "type": "hover_or_small_ui", "desc": "row 3: Email and ads" },
+    { "t": 4.70, "type": "hover_or_small_ui", "desc": "row 4: Automation" },
+    { "t": 5.78, "type": "click", "desc": "cursor clicks the control" },
+    { "t": 5.84, "type": "success", "desc": "arrow turns into a check" },
+    { "t": 6.80, "type": "scene_cut", "desc": "cut to scene 3, the leads chart" },
+    { "t": 7.60, "type": "appear", "desc": "title pill opens into the chart card" },
+    { "t": 7.96, "type": "hover_or_small_ui", "desc": "bar 1 grows: Before Magnifito" },
+    { "t": 8.12, "type": "hover_or_small_ui", "desc": "bar 2 grows: After three months" },
+    { "t": 8.28, "type": "hover_or_small_ui", "desc": "bar 3 grows: After six months" },
+    { "t": 8.90, "type": "build_up", "dur": 0.9, "desc": "riser into the logo scene" },
+    { "t": 9.80, "type": "scene_cut", "desc": "cut to scene 4, the logo" },
+    { "t": 10.22, "type": "reveal", "desc": "Magnifito logo rises out of the line" }
+  ]
+}

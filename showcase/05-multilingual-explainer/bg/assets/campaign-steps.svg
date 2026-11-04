@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="220" viewBox="0 0 1000 220">
+  <!-- Four campaign steps: plan, create, launch, measure -->
+  <defs>
+    <linearGradient id="track" gradientUnits="userSpaceOnUse" x1="110" y1="0" x2="890" y2="0">
+      <stop offset="0" stop-color="#573a30" stop-opacity="0.35"/>
+      <stop offset="1" stop-color="#7a584c"/>
+    </linearGradient>
+  </defs>
+  <line x1="110" y1="110" x2="890" y2="110" stroke="url(#track)" stroke-width="6" stroke-dasharray="14 12" stroke-linecap="round"/>
+  <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <g transform="translate(110 110)">
+      <circle r="80" fill="#ffffff" stroke="#d8c6b4" stroke-opacity="1" stroke-width="4"/>
+      <rect x="-28" y="-34" width="56" height="68" rx="8" stroke="#573a30" stroke-width="7"/>
+      <line x1="-14" y1="-14" x2="14" y2="-14" stroke="#ae8c72" stroke-width="7"/>
+      <line x1="-14" y1="2" x2="14" y2="2" stroke="#ae8c72" stroke-width="7"/>
+      <line x1="-14" y1="18" x2="4" y2="18" stroke="#ae8c72" stroke-width="7"/>
+    </g>
+    <g transform="translate(370 110)">
+      <circle r="80" fill="#ffffff" stroke="#d8c6b4" stroke-opacity="1" stroke-width="4"/>
+      <path d="M-26 30 L-20 8 L16 -28 L30 -14 L-6 22 Z" stroke="#573a30" stroke-width="7"/>
+      <line x1="6" y1="-18" x2="20" y2="-4" stroke="#ae8c72" stroke-width="7"/>
+      <line x1="-30" y1="36" x2="-4" y2="36" stroke="#7a584c" stroke-width="7"/>
+    </g>
+    <g transform="translate(630 110)">
+      <circle r="80" fill="#ffffff" stroke="#d8c6b4" stroke-opacity="1" stroke-width="4"/>
+      <path d="M0 -36 C18 -20 22 4 14 22 L-14 22 C-22 4 -18 -20 0 -36 Z" stroke="#573a30" stroke-width="7"/>
+      <circle cx="0" cy="-6" r="7" stroke="#ae8c72" stroke-width="6"/>
+      <line x1="-8" y1="32" x2="-8" y2="40" stroke="#7a584c" stroke-width="7"/>
+      <line x1="8" y1="32" x2="8" y2="40" stroke="#7a584c" stroke-width="7"/>
+    </g>
+    <g transform="translate(890 110)">
+      <circle r="80" fill="#7a584c"/>
+      <line x1="-26" y1="30" x2="-26" y2="6" stroke="#ffffff" stroke-width="10"/>
+      <line x1="0" y1="30" x2="0" y2="-12" stroke="#ffffff" stroke-width="10"/>
+      <line x1="26" y1="30" x2="26" y2="-30" stroke="#8acf31" stroke-width="10"/>
+    </g>
+  </g>
+</svg>

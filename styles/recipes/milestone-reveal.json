@@ -11,6 +11,6 @@
   "layout": {
     "metric_size_px": 96,
     "label_placement": "below_metric"
-  }
+  },
+  "copy_format": "<metric> <label> [| footnote]: the first word holding a digit is the metric, the rest of the field is the label"
 }
-

@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "revision": "rev-showcase-s11-1",
+  "claims": [
+    {
+      "claim_id": "claim-speaker",
+      "approved_wording": "Elena Petrova | Social media lead, Magnifito",
+      "evidence_source": "Fictional presenter drawn by make-footage.mjs; name and role are placeholders for this showcase",
+      "owner": "Toolkit maintainers",
+      "locale": "en"
+    }
+  ]
+}

@@ -1,0 +1,21 @@
+{
+  "schema_version": "1.0.0",
+  "plan_revision": "rev-showcase-s11-1",
+  "renderer": "hyperframes",
+  "timing_authority": "template",
+  "scenes": [
+    {
+      "scene_id": "scene-01-lower-third",
+      "factual_purpose": "Name the speaker and her affiliation",
+      "duration_seconds": 4.5,
+      "duration_frames": 135,
+      "copy_text": "Elena Petrova | Social media lead, Magnifito",
+      "claims_refs": [
+        "claim-speaker"
+      ],
+      "asset_refs": [],
+      "visual_recipe": "broll-lower-third",
+      "audio_events": []
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "schema_version": "1.0.0",
+  "project_id": "showcase-02-product-demo",
+  "client_id": "magnifito",
+  "workflow": "product-demo",
+  "objective": "Cursor tour of a mock campaign dashboard: overview, scheduling a post, sharing a report",
+  "audience": "Marketing managers at small and mid-sized businesses",
+  "language": "en",
+  "duration_seconds": 20,
+  "formats": ["16:9"],
+  "engine": "hyperframes",
+  "timing_authority": "template",
+  "campaign_reference_time": "2026-11-04T09:00:00Z",
+  "budgets": {
+    "agent_budget_usd": 10,
+    "compute_budget_usd": 5,
+    "media_budget_usd": 0,
+    "max_retries": 3
+  }
+}

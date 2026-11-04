@@ -31,14 +31,15 @@ export function runBrollCheck(planPath: string): void {
   console.log('');
 }
 
-export async function runBrollRender(planPath: string, opts: { only?: string }): Promise<void> {
+export async function runBrollRender(planPath: string, opts: { only?: string; pages?: string }): Promise<void> {
   const r = loadBrollPlan(planPath);
   const avail = motionAvailability();
   if (!avail.ok) throw new Error(`Motion engine unavailable: ${avail.errors.join(' ')}`);
   for (const l of describe(r)) console.log(l);
   const only = opts.only ? opts.only.split(',').map(s => s.trim()).filter(Boolean) : undefined;
-  const res = await renderBroll(r, { only, log: m => console.log(`  ${m}`) });
-  console.log(`\nRendered ${res.length} clip(s). Pages for preview: ${path.join(r.planDir, 'dist')}\n`);
+  const pagesDir = opts.pages ?? 'dist';
+  const res = await renderBroll(r, { only, pagesDir, log: m => console.log(`  ${m}`) });
+  console.log(`\nRendered ${res.length} clip(s). Pages for preview: ${path.join(r.planDir, pagesDir)}\n`);
 }
 
 export function runBrollCompose(planPath: string, outPath: string, opts: { sheet?: string }): void {

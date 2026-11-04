@@ -1,0 +1,22 @@
+{
+  "schema_version": "1.0.0",
+  "project_id": "showcase-05-explainer-en",
+  "client_id": "magnifito",
+  "workflow": "multilingual-explainer",
+  "objective": "Explain the four steps of a Magnifito campaign in English",
+  "audience": "English-speaking business owners",
+  "language": "en",
+  "duration_seconds": 6,
+  "formats": [
+    "16:9"
+  ],
+  "engine": "hyperframes",
+  "timing_authority": "template",
+  "campaign_reference_time": "2026-11-04T09:00:00Z",
+  "budgets": {
+    "agent_budget_usd": 10,
+    "compute_budget_usd": 5,
+    "media_budget_usd": 0,
+    "max_retries": 3
+  }
+}

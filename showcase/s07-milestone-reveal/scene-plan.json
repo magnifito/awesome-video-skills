@@ -1,0 +1,23 @@
+{
+  "schema_version": "1.0.0",
+  "plan_revision": "rev-showcase-s07-1",
+  "renderer": "hyperframes",
+  "timing_authority": "template",
+  "scenes": [
+    {
+      "scene_id": "scene-01-milestone",
+      "factual_purpose": "Reveal one milestone figure with its label",
+      "duration_seconds": 6.0,
+      "duration_frames": 180,
+      "copy_text": "150+ websites and campaigns launched | Illustrative figure for this showcase, not a Magnifito result",
+      "claims_refs": [
+        "claim-launches"
+      ],
+      "asset_refs": [
+        "magnifito-logo"
+      ],
+      "visual_recipe": "milestone-reveal",
+      "audio_events": []
+    }
+  ]
+}

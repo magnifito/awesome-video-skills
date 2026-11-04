@@ -1,0 +1,73 @@
+{
+  "schema_version": "1.0.0",
+  "plan_revision": "rev-showcase-1",
+  "renderer": "hyperframes",
+  "timing_authority": "template",
+  "scenes": [
+    {
+      "scene_id": "scene-01-intro",
+      "factual_purpose": "Title card before the tour",
+      "duration_seconds": 3.0,
+      "duration_frames": 90,
+      "copy_text": "A tour of the campaign hub",
+      "claims_refs": [],
+      "asset_refs": [
+        "magnifito-logo"
+      ],
+      "visual_recipe": "brand-title",
+      "audio_events": []
+    },
+    {
+      "scene_id": "scene-02-overview",
+      "factual_purpose": "Caption while the cursor reads the channel cards",
+      "duration_seconds": 5.0,
+      "duration_frames": 150,
+      "copy_text": "Every channel in one view",
+      "claims_refs": [
+        "claim-overview"
+      ],
+      "asset_refs": [],
+      "visual_recipe": "brand-title",
+      "audio_events": []
+    },
+    {
+      "scene_id": "scene-03-schedule",
+      "factual_purpose": "Caption while the cursor schedules the Thursday post",
+      "duration_seconds": 5.0,
+      "duration_frames": 150,
+      "copy_text": "Schedule a post from the calendar",
+      "claims_refs": [
+        "claim-schedule"
+      ],
+      "asset_refs": [],
+      "visual_recipe": "brand-title",
+      "audio_events": []
+    },
+    {
+      "scene_id": "scene-04-share",
+      "factual_purpose": "Caption while the cursor copies the report link",
+      "duration_seconds": 4.0,
+      "duration_frames": 120,
+      "copy_text": "Share a live report link",
+      "claims_refs": [
+        "claim-share"
+      ],
+      "asset_refs": [],
+      "visual_recipe": "brand-title",
+      "audio_events": []
+    },
+    {
+      "scene_id": "scene-05-outro",
+      "factual_purpose": "End card",
+      "duration_seconds": 3.0,
+      "duration_frames": 90,
+      "copy_text": "Talk to us at magnifito.com",
+      "claims_refs": [],
+      "asset_refs": [
+        "magnifito-logo"
+      ],
+      "visual_recipe": "brand-title",
+      "audio_events": []
+    }
+  ]
+}

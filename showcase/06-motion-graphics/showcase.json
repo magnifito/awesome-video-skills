@@ -1,0 +1,21 @@
+{
+  "id": "06-motion-graphics",
+  "title": "Motion graphics: one shape, four beats",
+  "type": "Motion graphics",
+  "skill": "magnifito-promo",
+  "engine": "motion",
+  "caption": "A 12 second Magnifito promo built from the four spring-based motion recipes: kinetic type, a card morph, a bar chart and a logo reveal. One brand-coloured shape carries the eye from clip to clip, with real sub-frame motion blur.",
+  "prompt": "Make a 12 second 16:9 motion-graphics promo for Magnifito, a Bulgarian digital marketing agency (websites, social media, email, ads, automation). Use the motion engine and all four motion recipes: open on the problem in kinetic type (\"Great businesses stay invisible online\"), then a service card titled \"Grow with Magnifito\" with four rows, then a bar chart of monthly leads before and after working with us, then close on our logo (assets/magnifito-logo.svg) with the tagline \"Digital marketing with heart and value.\" The chart numbers are illustrative: put them in claims.json and label the chart as illustrative. Brand colours are warm browns on cream (#7a584c, #ae8c72, #f0eadf), Geist for type, English on screen.",
+  "commands": [
+    "mgvideo render . --format 16:9 --force"
+  ],
+  "output": "runs/*/final_output_*.mp4",
+  "poster_at": 5.2,
+  "expect": { "width": 1920, "height": 1080, "duration_seconds": 12, "audio": false },
+  "synthetic_footage": false,
+  "credits": [
+    "Geist and Geist Mono fonts by Vercel (SIL OFL 1.1), vendored with the engine",
+    "Motion engine adapted from Barty-Bart/motion-graphics (MIT)",
+    "Magnifito logo: owned by Magnifito, the demo client; used with permission"
+  ]
+}

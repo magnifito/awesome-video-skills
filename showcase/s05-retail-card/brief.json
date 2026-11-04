@@ -1,0 +1,22 @@
+{
+  "schema_version": "1.0.0",
+  "project_id": "showcase-s05-retail-card",
+  "client_id": "magnifito",
+  "workflow": "commerce-variants",
+  "objective": "Two illustrative Magnifito service-package offer cards, shown as a sample of the retail-card recipe",
+  "audience": "Small and mid-sized businesses looking for a digital marketing partner",
+  "language": "en",
+  "duration_seconds": 7,
+  "formats": [
+    "16:9"
+  ],
+  "engine": "hyperframes",
+  "timing_authority": "template",
+  "campaign_reference_time": "2026-11-04T09:00:00Z",
+  "budgets": {
+    "agent_budget_usd": 5,
+    "compute_budget_usd": 2,
+    "media_budget_usd": 0,
+    "max_retries": 2
+  }
+}

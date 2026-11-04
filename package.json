@@ -24,7 +24,9 @@
     "lint:docs:advisory": "docs-notary advisory",
     "gen:docs-index": "docs-notary gen",
     "docs:impact": "docs-notary impact",
-    "test:suites": "tsx evaluations/run-suites.ts"
+    "test:suites": "tsx evaluations/run-suites.ts",
+    "showcase": "npm run build && tsx showcase/render.ts",
+    "site": "tsx site/build.ts"
   },
   "engines": {
     "node": ">=22.0.0"

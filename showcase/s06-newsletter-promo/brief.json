@@ -1,0 +1,22 @@
+{
+  "schema_version": "1.0.0",
+  "project_id": "showcase-s06-newsletter-promo",
+  "client_id": "magnifito",
+  "workflow": "branded-promo",
+  "objective": "A promo card for the Magnifito newsletter, shown as a sample of the newsletter-promo recipe",
+  "audience": "Small and mid-sized businesses looking for a digital marketing partner",
+  "language": "en",
+  "duration_seconds": 6,
+  "formats": [
+    "16:9"
+  ],
+  "engine": "hyperframes",
+  "timing_authority": "template",
+  "campaign_reference_time": "2026-11-04T09:00:00Z",
+  "budgets": {
+    "agent_budget_usd": 5,
+    "compute_budget_usd": 2,
+    "media_budget_usd": 0,
+    "max_retries": 2
+  }
+}

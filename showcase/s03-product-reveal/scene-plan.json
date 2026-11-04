@@ -1,0 +1,24 @@
+{
+  "schema_version": "1.0.0",
+  "plan_revision": "rev-showcase-s03-1",
+  "renderer": "hyperframes",
+  "timing_authority": "template",
+  "scenes": [
+    {
+      "scene_id": "scene-01-reveal",
+      "factual_purpose": "Reveal the Website Starter package as the hero product",
+      "duration_seconds": 6,
+      "duration_frames": 180,
+      "copy_text": "Website Starter | Website package | Five pages, built so you can edit them yourself",
+      "claims_refs": [
+        "claim-starter-scope"
+      ],
+      "asset_refs": [
+        "website-starter",
+        "magnifito-logo"
+      ],
+      "visual_recipe": "product-reveal",
+      "audio_events": []
+    }
+  ]
+}

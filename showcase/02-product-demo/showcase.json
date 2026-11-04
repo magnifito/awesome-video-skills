@@ -1,0 +1,39 @@
+{
+  "id": "02-product-demo",
+  "title": "Campaign hub product tour",
+  "type": "Product demo",
+  "skill": "magnifito-promo",
+  "engine": "hyperframes",
+  "caption": "A 20-second cursor tour of a mock campaign dashboard. The UI states are committed SVGs rasterized at 4K; ffmpeg moves an eased cursor and camera over them, swaps states on each click and adds captions rendered by HyperFrames in Geist.",
+  "prompt": "Make a 20-second 16:9 product demo for Magnifito's campaign hub using the product-demo workflow. Use the three mock dashboard states in assets/ (overview, post scheduled, report shared) as the screen: rasterize them at 4K, then animate a cursor that sweeps across the channel cards, clicks Schedule on Thursday's post and then clicks Share report, swapping the screen state on each click with a click ripple. Push the camera in on each action and ease it back out at the end. Bookend the tour with a logo title card (\"A tour of the campaign hub\") and an end card (\"Talk to us at magnifito.com\"), and put three short captions in a dark pill at the bottom, each linked to an approved claim. Render the cards and captions transparent with HyperFrames in Geist, composite everything over the Magnifito cream backdrop, and add soft whooshes, a pop per click and a chime on the end card. Label the dashboard as demo data.",
+  "commands": [
+    "mgvideo render . --codec mov_prores --force",
+    "node collect-run.mjs runs work/text.mov",
+    "node rasterize.mjs assets/dashboard-a.svg work/dash-a.png 3840 2160",
+    "node rasterize.mjs assets/dashboard-b.svg work/dash-b.png 3840 2160",
+    "node rasterize.mjs assets/dashboard-c.svg work/dash-c.png 3840 2160",
+    "node rasterize.mjs assets/cursor.svg work/cursor.png 56 80",
+    "node rasterize.mjs assets/click-ring.svg work/click-ring.png 320 320",
+    "node rasterize.mjs assets/caption-pill.svg work/caption-pill.png 940 96",
+    "mgvideo sfx whoosh -d 0.9 -o work/whoosh.wav",
+    "mgvideo sfx pop -d 0.3 -o work/pop.wav",
+    "mgvideo sfx chime -d 2.5 -o work/chime.wav",
+    "ffmpeg -f lavfi -i \"color=c=black:s=320x180:r=30:d=20,format=gray,geq=lum='255*exp(-(pow(X-(0.28*W+0.10*W*sin(T*0.5)),2)+pow(Y-(0.80*H+0.10*H*cos(T*0.4)),2))/(2*pow(0.26*W,2)))'\" -f lavfi -i \"color=c=black:s=320x180:r=30:d=20,format=gray,geq=lum='255*exp(-(pow(X-(0.80*W+0.08*W*cos(T*0.35)),2)+pow(Y-(0.18*H+0.08*H*sin(T*0.45)),2))/(2*pow(0.30*W,2)))'\" -f lavfi -i \"color=c=0xf0eadf:s=320x180:r=30:d=20\" -f lavfi -i \"color=c=black:s=1920x1080:r=30:d=0.04\" -filter_complex \"[0]format=gbrp,colorchannelmixer=rr=0.11:gg=0.15:bb=0.18[g1];[1]format=gbrp,colorchannelmixer=rr=0.05:gg=0.07:bb=0.08[g2];[2]format=gbrp[base];[base][g1]blend=all_mode=subtract[m];[m][g2]blend=all_mode=subtract,scale=1920:1080:flags=bicubic[soft];[3]format=gray,geq=lum='255*clip(1.9-hypot(mod(X,40)-20,mod(Y,40)-20),0,1)',loop=loop=-1:size=1,trim=duration=20,setpts=N/30/TB,format=gbrp,colorchannelmixer=rr=0.16:gg=0.2:bb=0.22[dots];[soft][dots]blend=all_mode=subtract,noise=alls=2:allf=t,format=yuv420p[v]\" -map [v] -t 20 -c:v libx264 -crf 12 -preset veryfast work/bg.mp4",
+    "ffmpeg -i work/bg.mp4 -loop 1 -framerate 30 -t 20 -i work/dash-a.png -loop 1 -framerate 30 -t 20 -i work/dash-b.png -loop 1 -framerate 30 -t 20 -i work/dash-c.png -loop 1 -framerate 30 -t 20 -i work/cursor.png -loop 1 -framerate 30 -t 20 -i work/click-ring.png -loop 1 -framerate 30 -t 20 -i work/caption-pill.png -i work/text.mov -i work/whoosh.wav -i work/pop.wav -i work/chime.wav -filter_complex \"[2]format=yuva420p,fade=t=in:st=9.95:d=0.15:alpha=1[sb];[3]format=yuva420p,fade=t=in:st=14.45:d=0.15:alpha=1[sc];[1][sb]overlay[d1];[d1][sc]overlay[d2];[5]format=yuva420p,split=2[r0][r1];[r0]scale=w='320*(0.5+0.9*clip((t-9.9)/0.45,0,1))':h='320*(0.5+0.9*clip((t-9.9)/0.45,0,1))':eval=frame,fade=t=in:st=9.9:d=0.06:alpha=1,fade=t=out:st=10.0:d=0.35:alpha=1[ring0];[r1]scale=w='320*(0.5+0.9*clip((t-14.4)/0.45,0,1))':h='320*(0.5+0.9*clip((t-14.4)/0.45,0,1))':eval=frame,fade=t=in:st=14.4:d=0.06:alpha=1,fade=t=out:st=14.5:d=0.35:alpha=1[ring1];[d2][ring0]overlay=x='3384-overlay_w/2':y='1052-overlay_h/2':eval=frame[d3];[d3][ring1]overlay=x='3386-overlay_w/2':y='362-overlay_h/2':eval=frame[d4];[4]format=yuva420p,fade=t=in:st=3.5:d=0.3:alpha=1,fade=t=out:st=16.2:d=0.3:alpha=1[cur];[d4][cur]overlay=x='2*(1250-685*(1-cos(PI*clip((t-3.8)/1.4,0,1)))/2+1035*(1-cos(PI*clip((t-5.4)/1.8,0,1)))/2+92*(1-cos(PI*clip((t-7.5)/2.0,0,1)))/2-62*(1-cos(PI*clip((t-10.5)/0.7,0,1)))/2+63*(1-cos(PI*clip((t-11.8)/2.2,0,1)))/2-133*(1-cos(PI*clip((t-15.0)/1.0,0,1)))/2)-6':y='2*(800-470*(1-cos(PI*clip((t-3.8)/1.4,0,1)))/2+196*(1-cos(PI*clip((t-7.5)/2.0,0,1)))/2+114*(1-cos(PI*clip((t-10.5)/0.7,0,1)))/2-459*(1-cos(PI*clip((t-11.8)/2.2,0,1)))/2+179*(1-cos(PI*clip((t-15.0)/1.0,0,1)))/2)-6':eval=frame[d5];[d5]zoompan=z='1.0+0.3500000000000001*(1-cos(PI*clip((on/30-4.0)/1.8,0,1)))/2+0.25*(1-cos(PI*clip((on/30-7.4)/1.8,0,1)))/2-0.30000000000000004*(1-cos(PI*clip((on/30-11.6)/1.6,0,1)))/2-0.30000000000000004*(1-cos(PI*clip((on/30-15.4)/1.4,0,1)))/2':x='clip(2*(960+140*(1-cos(PI*clip((on/30-4.0)/1.8,0,1)))/2+380*(1-cos(PI*clip((on/30-7.4)/1.8,0,1)))/2-80*(1-cos(PI*clip((on/30-11.6)/1.6,0,1)))/2-440*(1-cos(PI*clip((on/30-15.4)/1.4,0,1)))/2)-iw/zoom/2,0,iw-iw/zoom)':y='clip(2*(540-180*(1-cos(PI*clip((on/30-4.0)/1.8,0,1)))/2+420*(1-cos(PI*clip((on/30-7.4)/1.8,0,1)))/2-450*(1-cos(PI*clip((on/30-11.6)/1.6,0,1)))/2+210*(1-cos(PI*clip((on/30-15.4)/1.4,0,1)))/2)-ih/zoom/2,0,ih-ih/zoom)':d=1:s=1920x1080:fps=30,format=yuva420p,fade=t=in:st=2.7:d=0.6:alpha=1,fade=t=out:st=16.6:d=0.5:alpha=1[tour];[7]format=yuva420p,split=4[c0][c1][c2][c3];[c0]trim=start=0:end=3,fade=t=in:st=0.2:d=0.7:alpha=1,fade=t=out:st=2.45:d=0.35:alpha=1[intro];[c1]trim=start=3:end=8,crop=1920:160:0:460,scale=1056:88,fade=t=in:st=3.5:d=0.4:alpha=1,fade=t=out:st=7.75:d=0.25:alpha=1[cap0];[c2]trim=start=8:end=13,crop=1920:160:0:460,scale=1056:88,fade=t=in:st=8.0:d=0.3:alpha=1,fade=t=out:st=12.75:d=0.25:alpha=1[cap1];[c3]trim=start=13:end=20,fade=t=in:st=13.0:d=0.3:alpha=1[tail];[tail]split=2[t0][t1];[t0]trim=start=13:end=17,crop=1920:160:0:460,scale=1056:88,fade=t=out:st=16.4:d=0.3:alpha=1[cap2];[t1]trim=start=17:end=20,fade=t=in:st=17.1:d=0.7:alpha=1[outro];[6]format=yuva420p,fade=t=in:st=3.3:d=0.4:alpha=1,fade=t=out:st=16.4:d=0.4:alpha=1[pill];[0][intro]overlay=y='60*pow(max(0,1-(t-0.2)/1.1),3)':eof_action=pass[v0];[v0][tour]overlay[v1];[v1][pill]overlay=x=490:y=950[v2];[v2][cap0]overlay=x=432:y=954:eof_action=pass[v3];[v3][cap1]overlay=x=432:y=954:eof_action=pass[v4];[v4][cap2]overlay=x=432:y=954:eof_action=pass[v5];[v5][outro]overlay=y='60*pow(max(0,1-(t-17.1)/1.1),3)':eof_action=pass[v6];[v6]fade=t=in:d=0.4,fade=t=out:st=19.4:d=0.6,format=yuv420p[v];[8]asplit=2[w0][w1];[w0]adelay=2500:all=1,volume=0.45[x0];[w1]adelay=16450:all=1,volume=0.45[x1];[9]asplit=2[p0][p1];[p0]adelay=9880:all=1,volume=0.6[x2];[p1]adelay=14380:all=1,volume=0.6[x3];[10]adelay=17300:all=1,volume=0.6[x4];[x0][x1][x2][x3][x4]amix=inputs=5:normalize=0,aformat=sample_rates=48000:channel_layouts=stereo,apad,atrim=0:20,afade=t=out:st=19.3:d=0.7[a]\" -map [v] -map [a] -t 20 -c:v libx264 -crf 16 -pix_fmt yuv420p -c:a aac -b:a 160k work/product-demo.mp4"
+  ],
+  "output": "work/product-demo.mp4",
+  "poster_at": 10.8,
+  "expect": {
+    "width": 1920,
+    "height": 1080,
+    "duration_seconds": 20,
+    "audio": true
+  },
+  "synthetic_footage": false,
+  "credits": [
+    "Geist typeface by Vercel, SIL Open Font License 1.1 (fonts/OFL-Geist.txt); TTF converted from the WOFF2 vendored in vendor/barty-motion-graphics",
+    "Mock dashboard, cursor, click ring and caption pill drawn as SVG for this repository; every name and number in the UI is demo data",
+    "Magnifito logo (assets/magnifito-logo.svg, from the Magnifito website): owned by Magnifito, the demo client; used with permission",
+    "Whoosh, pop and chime synthesized by mgvideo sfx"
+  ]
+}

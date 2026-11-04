@@ -1,0 +1,25 @@
+{
+  "id": "s04-saas-interface-tour",
+  "title": "SaaS interface tour",
+  "type": "SaaS interface tour",
+  "skill": "magnifito-product-demo",
+  "engine": "hyperframes",
+  "caption": "The saas-interface-tour recipe: a product screen in a browser frame, magnified on one element with a glowing highlight, a cursor click and a callout card, for walking viewers through software.",
+  "prompt": "Use the magnifito-product-demo skill to make a 7-second 16:9 interface shot of the Magnifito client report in the saas-interface-tour style. The screen is assets/client-report.svg (a mock with demo data); focus the \"Leads this month\" card in the middle, click it, and add the callout \"Your monthly report\" with \"Website, social, email and ads results on one screen\", which is an approved claim in claims.json. Brand: warm browns on cream (#7a584c, #ae8c72, #f0eadf), dark ink #2b1c17, the logo green #8acf31 used sparingly, Geist from fonts/, and the logo in assets/magnifito-logo.svg. Render it with HyperFrames.",
+  "commands": [
+    "mgvideo render . --force"
+  ],
+  "output": "runs/*/final_output_*.mp4",
+  "poster_at": 3.5,
+  "expect": {
+    "width": 1920,
+    "height": 1080,
+    "duration_seconds": 7,
+    "audio": false
+  },
+  "synthetic_footage": false,
+  "credits": [
+    "Geist typeface by Vercel, SIL Open Font License 1.1 (fonts/OFL-Geist.txt); TTF converted from the WOFF2 vendored in vendor/barty-motion-graphics",
+    "Client report screen (assets/client-report.svg) drawn as SVG for this repository; every name and number on it is demo data"
+  ]
+}

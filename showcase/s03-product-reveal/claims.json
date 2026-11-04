@@ -1,0 +1,17 @@
+{
+  "schema_version": "1.0.0",
+  "revision": "rev-showcase-s03-1",
+  "claims": [
+    {
+      "claim_id": "claim-starter-scope",
+      "approved_wording": "Five pages, built so you can edit them yourself",
+      "evidence_source": "Illustrative showcase package, not a current Magnifito offer",
+      "owner": "Magnifito marketing lead",
+      "locale": "en",
+      "tags": [
+        "product",
+        "illustrative"
+      ]
+    }
+  ]
+}

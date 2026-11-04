@@ -10,6 +10,6 @@
   "layout": {
     "split_portrait": true,
     "credentials_alignment": "left"
-  }
+  },
+  "copy_format": "name | role | episode topic [| kicker, default 'In conversation']"
 }
-

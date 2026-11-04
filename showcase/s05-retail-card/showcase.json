@@ -1,0 +1,25 @@
+{
+  "id": "s05-retail-card",
+  "title": "Retail and offer card",
+  "type": "Retail and offer card",
+  "skill": "magnifito-variants",
+  "engine": "hyperframes",
+  "caption": "The retail-card recipe: a bold offer card with a big price, a badge popping over the corner, a shimmer sweep and a strong call-to-action button, for pricing and promotions.",
+  "prompt": "Use the magnifito-variants skill to make a 7-second 16:9 offer clip for two Magnifito service packages in the retail-card style: \"Website Starter, from €690\" with a \"Launch offer\" badge, then \"Social Media Care, €390 / month\" with a \"Monthly plan\" badge, each 3.5 seconds with a \"Book a call\" button and the fine print \"Illustrative prices for this showcase, VAT excluded\". The prices are illustrative claims in claims.json. Brand: warm browns on cream (#7a584c, #ae8c72, #f0eadf), dark ink #2b1c17, the logo green #8acf31 used sparingly, Geist from fonts/, and the logo in assets/magnifito-logo.svg. Render it with HyperFrames.",
+  "commands": [
+    "mgvideo render . --force"
+  ],
+  "output": "runs/*/final_output_*.mp4",
+  "poster_at": 2,
+  "expect": {
+    "width": 1920,
+    "height": 1080,
+    "duration_seconds": 7,
+    "audio": false
+  },
+  "synthetic_footage": false,
+  "credits": [
+    "Geist typeface by Vercel, SIL Open Font License 1.1 (fonts/OFL-Geist.txt); TTF converted from the WOFF2 vendored in vendor/barty-motion-graphics",
+    "Magnifito logo (assets/magnifito-logo.svg, from the Magnifito website): owned by Magnifito, the demo client; used with permission"
+  ]
+}

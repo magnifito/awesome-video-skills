@@ -1,0 +1,21 @@
+{
+  "schema_version": "1.0.0",
+  "plan_revision": "rev-showcase-s12-1",
+  "renderer": "hyperframes",
+  "timing_authority": "template",
+  "scenes": [
+    {
+      "scene_id": "scene-01-callout",
+      "factual_purpose": "Back the spoken line with one illustrative number",
+      "duration_seconds": 4.0,
+      "duration_frames": 120,
+      "copy_text": "12 planned posts a month | Illustrative example",
+      "claims_refs": [
+        "claim-posts"
+      ],
+      "asset_refs": [],
+      "visual_recipe": "broll-stat-callout",
+      "audio_events": []
+    }
+  ]
+}

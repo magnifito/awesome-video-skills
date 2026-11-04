@@ -93,6 +93,8 @@ export function brollClipHtml(r: ResolvedBrollPlan, c: ResolvedBrollClip, look: 
 export interface BrollRenderOptions {
   /** Render only these clip ids. */
   only?: string[];
+  /** Folder for the preview pages, relative to the plan folder and confined to it (default "dist"). */
+  pagesDir?: string;
   browser?: Browser;
   log?: (msg: string) => void;
 }
@@ -105,7 +107,7 @@ export interface BrollRenderedClip extends RenderClipResult {
 }
 
 /**
- * Renders the plan's clips. Pages are written to `<plan dir>/dist/<id>.html` (open one in a
+ * Renders the plan's clips. Pages are written to `<plan dir>/<pagesDir, default dist>/<id>.html` (open one in a
  * browser to preview it); clips go to each clip's `file`. A clip whose size or alpha does not
  * match its kind is deleted and reported.
  */
@@ -117,7 +119,7 @@ export async function renderBroll(r: ResolvedBrollPlan, options: BrollRenderOpti
   }
   const todo = r.clips.filter(c => !only || only.has(c.clip.id));
   const look = loadBrollLook(r);
-  const distDir = safeJoin(r.planDir, 'dist');
+  const distDir = safeJoin(r.planDir, options.pagesDir ?? 'dist');
   fs.mkdirSync(distDir, { recursive: true });
   const results: BrollRenderedClip[] = [];
   const browser = options.browser ?? (await launchBrowser());

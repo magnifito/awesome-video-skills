@@ -1,0 +1,36 @@
+{
+  "schema_version": "1.0.0",
+  "revision": "rev-showcase-1",
+  "claims": [
+    {
+      "claim_id": "claim-overview",
+      "approved_wording": "Every channel in one view",
+      "evidence_source": "Showcase mock UI (assets/dashboard-a.svg to dashboard-c.svg); describes the mock interface, not a shipped product",
+      "owner": "Magnifito marketing lead",
+      "locale": "en",
+      "tags": [
+        "demo-ui"
+      ]
+    },
+    {
+      "claim_id": "claim-schedule",
+      "approved_wording": "Schedule a post from the calendar",
+      "evidence_source": "Showcase mock UI (assets/dashboard-a.svg to dashboard-c.svg); describes the mock interface, not a shipped product",
+      "owner": "Magnifito marketing lead",
+      "locale": "en",
+      "tags": [
+        "demo-ui"
+      ]
+    },
+    {
+      "claim_id": "claim-share",
+      "approved_wording": "Share a live report link",
+      "evidence_source": "Showcase mock UI (assets/dashboard-a.svg to dashboard-c.svg); describes the mock interface, not a shipped product",
+      "owner": "Magnifito marketing lead",
+      "locale": "en",
+      "tags": [
+        "demo-ui"
+      ]
+    }
+  ]
+}

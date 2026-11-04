@@ -1,0 +1,26 @@
+{
+  "id": "s06-newsletter-promo",
+  "title": "Newsletter promo",
+  "type": "Newsletter promo",
+  "skill": "magnifito-promo",
+  "engine": "hyperframes",
+  "caption": "The newsletter-promo recipe: an editorial card with the author avatar, numbered serif headlines, a subscriber badge and a subscribe button, for promoting a publication.",
+  "prompt": "Use the magnifito-promo skill to make a 6-second 16:9 promo for \"The Magnifito Letter\" in the newsletter-promo style: the logo mark as the avatar, \"Sample issue · notes for small businesses\", three headlines (writing subject lines people open, what a good landing page asks for, small budgets and careful ads), a \"Free, once a month\" badge that links to its claim in claims.json, and a Subscribe button. Brand: warm browns on cream (#7a584c, #ae8c72, #f0eadf), dark ink #2b1c17, the logo green #8acf31 used sparingly, Geist from fonts/, and the logo in assets/magnifito-logo.svg. Render it with HyperFrames.",
+  "commands": [
+    "mgvideo render . --force"
+  ],
+  "output": "runs/*/final_output_*.mp4",
+  "poster_at": 3,
+  "expect": {
+    "width": 1920,
+    "height": 1080,
+    "duration_seconds": 6,
+    "audio": false
+  },
+  "synthetic_footage": false,
+  "credits": [
+    "Geist typeface by Vercel, SIL Open Font License 1.1 (fonts/OFL-Geist.txt); TTF converted from the WOFF2 vendored in vendor/barty-motion-graphics",
+    "Headline serif: the renderer's system serif (Georgia, PT Serif or Times New Roman via fontconfig); not shipped in this folder",
+    "Magnifito logo (assets/magnifito-logo.svg, from the Magnifito website): owned by Magnifito, the demo client; used with permission"
+  ]
+}

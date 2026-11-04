@@ -1,0 +1,19 @@
+{
+  "schema_version": "1.0.0",
+  "brand_id": "magnifito",
+  "name": "Magnifito",
+  "logos": { "primary": "assets/magnifito-logo.svg" },
+  "colors": {
+    "primary": "#7a584c",
+    "secondary": "#ae8c72",
+    "background": "#f0eadf",
+    "text_primary": "#2b1c17",
+    "accent": "#d5c299"
+  },
+  "fonts": [
+    { "family": "Geist", "weight": "800", "rights_evidence": "OFL-1.1 (vendored Barty-Bart/motion-graphics engine font)", "supports_cyrillic": false }
+  ],
+  "type_scale": { "h1": 96, "h2": 56, "body": 30, "caption": 18 },
+  "motion_preferences": { "tempo": "punchy", "camera_style": "subtle_drift", "border_radius": 36, "glassmorphism": false },
+  "prohibited_treatments": ["panels over the speaker's face", "invented figures"]
+}

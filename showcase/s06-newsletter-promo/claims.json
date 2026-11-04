@@ -1,0 +1,17 @@
+{
+  "schema_version": "1.0.0",
+  "revision": "rev-showcase-s06-1",
+  "claims": [
+    {
+      "claim_id": "claim-newsletter-cadence",
+      "approved_wording": "Free, once a month",
+      "evidence_source": "Illustrative newsletter concept for this showcase",
+      "owner": "Magnifito marketing lead",
+      "locale": "en",
+      "tags": [
+        "newsletter",
+        "illustrative"
+      ]
+    }
+  ]
+}

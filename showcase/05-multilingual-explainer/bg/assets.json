@@ -1,0 +1,43 @@
+{
+  "schema_version": "1.0.0",
+  "assets": [
+    {
+      "asset_id": "magnifito-logo",
+      "content_hash": "sha256-showcase-magnifito-logo-v2",
+      "local_path": "assets/magnifito-logo.svg",
+      "source": "Magnifito logo (menu-logo.svg from the Magnifito website, cropped copy from showcase/06-motion-graphics), owned by Magnifito, the demo client; used with permission",
+      "rights_evidence": "Magnifito-Owned-Asset",
+      "consent_obtained": true,
+      "permitted": {
+        "client": "magnifito",
+        "channels": [
+          "all"
+        ],
+        "territories": [
+          "worldwide"
+        ]
+      },
+      "attribution_required": false,
+      "status": "approved"
+    },
+    {
+      "asset_id": "campaign-steps",
+      "content_hash": "sha256-showcase-campaign-steps-v1",
+      "local_path": "assets/campaign-steps.svg",
+      "source": "Magnifito brand kit (showcase vector, drawn for this repository)",
+      "rights_evidence": "Magnifito-Owned-Asset",
+      "consent_obtained": true,
+      "permitted": {
+        "client": "magnifito",
+        "channels": [
+          "all"
+        ],
+        "territories": [
+          "worldwide"
+        ]
+      },
+      "attribution_required": false,
+      "status": "approved"
+    }
+  ]
+}

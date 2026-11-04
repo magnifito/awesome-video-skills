@@ -1,0 +1,17 @@
+{
+  "schema_version": "1.0.0",
+  "revision": "rev-showcase-s04-1",
+  "claims": [
+    {
+      "claim_id": "claim-report-scope",
+      "approved_wording": "Website, social, email and ads results on one screen",
+      "evidence_source": "Illustrative client report screen drawn for this showcase; every number on it is demo data",
+      "owner": "Magnifito marketing lead",
+      "locale": "en",
+      "tags": [
+        "product",
+        "illustrative"
+      ]
+    }
+  ]
+}

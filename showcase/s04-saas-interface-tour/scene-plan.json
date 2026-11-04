@@ -1,0 +1,23 @@
+{
+  "schema_version": "1.0.0",
+  "plan_revision": "rev-showcase-s04-1",
+  "renderer": "hyperframes",
+  "timing_authority": "template",
+  "scenes": [
+    {
+      "scene_id": "scene-01-report",
+      "factual_purpose": "Walk the viewer to the leads card on the monthly client report",
+      "duration_seconds": 7,
+      "duration_frames": 210,
+      "copy_text": "Your monthly report | Website, social, email and ads results on one screen",
+      "claims_refs": [
+        "claim-report-scope"
+      ],
+      "asset_refs": [
+        "client-report"
+      ],
+      "visual_recipe": "saas-interface-tour",
+      "audio_events": []
+    }
+  ]
+}

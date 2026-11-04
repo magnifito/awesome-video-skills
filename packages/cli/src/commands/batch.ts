@@ -1,5 +1,7 @@
 import fs from 'node:fs/promises';
+import { existsSync } from 'node:fs';
 import path from 'node:path';
+import { AssetManifestSchema, BrandProfileSchema } from '../../../contracts/src/index.js';
 import { runInit } from './init.js';
 import { safeId, safeJoin } from '../../../media/src/proc.js';
 import { runRender } from './render.js';
@@ -11,6 +13,7 @@ export interface CatalogItem {
   price: number;
   discount_percent: number;
   in_stock: boolean;
+  /** Asset id from the catalogue assets.json, shown on every scene in place of the brand logo. */
   image_asset?: string | null;
   status: string;
 }
@@ -20,6 +23,36 @@ export interface CatalogBatchFile {
   client_id: string;
   currency: string;
   items: CatalogItem[];
+  /** Optional visual recipe for every SKU scene; defaults to kinetic-typography / retail-card. */
+  visual_recipe?: string;
+  /** Optional closing line (claim-free); defaults to the generic retail call to action. */
+  cta_text?: string;
+}
+
+/**
+ * When the catalog folder holds the client's brand kit (brand.json, optionally assets.json),
+ * copies it into the SKU workspace together with the font and asset files it references, so
+ * the SKU renders in the client's brand instead of the stock brand written by init.
+ */
+async function applyCatalogBrandKit(catalogDir: string, skuDir: string): Promise<void> {
+  const brandPath = path.join(catalogDir, 'brand.json');
+  if (!existsSync(brandPath)) return;
+  const brand = BrandProfileSchema.parse(JSON.parse(await fs.readFile(brandPath, 'utf-8')));
+  const files = brand.fonts.flatMap(f => (f.file_path ? [f.file_path] : []));
+  await fs.copyFile(brandPath, path.join(skuDir, 'brand.json'));
+  const assetsPath = path.join(catalogDir, 'assets.json');
+  if (existsSync(assetsPath)) {
+    const manifest = AssetManifestSchema.parse(JSON.parse(await fs.readFile(assetsPath, 'utf-8')));
+    files.push(...manifest.assets.map(a => a.local_path));
+    await fs.copyFile(assetsPath, path.join(skuDir, 'assets.json'));
+  }
+  for (const rel of new Set(files)) {
+    const from = safeJoin(catalogDir, rel);
+    if (!existsSync(from)) throw new Error(`Brand kit file not found next to the catalog: ${rel}`);
+    const to = safeJoin(skuDir, rel);
+    await fs.mkdir(path.dirname(to), { recursive: true });
+    await fs.copyFile(from, to);
+  }
 }
 
 export interface BatchItemResult {
@@ -98,6 +131,7 @@ export async function runBatchCommerce(
           // Batch workspaces are generated output and are regenerated on every run.
           force: true
         });
+        await applyCatalogBrandKit(catalogDir, skuDir);
 
         // Update claims with price & discount
         const claimsPath = path.join(skuDir, 'claims.json');
@@ -141,8 +175,8 @@ export async function runBatchCommerce(
               duration_frames: 150,
               copy_text: item.title,
               claims_refs: [`claim-${item.sku}-title`],
-              asset_refs: ['brand-logo'],
-              visual_recipe: 'kinetic-typography',
+              asset_refs: [item.image_asset ?? 'brand-logo'],
+              visual_recipe: catalogData.visual_recipe ?? 'kinetic-typography',
               audio_events: []
             },
             {
@@ -152,8 +186,8 @@ export async function runBatchCommerce(
               duration_frames: 150,
               copy_text: `${priceText} - ${discountText}`,
               claims_refs: [`claim-${item.sku}-offer`],
-              asset_refs: [],
-              visual_recipe: 'retail-card',
+              asset_refs: item.image_asset ? [item.image_asset] : [],
+              visual_recipe: catalogData.visual_recipe ?? 'retail-card',
               audio_events: []
             },
             {
@@ -161,10 +195,10 @@ export async function runBatchCommerce(
               factual_purpose: 'Call to action',
               duration_seconds: 5.0,
               duration_frames: 150,
-              copy_text: 'Order now with express delivery',
+              copy_text: catalogData.cta_text ?? 'Order now with express delivery',
               claims_refs: [],
-              asset_refs: ['brand-logo'],
-              visual_recipe: 'retail-card',
+              asset_refs: [item.image_asset ?? 'brand-logo'],
+              visual_recipe: catalogData.visual_recipe ?? 'retail-card',
               audio_events: []
             }
           ]

@@ -1,5 +1,5 @@
 import fs from 'node:fs/promises';
-import { readFileSync, existsSync } from 'node:fs';
+import { existsSync } from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 import crypto from 'node:crypto';
@@ -15,6 +15,8 @@ import type {
   AdapterRenderOutput
 } from '../interface.js';
 import { inspectMedia, measureAudioLoudness, MediaProbeResult } from '../../packages/media/src/inspector.js';
+import { loadSceneImages, renderRecipeSvg, type SceneImage } from './recipes.js';
+import { renderStyleRecipeSvg } from './style-recipes.js';
 
 const execFileAsync = promisify(execFile);
 
@@ -202,6 +204,11 @@ export class HyperFramesAdapter implements VideoRendererAdapter {
     if (scene.visual_recipe === 'brand-title') {
       return this.generateBrandTitleSvg(scene, brand, width, height, transparent, assetSource);
     }
+    const images = assetSource ? loadSceneImages(scene, assetSource, false) : [];
+    const recipeSvg = renderRecipeSvg(scene, brand, width, height, transparent, images)
+      ?? renderStyleRecipeSvg(scene, brand, width, height, transparent, images);
+    if (recipeSvg) return recipeSvg;
+    // Fallback review card for recipes without a layout of their own.
     const fontSize = Math.round(width > 1200 ? 54 : 40);
     const subSize = Math.round(fontSize * 0.45);
     const isVertical = height > width;
@@ -300,7 +307,9 @@ export class HyperFramesAdapter implements VideoRendererAdapter {
     const lineHeight = Math.round(fontSize * 1.18);
 
     const logo = assetSource ? this.loadSceneLogo(scene, assetSource) : null;
-    const logoW = logo ? Math.round(width * 0.32) : 0;
+    // 32% of the width suits landscape; in portrait that leaves the image at a fifth of the frame
+    // height, so portrait frames give it 72% of the width.
+    const logoW = logo ? Math.round(width * (height > width ? 0.72 : 0.32)) : 0;
     const logoH = logo ? Math.round(logoW * logo.aspect) : 0;
 
     const maxChars = Math.max(12, Math.floor((width * 0.84) / (fontSize * 0.55)));
@@ -337,26 +346,8 @@ export class HyperFramesAdapter implements VideoRendererAdapter {
   private loadSceneLogo(
     scene: ProjectContext['scenePlan']['scenes'][0],
     source: Pick<ProjectContext, 'projectDir' | 'assets'>
-  ): { dataUri: string; aspect: number } | null {
-    for (const ref of scene.asset_refs) {
-      const asset = source.assets.assets.find(a => a.asset_id === ref);
-      if (!asset?.local_path) continue;
-      const file = safeJoin(source.projectDir, asset.local_path);
-      if (!existsSync(file)) throw new Error(`Asset ${ref} not found at ${asset.local_path}`);
-      const ext = path.extname(file).toLowerCase();
-      const mime = ext === '.svg' ? 'image/svg+xml' : ext === '.png' ? 'image/png' : ext === '.jpg' || ext === '.jpeg' ? 'image/jpeg' : null;
-      if (!mime) continue;
-      const buf = readFileSync(file);
-      let aspect = 1;
-      if (ext === '.svg') {
-        const vb = /viewBox="\s*[-\d.]+[ ,]+[-\d.]+[ ,]+([\d.]+)[ ,]+([\d.]+)\s*"/.exec(buf.toString('utf8'));
-        if (vb) aspect = Number(vb[2]) / Number(vb[1]);
-      } else if (ext === '.png' && buf.length > 24) {
-        aspect = buf.readUInt32BE(20) / buf.readUInt32BE(16);
-      }
-      return { dataUri: `data:${mime};base64,${buf.toString('base64')}`, aspect };
-    }
-    return null;
+  ): SceneImage | null {
+    return loadSceneImages(scene, source)[0] ?? null;
   }
 
   /**

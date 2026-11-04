@@ -1,0 +1,32 @@
+{
+  "schema_version": "1.0.0",
+  "plan_revision": "rev-showcase-s02-1",
+  "renderer": "hyperframes",
+  "timing_authority": "template",
+  "scenes": [
+    {
+      "scene_id": "scene-01-hook",
+      "factual_purpose": "Hook: the brand promise in bold type",
+      "duration_seconds": 3,
+      "duration_frames": 90,
+      "copy_text": "Digital marketing | with heart and value",
+      "claims_refs": [],
+      "asset_refs": [],
+      "visual_recipe": "kinetic-typography",
+      "audio_events": []
+    },
+    {
+      "scene_id": "scene-02-team",
+      "factual_purpose": "State the one-team engagement model",
+      "duration_seconds": 3,
+      "duration_frames": 90,
+      "copy_text": "Meet Magnifito. | One team from first idea to launch",
+      "claims_refs": [
+        "claim-one-team"
+      ],
+      "asset_refs": [],
+      "visual_recipe": "kinetic-typography",
+      "audio_events": []
+    }
+  ]
+}

@@ -1,0 +1,36 @@
+{
+  "schema_version": "1.0.0",
+  "plan_revision": "rev-showcase-1",
+  "renderer": "hyperframes",
+  "timing_authority": "template",
+  "scenes": [
+    {
+      "scene_id": "scene-01-title",
+      "factual_purpose": "Introduce the topic",
+      "duration_seconds": 2.5,
+      "duration_frames": 75,
+      "copy_text": "How a campaign comes together",
+      "claims_refs": [],
+      "asset_refs": [
+        "magnifito-logo"
+      ],
+      "visual_recipe": "brand-title",
+      "audio_events": []
+    },
+    {
+      "scene_id": "scene-02-steps",
+      "factual_purpose": "Name the four campaign steps",
+      "duration_seconds": 3.5,
+      "duration_frames": 105,
+      "copy_text": "Plan, create, launch, measure",
+      "claims_refs": [
+        "claim-process-en"
+      ],
+      "asset_refs": [
+        "campaign-steps"
+      ],
+      "visual_recipe": "brand-title",
+      "audio_events": []
+    }
+  ]
+}

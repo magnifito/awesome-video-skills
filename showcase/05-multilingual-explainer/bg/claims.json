@@ -1,0 +1,16 @@
+{
+  "schema_version": "1.0.0",
+  "revision": "rev-showcase-1",
+  "claims": [
+    {
+      "claim_id": "claim-process-bg",
+      "approved_wording": "План, създаване, старт, анализ",
+      "evidence_source": "Процес на кампания в Magnifito (вътрешно ръководство)",
+      "owner": "Маркетинг ръководител, Magnifito",
+      "locale": "bg",
+      "tags": [
+        "process"
+      ]
+    }
+  ]
+}

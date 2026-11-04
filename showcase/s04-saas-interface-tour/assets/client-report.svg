@@ -1,0 +1,78 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1000" viewBox="0 0 1600 1000">
+<!-- Mock "screen capture" of a Magnifito client report page, drawn for the showcase. Every name and number is demo data. -->
+<defs>
+  <linearGradient id="area" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7a584c" stop-opacity="0.3"/><stop offset="1" stop-color="#7a584c" stop-opacity="0"/></linearGradient>
+</defs>
+<rect width="1600" height="1000" fill="#fbf8f4"/>
+<rect width="250" height="1000" fill="#f0eadf"/>
+<circle cx="52" cy="54" r="18" fill="#7a584c"/>
+<text x="82" y="62" font-family="Geist" font-size="22" font-weight="700" fill="#2b1c17">Client hub</text>
+<g font-family="Geist" font-size="18" font-weight="500" fill="#7a584c">
+  <rect x="20" y="118" width="210" height="44" rx="10" fill="#d8c6b4"/>
+  <text x="44" y="146" fill="#2b1c17" font-weight="700">Report</text>
+  <text x="44" y="206">Website</text>
+  <text x="44" y="256">Social media</text>
+  <text x="44" y="306">Email</text>
+  <text x="44" y="356">Ads</text>
+  <text x="44" y="406">Automation</text>
+</g>
+<text x="300" y="78" font-family="Geist" font-size="34" font-weight="700" fill="#2b1c17">October report</text>
+<text x="300" y="112" font-family="Geist" font-size="18" font-weight="400" fill="#ae8c72">Demo client · sample data</text>
+<rect x="1380" y="52" width="180" height="48" rx="24" fill="#7a584c"/>
+<text x="1470" y="83" font-family="Geist" font-size="18" font-weight="700" fill="#f0eadf" text-anchor="middle">Share report</text>
+<g font-family="Geist">
+  <rect x="300" y="150" width="290" height="190" rx="18" fill="#ffffff" stroke="#e6dccf"/>
+  <text x="326" y="194" font-size="18" fill="#ae8c72" font-weight="500">Website visits</text>
+  <text x="326" y="250" font-size="44" fill="#2b1c17" font-weight="700">3,180</text>
+  <rect x="326" y="282" width="200" height="10" rx="5" fill="#f0eadf"/><rect x="326" y="282" width="140" height="10" rx="5" fill="#ae8c72"/>
+
+  <rect x="610" y="150" width="400" height="190" rx="18" fill="#ffffff" stroke="#e6dccf"/>
+  <text x="636" y="194" font-size="18" fill="#ae8c72" font-weight="500">Social reach</text>
+  <text x="636" y="250" font-size="44" fill="#2b1c17" font-weight="700">12.4k</text>
+  <rect x="636" y="282" width="320" height="10" rx="5" fill="#f0eadf"/><rect x="636" y="282" width="210" height="10" rx="5" fill="#ae8c72"/>
+
+  <rect x="1030" y="150" width="270" height="190" rx="18" fill="#ffffff" stroke="#e6dccf"/>
+  <text x="1056" y="194" font-size="18" fill="#ae8c72" font-weight="500">Email opens</text>
+  <text x="1056" y="250" font-size="44" fill="#2b1c17" font-weight="700">48%</text>
+  <rect x="1056" y="282" width="200" height="10" rx="5" fill="#f0eadf"/><rect x="1056" y="282" width="96" height="10" rx="5" fill="#ae8c72"/>
+
+  <rect x="1320" y="150" width="240" height="190" rx="18" fill="#ffffff" stroke="#e6dccf"/>
+  <text x="1346" y="194" font-size="18" fill="#ae8c72" font-weight="500">Ad spend</text>
+  <text x="1346" y="250" font-size="44" fill="#2b1c17" font-weight="700">€640</text>
+
+  <rect x="580" y="380" width="440" height="240" rx="18" fill="#ffffff" stroke="#d8c6b4" stroke-width="2"/>
+  <text x="606" y="422" font-size="20" fill="#7a584c" font-weight="700">Leads this month</text>
+  <text x="606" y="482" font-size="56" fill="#2b1c17" font-weight="700">41</text>
+  <rect x="690" y="446" width="76" height="32" rx="16" fill="#8acf31" fill-opacity="0.25"/>
+  <text x="728" y="468" font-size="17" fill="#3d6b10" font-weight="700" text-anchor="middle">+9</text>
+  <path d="M606 590 L660 570 L714 578 L768 548 L822 556 L876 520 L930 528 L994 500 L994 600 L606 600 Z" fill="url(#area)"/>
+  <path d="M606 590 L660 570 L714 578 L768 548 L822 556 L876 520 L930 528 L994 500" fill="none" stroke="#7a584c" stroke-width="4" stroke-linejoin="round"/>
+
+  <rect x="300" y="380" width="260" height="560" rx="18" fill="#ffffff" stroke="#e6dccf"/>
+  <text x="326" y="422" font-size="20" fill="#2b1c17" font-weight="700">Channels</text>
+  <g font-size="17" fill="#7a584c" font-weight="500">
+    <text x="326" y="474">Website</text><rect x="326" y="486" width="200" height="8" rx="4" fill="#ae8c72"/>
+    <text x="326" y="534">Social</text><rect x="326" y="546" width="150" height="8" rx="4" fill="#ae8c72"/>
+    <text x="326" y="594">Email</text><rect x="326" y="606" width="120" height="8" rx="4" fill="#ae8c72"/>
+    <text x="326" y="654">Ads</text><rect x="326" y="666" width="90" height="8" rx="4" fill="#ae8c72"/>
+  </g>
+
+  <rect x="1040" y="380" width="520" height="240" rx="18" fill="#ffffff" stroke="#e6dccf"/>
+  <text x="1066" y="422" font-size="20" fill="#2b1c17" font-weight="700">Next posts</text>
+  <g font-size="17" fill="#7a584c" font-weight="500">
+    <circle cx="1078" cy="468" r="8" fill="#8acf31"/><text x="1098" y="474">Thu · Autumn offer reel</text>
+    <circle cx="1078" cy="518" r="8" fill="#d8c6b4"/><text x="1098" y="524">Sat · Customer story</text>
+    <circle cx="1078" cy="568" r="8" fill="#d8c6b4"/><text x="1098" y="574">Mon · Newsletter teaser</text>
+  </g>
+
+  <rect x="580" y="660" width="980" height="280" rx="18" fill="#ffffff" stroke="#e6dccf"/>
+  <text x="606" y="702" font-size="20" fill="#2b1c17" font-weight="700">Campaigns</text>
+  <g font-size="17" fill="#7a584c" font-weight="500">
+    <text x="606" y="754">Autumn offer</text><text x="1000" y="754">Social + ads</text><text x="1400" y="754" fill="#3d6b10" font-weight="700">Live</text>
+    <rect x="606" y="772" width="930" height="1.5" fill="#f0eadf"/>
+    <text x="606" y="814">Welcome emails</text><text x="1000" y="814">Email</text><text x="1400" y="814" fill="#3d6b10" font-weight="700">Live</text>
+    <rect x="606" y="832" width="930" height="1.5" fill="#f0eadf"/>
+    <text x="606" y="874">New landing page</text><text x="1000" y="874">Website</text><text x="1400" y="874">Draft</text>
+  </g>
+</g>
+</svg>

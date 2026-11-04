@@ -1,0 +1,25 @@
+{
+  "id": "s07-milestone-reveal",
+  "title": "Milestone reveal: 150+ launches",
+  "type": "Milestone reveal",
+  "skill": "magnifito-promo",
+  "engine": "hyperframes",
+  "caption": "The milestone-reveal recipe: one big metric over a soft radial glow and particle ring, with its label underneath, for anniversary posts and results slides.",
+  "prompt": "Make a 6 second 16:9 milestone card for Magnifito, a Bulgarian digital marketing agency, using the milestone-reveal style. The figure is \"150+ websites and campaigns launched\"; it is illustrative, so put it in claims.json and say so in a footnote on screen. Put our logo (assets/magnifito-logo.svg) in the corner. Brand: warm browns on cream (#7a584c, #d8c6b4, #f0eadf), dark ink #2b1c17, a touch of green #8acf31, Geist from fonts/. English on screen.",
+  "commands": [
+    "mgvideo render . --force"
+  ],
+  "output": "runs/*/final_output_*.mp4",
+  "poster_at": 3.0,
+  "expect": {
+    "width": 1920,
+    "height": 1080,
+    "duration_seconds": 6.0,
+    "audio": false
+  },
+  "synthetic_footage": false,
+  "credits": [
+    "Geist typeface by Vercel, SIL Open Font License 1.1 (fonts/OFL-Geist.txt); TTF converted from the WOFF2 vendored in vendor/barty-motion-graphics",
+    "Magnifito logo (assets/magnifito-logo.svg, from the Magnifito website): owned by Magnifito, the demo client; used with permission"
+  ]
+}

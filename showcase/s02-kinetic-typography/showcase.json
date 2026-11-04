@@ -1,0 +1,24 @@
+{
+  "id": "s02-kinetic-typography",
+  "title": "Kinetic typography",
+  "type": "Kinetic typography",
+  "skill": "magnifito-promo",
+  "engine": "hyperframes",
+  "caption": "The kinetic-typography recipe: big, tight statement lines with the key words in the brand colour over an accent underline, for hooks and bold messages.",
+  "prompt": "Use the magnifito-promo skill to make a 6-second 16:9 hook for Magnifito in the kinetic-typography style: two 3-second lines, \"Digital marketing with heart and value\" and \"Meet Magnifito. One team from first idea to launch\", with the second half of each line emphasised. Link the one-team line to its approved claim in claims.json. Brand: warm browns on cream (#7a584c, #ae8c72, #f0eadf), dark ink #2b1c17, the logo green #8acf31 used sparingly, Geist from fonts/, and the logo in assets/magnifito-logo.svg. Render it with HyperFrames.",
+  "commands": [
+    "mgvideo render . --force"
+  ],
+  "output": "runs/*/final_output_*.mp4",
+  "poster_at": 4.5,
+  "expect": {
+    "width": 1920,
+    "height": 1080,
+    "duration_seconds": 6,
+    "audio": false
+  },
+  "synthetic_footage": false,
+  "credits": [
+    "Geist typeface by Vercel, SIL Open Font License 1.1 (fonts/OFL-Geist.txt); TTF converted from the WOFF2 vendored in vendor/barty-motion-graphics"
+  ]
+}

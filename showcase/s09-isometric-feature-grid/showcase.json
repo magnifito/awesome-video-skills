@@ -1,0 +1,25 @@
+{
+  "id": "s09-isometric-feature-grid",
+  "title": "Isometric feature grid: six services",
+  "type": "Isometric feature grid",
+  "skill": "magnifito-promo",
+  "engine": "hyperframes",
+  "caption": "The isometric-feature-grid recipe: up to six labelled isometric tiles on a 3x2 grid under a title, for service overviews and architecture diagrams.",
+  "prompt": "Make a 7 second 16:9 service overview for Magnifito, a Bulgarian digital marketing agency, using the isometric-feature-grid style: the title \"Websites, social media, email, ads and automation\" over six tiles: Strategy, Websites, Social media, Email, Ads, Automation. Link the wording to claims.json. Logo in the corner (assets/magnifito-logo.svg). Brand: warm browns on cream (#7a584c, #d8c6b4, #f0eadf), dark ink #2b1c17, green #8acf31 sparingly, Geist from fonts/. English on screen.",
+  "commands": [
+    "mgvideo render . --force"
+  ],
+  "output": "runs/*/final_output_*.mp4",
+  "poster_at": 3.5,
+  "expect": {
+    "width": 1920,
+    "height": 1080,
+    "duration_seconds": 7.0,
+    "audio": false
+  },
+  "synthetic_footage": false,
+  "credits": [
+    "Geist typeface by Vercel, SIL Open Font License 1.1 (fonts/OFL-Geist.txt); TTF converted from the WOFF2 vendored in vendor/barty-motion-graphics",
+    "Magnifito logo (assets/magnifito-logo.svg, from the Magnifito website): owned by Magnifito, the demo client; used with permission"
+  ]
+}

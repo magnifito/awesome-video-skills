@@ -10,6 +10,6 @@
   "layout": {
     "column_ratio": "50/50",
     "badge_vs_placement": "center_divider"
-  }
+  },
+  "copy_format": "title | left heading | item; item; item | right heading (highlighted winner) | item; item; item [| footnote]"
 }
-

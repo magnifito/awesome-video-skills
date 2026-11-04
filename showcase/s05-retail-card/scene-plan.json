@@ -1,0 +1,38 @@
+{
+  "schema_version": "1.0.0",
+  "plan_revision": "rev-showcase-s05-1",
+  "renderer": "hyperframes",
+  "timing_authority": "template",
+  "scenes": [
+    {
+      "scene_id": "scene-01-starter",
+      "factual_purpose": "Offer card for the Website Starter package (illustrative price)",
+      "duration_seconds": 3.5,
+      "duration_frames": 105,
+      "copy_text": "Website Starter | from €690 | Launch offer | Book a call | Illustrative prices for this showcase, VAT excluded",
+      "claims_refs": [
+        "claim-price-starter"
+      ],
+      "asset_refs": [
+        "magnifito-logo"
+      ],
+      "visual_recipe": "retail-card",
+      "audio_events": []
+    },
+    {
+      "scene_id": "scene-02-social",
+      "factual_purpose": "Offer card for the Social Media Care plan (illustrative price)",
+      "duration_seconds": 3.5,
+      "duration_frames": 105,
+      "copy_text": "Social Media Care | €390 / month | Monthly plan | Book a call | Illustrative prices for this showcase, VAT excluded",
+      "claims_refs": [
+        "claim-price-social"
+      ],
+      "asset_refs": [
+        "magnifito-logo"
+      ],
+      "visual_recipe": "retail-card",
+      "audio_events": []
+    }
+  ]
+}

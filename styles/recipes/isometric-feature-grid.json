@@ -11,6 +11,6 @@
   "layout": {
     "grid_dimensions": "3x2",
     "camera_fov": 45
-  }
+  },
+  "copy_format": "title | tile | tile | ... (up to six tiles, 3x2) [| footnote as the eighth field]"
 }
-

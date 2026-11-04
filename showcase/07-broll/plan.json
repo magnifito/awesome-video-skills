@@ -1,0 +1,47 @@
+{
+  "title": "Magnifito: one plan, the whole funnel",
+  "video": "work/source.mp4",
+  "fps": "30/1",
+  "brand": "brand.json",
+  "clips": [
+    {
+      "id": "01",
+      "title": "One plan",
+      "line": "Websites, social media, email and ads, all in one plan.",
+      "in": 2.5,
+      "out": 7.2,
+      "kind": "panel",
+      "area": { "x": 990, "y": 70, "w": 860, "h": 860 },
+      "recipe": "motion-card-morph",
+      "scene": { "copy": "One plan | Websites | Social media | Email and ads" },
+      "file": "work/clips/01-one-plan.mov"
+    },
+    {
+      "id": "02",
+      "title": "Automate the follow-up",
+      "line": "Then we automate the follow-up.",
+      "in": 7.3,
+      "out": 9.6,
+      "kind": "full",
+      "recipe": "motion-kinetic-type",
+      "scene": { "copy": "Then we automate the follow-up" },
+      "file": "work/clips/02-automate.mp4"
+    },
+    {
+      "id": "03",
+      "title": "Every new lead",
+      "line": "Every new lead gets a welcome email, and your sales team hears about it.",
+      "in": 9.7,
+      "out": 14.9,
+      "kind": "panel",
+      "area": { "x": 990, "y": 70, "w": 860, "h": 860 },
+      "recipe": "motion-card-morph",
+      "scene": { "copy": "Automation | New lead captured | Welcome email sent | Sales team notified" },
+      "file": "work/clips/03-every-lead.mov"
+    }
+  ],
+  "notes": [
+    "work/source.mp4 is synthetic: a generated presenter on the left third with a voice-like tone track, made by make-footage.mjs.",
+    "No figures are shown; every panel row is taken from the spoken line."
+  ]
+}

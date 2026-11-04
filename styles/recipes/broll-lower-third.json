@@ -11,6 +11,6 @@
     "margin_bottom_px": 80,
     "margin_left_px": 80,
     "transparent_background": true
-  }
+  },
+  "copy_format": "name | affiliation"
 }
-

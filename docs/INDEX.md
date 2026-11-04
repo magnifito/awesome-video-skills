@@ -2,13 +2,14 @@
 
 # Documentation index
 
-10 documents. Agents should read `docs/index.json` instead of this file.
+11 documents. Agents should read `docs/index.json` instead of this file.
 
-## plan (1)
+## plan (2)
 
 | Document | Status | Updated | Summary |
 |---|---|---|---|
 | [Motion engine (Barty-Bart motion-graphics integration)](plans/motion-engine.md) | `draft` | 2026-11-04 | Vendor Barty-Bart/motion-graphics at 3d83d98 and add a motion renderer, recipes, transparent B-roll, sound effects and object separation |
+| [Showcase videos and GitHub Pages site](plans/showcase-videos.md) | `draft` | 2026-11-04 | Nine Magnifito demo projects, one per video type, rendered to committed MP4s, checked by a test suite and shown on a GitHub Pages site |
 
 ## reference (9)
 

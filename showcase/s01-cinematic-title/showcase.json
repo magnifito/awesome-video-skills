@@ -1,0 +1,24 @@
+{
+  "id": "s01-cinematic-title",
+  "title": "Cinematic title",
+  "type": "Cinematic title",
+  "skill": "magnifito-promo",
+  "engine": "hyperframes",
+  "caption": "The cinematic-title recipe: a letterboxed, glowing title card with a lens-flare streak and wide uppercase tracking, for openers and film-style title moments.",
+  "prompt": "Use the magnifito-promo skill to make a 6-second 16:9 title card for Magnifito, a Bulgarian digital marketing agency, in the cinematic-title style. The title is \"Magnifito\" with the approved service line \"Websites, social media, email, ads and automation\" under it (claim-services in claims.json). Brand: warm browns on cream (#7a584c, #ae8c72, #f0eadf), dark ink #2b1c17, the logo green #8acf31 used sparingly, Geist from fonts/, and the logo in assets/magnifito-logo.svg. Render it with HyperFrames.",
+  "commands": [
+    "mgvideo render . --force"
+  ],
+  "output": "runs/*/final_output_*.mp4",
+  "poster_at": 3,
+  "expect": {
+    "width": 1920,
+    "height": 1080,
+    "duration_seconds": 6,
+    "audio": false
+  },
+  "synthetic_footage": false,
+  "credits": [
+    "Geist typeface by Vercel, SIL Open Font License 1.1 (fonts/OFL-Geist.txt); TTF converted from the WOFF2 vendored in vendor/barty-motion-graphics"
+  ]
+}

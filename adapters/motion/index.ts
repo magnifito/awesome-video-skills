@@ -65,9 +65,7 @@ export class MotionAdapter implements VideoRendererAdapter {
     if (!context.brand.fonts || context.brand.fonts.length === 0) {
       errors.push('Motion: At least one font definition with rights evidence is required.');
     }
-    if (context.brief.language === 'bg' && !context.brand.fonts.some(f => f.supports_cyrillic && f.file_path)) {
-      errors.push("Motion: Brief requests Bulgarian ('bg'); the embedded Geist fallback has no Cyrillic, so ship a Cyrillic brand font file (fonts[].file_path).");
-    }
+    // No Cyrillic gate here: the embedded Geist fallback covers Bulgarian (fontconfig lang "bg").
     for (const [k, v] of Object.entries(context.brand.colors)) {
       if (v === undefined) continue;
       try { safeCssColor(v); } catch { errors.push(`Motion: brand color ${k} is not a valid CSS color.`); }

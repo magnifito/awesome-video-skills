@@ -1,0 +1,16 @@
+{
+  "schema_version": "1.0.0",
+  "revision": "rev-showcase-1",
+  "claims": [
+    {
+      "claim_id": "claim-process-en",
+      "approved_wording": "Plan, create, launch, measure",
+      "evidence_source": "Magnifito campaign process (internal playbook)",
+      "owner": "Magnifito marketing lead",
+      "locale": "en",
+      "tags": [
+        "process"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "revision": "rev-showcase-s07-1",
+  "claims": [
+    {
+      "claim_id": "claim-launches",
+      "approved_wording": "150+ websites and campaigns launched",
+      "evidence_source": "Illustrative showcase data, not a real Magnifito or client result",
+      "owner": "Toolkit maintainers",
+      "locale": "en"
+    }
+  ]
+}

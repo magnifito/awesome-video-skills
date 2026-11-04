@@ -1,0 +1,20 @@
+{
+  "schema_version": "1.0.0",
+  "project_id": "showcase-04-commerce-variants",
+  "client_id": "magnifito",
+  "workflow": "commerce-variants",
+  "objective": "Turn a three-package service catalogue into one vertical offer video per package",
+  "audience": "Small business owners browsing social feeds",
+  "language": "en",
+  "duration_seconds": 15,
+  "formats": ["16:9"],
+  "engine": "hyperframes",
+  "timing_authority": "template",
+  "campaign_reference_time": "2026-11-04T09:00:00Z",
+  "budgets": {
+    "agent_budget_usd": 10,
+    "compute_budget_usd": 5,
+    "media_budget_usd": 0,
+    "max_retries": 3
+  }
+}

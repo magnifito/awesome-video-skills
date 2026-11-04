@@ -15,7 +15,9 @@
     "packages/**/*",
     "adapters/**/*",
     "tools/**/*",
-    "evaluations/**/*"
+    "evaluations/**/*",
+    "showcase/**/*.ts",
+    "site/**/*.ts"
   ],
   "exclude": [
     "node_modules",

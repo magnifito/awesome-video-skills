@@ -1,0 +1,26 @@
+{
+  "id": "s03-product-reveal",
+  "title": "Product reveal",
+  "type": "Product reveal",
+  "skill": "magnifito-promo",
+  "engine": "hyperframes",
+  "caption": "The product-reveal recipe: a spotlit hero product on a soft glow with a floor shadow, a category badge top left and the name and promise below, for launching one offer.",
+  "prompt": "Use the magnifito-promo skill to make a 6-second 16:9 product reveal for Magnifito's Website Starter package in the product-reveal style. Use the laptop product shot in assets/website-starter.svg as the hero, a \"Website package\" badge, the logo in the corner, and the line \"Five pages, built so you can edit them yourself\", which is an illustrative claim in claims.json. Brand: warm browns on cream (#7a584c, #ae8c72, #f0eadf), dark ink #2b1c17, the logo green #8acf31 used sparingly, Geist from fonts/, and the logo in assets/magnifito-logo.svg. Render it with HyperFrames.",
+  "commands": [
+    "mgvideo render . --force"
+  ],
+  "output": "runs/*/final_output_*.mp4",
+  "poster_at": 3,
+  "expect": {
+    "width": 1920,
+    "height": 1080,
+    "duration_seconds": 6,
+    "audio": false
+  },
+  "synthetic_footage": false,
+  "credits": [
+    "Geist typeface by Vercel, SIL Open Font License 1.1 (fonts/OFL-Geist.txt); TTF converted from the WOFF2 vendored in vendor/barty-motion-graphics",
+    "Website Starter product shot (assets/website-starter.svg) drawn as SVG for this repository; the package is illustrative, not a current Magnifito offer",
+    "Magnifito logo (assets/magnifito-logo.svg, from the Magnifito website): owned by Magnifito, the demo client; used with permission"
+  ]
+}

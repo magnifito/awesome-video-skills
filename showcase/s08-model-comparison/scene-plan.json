@@ -1,0 +1,25 @@
+{
+  "schema_version": "1.0.0",
+  "plan_revision": "rev-showcase-s08-1",
+  "renderer": "hyperframes",
+  "timing_authority": "template",
+  "scenes": [
+    {
+      "scene_id": "scene-01-compare",
+      "factual_purpose": "Compare DIY posting with managed social media, side by side",
+      "duration_seconds": 7.0,
+      "duration_frames": 210,
+      "copy_text": "DIY posting vs managed social media | DIY posting | Posts go out when there is time; No plan for the month; Hard to tell what worked | Managed by Magnifito | A content calendar planned a month ahead; One consistent brand voice; A monthly report on what worked | Illustrative comparison",
+      "claims_refs": [
+        "claim-calendar",
+        "claim-voice",
+        "claim-report"
+      ],
+      "asset_refs": [
+        "magnifito-logo"
+      ],
+      "visual_recipe": "model-comparison",
+      "audio_events": []
+    }
+  ]
+}

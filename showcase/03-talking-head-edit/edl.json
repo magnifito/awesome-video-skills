@@ -1,0 +1,75 @@
+{
+  "schema_version": "1.0.0",
+  "timing_authority": "speech",
+  "source_media_hash": "synthetic-raw-take-v1",
+  "source_duration_us": 30333333,
+  "output_fps": {
+    "numerator": 30,
+    "denominator": 1
+  },
+  "cuts": [
+    {
+      "cut_id": "cut-01",
+      "source_start_us": 633333,
+      "source_end_us": 3233333,
+      "output_start_frame": 0,
+      "output_end_frame": 78,
+      "speed_factor": 1,
+      "reason": "Opening line; lead-in silence trimmed"
+    },
+    {
+      "cut_id": "cut-02",
+      "source_start_us": 5933333,
+      "source_end_us": 9600000,
+      "output_start_frame": 78,
+      "output_end_frame": 188,
+      "speed_factor": 1,
+      "reason": "Removed filler \"um, so\" with its pauses (2.7 s) before \"we're\""
+    },
+    {
+      "cut_id": "cut-03",
+      "source_start_us": 10766667,
+      "source_end_us": 12433333,
+      "output_start_frame": 188,
+      "output_end_frame": 238,
+      "speed_factor": 1,
+      "reason": "Shortened a 1.2 s pause before \"We\""
+    },
+    {
+      "cut_id": "cut-04",
+      "source_start_us": 13266667,
+      "source_end_us": 16266667,
+      "output_start_frame": 238,
+      "output_end_frame": 328,
+      "speed_factor": 1,
+      "reason": "Removed filler \"uh\" with its pauses (0.8 s) before \"run\""
+    },
+    {
+      "cut_id": "cut-05",
+      "source_start_us": 18066667,
+      "source_end_us": 22866667,
+      "output_start_frame": 328,
+      "output_end_frame": 472,
+      "speed_factor": 1,
+      "reason": "Removed false start \"and we\" with its pauses (1.8 s) before \"and\""
+    },
+    {
+      "cut_id": "cut-06",
+      "source_start_us": 23800000,
+      "source_end_us": 25366667,
+      "output_start_frame": 472,
+      "output_end_frame": 519,
+      "speed_factor": 1,
+      "reason": "Removed filler \"um\" with its pauses (0.9 s) before \"focus\""
+    },
+    {
+      "cut_id": "cut-07",
+      "source_start_us": 26433333,
+      "source_end_us": 29600000,
+      "output_start_frame": 519,
+      "output_end_frame": 614,
+      "speed_factor": 1,
+      "reason": "Shortened a 1.1 s pause before \"Let's\""
+    }
+  ]
+}

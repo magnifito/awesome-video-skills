@@ -1,0 +1,25 @@
+{
+  "id": "s08-model-comparison",
+  "title": "Model comparison: DIY posting vs managed social",
+  "type": "Model comparison",
+  "skill": "magnifito-promo",
+  "engine": "hyperframes",
+  "caption": "The model-comparison recipe: two 50/50 columns split by a VS badge, the old way on the left and the recommended way highlighted on the right, for before/after and us-versus-them slides.",
+  "prompt": "Make a 7 second 16:9 side-by-side comparison for Magnifito, a Bulgarian digital marketing agency, using the model-comparison style: \"DIY posting\" on the left (posts go out when there is time, no plan for the month, hard to tell what worked) against \"Managed by Magnifito\" on the right (a content calendar planned a month ahead, one consistent brand voice, a monthly report on what worked). Keep it honest and generic and label it as an illustrative comparison; put the service lines in claims.json. Logo in the corner (assets/magnifito-logo.svg). Brand: warm browns on cream, dark ink, green #8acf31 only as an accent, Geist from fonts/. English on screen.",
+  "commands": [
+    "mgvideo render . --force"
+  ],
+  "output": "runs/*/final_output_*.mp4",
+  "poster_at": 3.5,
+  "expect": {
+    "width": 1920,
+    "height": 1080,
+    "duration_seconds": 7.0,
+    "audio": false
+  },
+  "synthetic_footage": false,
+  "credits": [
+    "Geist typeface by Vercel, SIL Open Font License 1.1 (fonts/OFL-Geist.txt); TTF converted from the WOFF2 vendored in vendor/barty-motion-graphics",
+    "Magnifito logo (assets/magnifito-logo.svg, from the Magnifito website): owned by Magnifito, the demo client; used with permission"
+  ]
+}

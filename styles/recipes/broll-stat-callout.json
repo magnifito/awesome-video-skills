@@ -10,6 +10,6 @@
   "layout": {
     "position": "upper_right",
     "max_width_px": 360
-  }
+  },
+  "copy_format": "<metric> <label> [| footnote]: the first word holding a digit is the metric"
 }
-

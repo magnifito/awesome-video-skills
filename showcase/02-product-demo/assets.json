@@ -1,0 +1,138 @@
+{
+  "schema_version": "1.0.0",
+  "assets": [
+    {
+      "asset_id": "magnifito-logo",
+      "content_hash": "sha256-showcase-magnifito-logo-v2",
+      "local_path": "assets/magnifito-logo.svg",
+      "source": "Magnifito logo (menu-logo.svg from the Magnifito website, cropped copy from showcase/06-motion-graphics), owned by Magnifito, the demo client; used with permission",
+      "rights_evidence": "Magnifito-Owned-Asset",
+      "consent_obtained": true,
+      "permitted": {
+        "client": "magnifito",
+        "channels": [
+          "all"
+        ],
+        "territories": [
+          "worldwide"
+        ]
+      },
+      "attribution_required": false,
+      "status": "approved"
+    },
+    {
+      "asset_id": "dashboard-overview",
+      "content_hash": "sha256-showcase-dashboard-overview-v1",
+      "local_path": "assets/dashboard-a.svg",
+      "source": "Synthetic mock UI drawn as SVG for this showcase; every name and number on screen is demo data",
+      "rights_evidence": "Magnifito-Owned-Asset",
+      "consent_obtained": true,
+      "permitted": {
+        "client": "magnifito",
+        "channels": [
+          "all"
+        ],
+        "territories": [
+          "worldwide"
+        ]
+      },
+      "attribution_required": false,
+      "status": "approved"
+    },
+    {
+      "asset_id": "dashboard-scheduled",
+      "content_hash": "sha256-showcase-dashboard-scheduled-v1",
+      "local_path": "assets/dashboard-b.svg",
+      "source": "Synthetic mock UI drawn as SVG for this showcase; every name and number on screen is demo data",
+      "rights_evidence": "Magnifito-Owned-Asset",
+      "consent_obtained": true,
+      "permitted": {
+        "client": "magnifito",
+        "channels": [
+          "all"
+        ],
+        "territories": [
+          "worldwide"
+        ]
+      },
+      "attribution_required": false,
+      "status": "approved"
+    },
+    {
+      "asset_id": "dashboard-shared",
+      "content_hash": "sha256-showcase-dashboard-shared-v1",
+      "local_path": "assets/dashboard-c.svg",
+      "source": "Synthetic mock UI drawn as SVG for this showcase; every name and number on screen is demo data",
+      "rights_evidence": "Magnifito-Owned-Asset",
+      "consent_obtained": true,
+      "permitted": {
+        "client": "magnifito",
+        "channels": [
+          "all"
+        ],
+        "territories": [
+          "worldwide"
+        ]
+      },
+      "attribution_required": false,
+      "status": "approved"
+    },
+    {
+      "asset_id": "cursor",
+      "content_hash": "sha256-showcase-cursor-v1",
+      "local_path": "assets/cursor.svg",
+      "source": "Pointer drawn as SVG for this showcase",
+      "rights_evidence": "Magnifito-Owned-Asset",
+      "consent_obtained": true,
+      "permitted": {
+        "client": "magnifito",
+        "channels": [
+          "all"
+        ],
+        "territories": [
+          "worldwide"
+        ]
+      },
+      "attribution_required": false,
+      "status": "approved"
+    },
+    {
+      "asset_id": "click-ring",
+      "content_hash": "sha256-showcase-click-ring-v1",
+      "local_path": "assets/click-ring.svg",
+      "source": "Click ripple drawn as SVG for this showcase",
+      "rights_evidence": "Magnifito-Owned-Asset",
+      "consent_obtained": true,
+      "permitted": {
+        "client": "magnifito",
+        "channels": [
+          "all"
+        ],
+        "territories": [
+          "worldwide"
+        ]
+      },
+      "attribution_required": false,
+      "status": "approved"
+    },
+    {
+      "asset_id": "caption-pill",
+      "content_hash": "sha256-showcase-caption-pill-v1",
+      "local_path": "assets/caption-pill.svg",
+      "source": "Caption backing drawn as SVG for this showcase",
+      "rights_evidence": "Magnifito-Owned-Asset",
+      "consent_obtained": true,
+      "permitted": {
+        "client": "magnifito",
+        "channels": [
+          "all"
+        ],
+        "territories": [
+          "worldwide"
+        ]
+      },
+      "attribution_required": false,
+      "status": "approved"
+    }
+  ]
+}

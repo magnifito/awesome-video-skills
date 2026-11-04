@@ -26,7 +26,7 @@ Every scene must use one of the four motion recipes; `mgvideo render` refuses ot
 | `motion-bars-chart` | Metrics and comparisons | `Title \| Label: 180 min \| …`; link every number via `claims_refs` (approved wording wins). |
 | `motion-logo-reveal` | End card | Tagline; put the logo asset (SVG, PNG or JPEG) in `asset_refs`. |
 
-Brand colours, the heading/body fonts (`fonts[].file_path` is embedded; Geist otherwise) and the brand name drive every recipe. Geist has no Cyrillic: Bulgarian briefs must ship a Cyrillic font file. Transparent output (`mov_prores`) renders ProRes 4444 with alpha. Engine details: `reference/motion-engine.md`. A working example lives in `fixtures/motion-demo/`.
+Brand colours, the heading/body fonts (`fonts[].file_path` is embedded; Geist otherwise) and the brand name drive every recipe. Geist covers Latin and Cyrillic, including Bulgarian. Transparent output (`mov_prores`) renders ProRes 4444 with alpha. Engine details: `reference/motion-engine.md`. A working example lives in `fixtures/motion-demo/`.
 
 ## Production Workflow
 

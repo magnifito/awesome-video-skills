@@ -1,0 +1,23 @@
+{
+  "schema_version": "1.0.0",
+  "plan_revision": "rev-showcase-s06-1",
+  "renderer": "hyperframes",
+  "timing_authority": "template",
+  "scenes": [
+    {
+      "scene_id": "scene-01-issue",
+      "factual_purpose": "Preview a sample issue of the Magnifito newsletter and invite sign-ups",
+      "duration_seconds": 6,
+      "duration_frames": 180,
+      "copy_text": "The Magnifito Letter | Sample issue · notes for small businesses | Writing subject lines people open | What a good landing page asks for | Small budgets, careful ads | Free, once a month | Subscribe",
+      "claims_refs": [
+        "claim-newsletter-cadence"
+      ],
+      "asset_refs": [
+        "magnifito-logo"
+      ],
+      "visual_recipe": "newsletter-promo",
+      "audio_events": []
+    }
+  ]
+}

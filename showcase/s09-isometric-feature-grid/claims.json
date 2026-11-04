@@ -1,0 +1,20 @@
+{
+  "schema_version": "1.0.0",
+  "revision": "rev-showcase-s09-1",
+  "claims": [
+    {
+      "claim_id": "claim-services",
+      "approved_wording": "Websites, social media, email, ads and automation",
+      "evidence_source": "Magnifito service catalogue (magnifito.com/services)",
+      "owner": "Toolkit maintainers",
+      "locale": "en"
+    },
+    {
+      "claim_id": "claim-strategy",
+      "approved_wording": "Strategy",
+      "evidence_source": "Showcase wording for the planning step before a project; illustrative",
+      "owner": "Toolkit maintainers",
+      "locale": "en"
+    }
+  ]
+}

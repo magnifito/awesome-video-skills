@@ -1,0 +1,19 @@
+{
+  "schema_version": "1.0.0",
+  "plan_revision": "rev-showcase-1",
+  "renderer": "hyperframes",
+  "timing_authority": "template",
+  "scenes": [
+    {
+      "scene_id": "reel-header",
+      "factual_purpose": "Header for the contact reel that shows the three SKU renders side by side",
+      "duration_seconds": 15.0,
+      "duration_frames": 450,
+      "copy_text": "One catalogue, three videos",
+      "claims_refs": [],
+      "asset_refs": [],
+      "visual_recipe": "brand-title",
+      "audio_events": []
+    }
+  ]
+}

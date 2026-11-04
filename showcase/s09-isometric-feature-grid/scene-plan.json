@@ -1,0 +1,24 @@
+{
+  "schema_version": "1.0.0",
+  "plan_revision": "rev-showcase-s09-1",
+  "renderer": "hyperframes",
+  "timing_authority": "template",
+  "scenes": [
+    {
+      "scene_id": "scene-01-grid",
+      "factual_purpose": "Show the services as six isometric tiles",
+      "duration_seconds": 7.0,
+      "duration_frames": 210,
+      "copy_text": "Websites, social media, email, ads and automation | Strategy | Websites | Social media | Email | Ads | Automation",
+      "claims_refs": [
+        "claim-services",
+        "claim-strategy"
+      ],
+      "asset_refs": [
+        "magnifito-logo"
+      ],
+      "visual_recipe": "isometric-feature-grid",
+      "audio_events": []
+    }
+  ]
+}

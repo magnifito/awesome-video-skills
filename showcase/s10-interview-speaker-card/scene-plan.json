@@ -1,0 +1,23 @@
+{
+  "schema_version": "1.0.0",
+  "plan_revision": "rev-showcase-s10-1",
+  "renderer": "hyperframes",
+  "timing_authority": "template",
+  "scenes": [
+    {
+      "scene_id": "scene-01-speaker",
+      "factual_purpose": "Introduce the speaker and the episode topic",
+      "duration_seconds": 4.5,
+      "duration_frames": 135,
+      "copy_text": "Elena Petrova | Social media lead, Magnifito | Episode 3: Posting with a plan | The Magnifito podcast",
+      "claims_refs": [
+        "claim-speaker"
+      ],
+      "asset_refs": [
+        "magnifito-logo"
+      ],
+      "visual_recipe": "interview-speaker-card",
+      "audio_events": []
+    }
+  ]
+}
