@@ -1,0 +1,15 @@
+{
+  "id": "brand-title",
+  "name": "Brand Title Card Recipe",
+  "description": "Full-bleed brand gradient with one centred headline in the brand heading font and an optional logo. No review labels. Built for muted loops such as website hero videos.",
+  "recommended_duration_seconds": [2.0, 5.0],
+  "motion": {
+    "transition": "crossfade",
+    "transition_ms": 500
+  },
+  "layout": {
+    "logo_max_width_ratio": 0.32,
+    "text_align": "center",
+    "transparent_background": false
+  }
+}

@@ -1,10 +1,12 @@
 import fs from 'node:fs/promises';
+import { readFileSync, existsSync } from 'node:fs';
 import path from 'node:path';
+import os from 'node:os';
 import crypto from 'node:crypto';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { scenePlanFps } from '../../packages/contracts/src/index.js';
-import { rasterizeSvg, concatListLine, safeCssColor } from '../../packages/media/src/proc.js';
+import { rasterizeSvg, concatListLine, safeCssColor, safeJoin } from '../../packages/media/src/proc.js';
 import type {
   VideoRendererAdapter,
   AdapterCapabilities,
@@ -194,8 +196,12 @@ export class HyperFramesAdapter implements VideoRendererAdapter {
     brand: ProjectContext['brand'],
     width: number,
     height: number,
-    transparent = false
+    transparent = false,
+    assetSource?: Pick<ProjectContext, 'projectDir' | 'assets'>
   ): string {
+    if (scene.visual_recipe === 'brand-title') {
+      return this.generateBrandTitleSvg(scene, brand, width, height, transparent, assetSource);
+    }
     const fontSize = Math.round(width > 1200 ? 54 : 40);
     const subSize = Math.round(fontSize * 0.45);
     const isVertical = height > width;
@@ -272,6 +278,115 @@ export class HyperFramesAdapter implements VideoRendererAdapter {
 </svg>`;
   }
 
+  /**
+   * Recipe "brand-title": full-bleed brand gradient, one centred headline in the brand heading
+   * font, and the first raster/vector logo referenced by the scene. No review labels.
+   */
+  generateBrandTitleSvg(
+    scene: ProjectContext['scenePlan']['scenes'][0],
+    brand: ProjectContext['brand'],
+    width: number,
+    height: number,
+    transparent: boolean,
+    assetSource?: Pick<ProjectContext, 'projectDir' | 'assets'>
+  ): string {
+    const bg = safeCssColor(brand.colors.background);
+    const bgEnd = safeCssColor(brand.colors.secondary ?? brand.colors.background);
+    const textColor = safeCssColor(brand.colors.text_primary);
+    const headingFont = cssFontFamily(brand.fonts[0]?.family);
+    const weight = /^[1-9]00$/.test(brand.fonts[0]?.weight ?? '') ? brand.fonts[0].weight : '700';
+    const scale = Math.min(width, height) / 1080;
+    const fontSize = Math.round(brand.type_scale.h1 * scale);
+    const lineHeight = Math.round(fontSize * 1.18);
+
+    const logo = assetSource ? this.loadSceneLogo(scene, assetSource) : null;
+    const logoW = logo ? Math.round(width * 0.32) : 0;
+    const logoH = logo ? Math.round(logoW * logo.aspect) : 0;
+
+    const maxChars = Math.max(12, Math.floor((width * 0.84) / (fontSize * 0.55)));
+    const lines = wrapWords(scene.copy_text, maxChars);
+    const gap = logo && lines.length ? Math.round(24 * scale) : 0;
+    const blockH = logoH + gap + lines.length * lineHeight;
+    const top = Math.round((height - blockH) / 2);
+
+    const logoEl = logo
+      ? `<image x="${Math.round((width - logoW) / 2)}" y="${top}" width="${logoW}" height="${logoH}" preserveAspectRatio="xMidYMid meet" href="${logo.dataUri}"/>`
+      : '';
+    const textTop = top + logoH + gap;
+    const textEls = lines
+      .map(
+        (line, i) =>
+          `<text x="${width / 2}" y="${textTop + i * lineHeight + Math.round(fontSize * 0.86)}" font-family="${escapeHtml(headingFont)}" font-size="${fontSize}" font-weight="${weight}" fill="${textColor}" text-anchor="middle">${escapeHtml(line)}</text>`
+      )
+      .join('\n  ');
+
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="${bg}"/>
+      <stop offset="100%" stop-color="${bgEnd}"/>
+    </linearGradient>
+  </defs>
+  ${transparent ? '' : '<rect width="100%" height="100%" fill="url(#bgGrad)"/>'}
+  ${logoEl}
+  ${textEls}
+</svg>`;
+  }
+
+  /** Loads the first SVG/PNG/JPEG asset referenced by the scene as a data URI. */
+  private loadSceneLogo(
+    scene: ProjectContext['scenePlan']['scenes'][0],
+    source: Pick<ProjectContext, 'projectDir' | 'assets'>
+  ): { dataUri: string; aspect: number } | null {
+    for (const ref of scene.asset_refs) {
+      const asset = source.assets.assets.find(a => a.asset_id === ref);
+      if (!asset?.local_path) continue;
+      const file = safeJoin(source.projectDir, asset.local_path);
+      if (!existsSync(file)) throw new Error(`Asset ${ref} not found at ${asset.local_path}`);
+      const ext = path.extname(file).toLowerCase();
+      const mime = ext === '.svg' ? 'image/svg+xml' : ext === '.png' ? 'image/png' : ext === '.jpg' || ext === '.jpeg' ? 'image/jpeg' : null;
+      if (!mime) continue;
+      const buf = readFileSync(file);
+      let aspect = 1;
+      if (ext === '.svg') {
+        const vb = /viewBox="\s*[-\d.]+[ ,]+[-\d.]+[ ,]+([\d.]+)[ ,]+([\d.]+)\s*"/.exec(buf.toString('utf8'));
+        if (vb) aspect = Number(vb[2]) / Number(vb[1]);
+      } else if (ext === '.png' && buf.length > 24) {
+        aspect = buf.readUInt32BE(20) / buf.readUInt32BE(16);
+      }
+      return { dataUri: `data:${mime};base64,${buf.toString('base64')}`, aspect };
+    }
+    return null;
+  }
+
+  /**
+   * When brand fonts ship files, returns an environment whose fontconfig also scans those
+   * font directories, so rasterizers render the real brand typeface.
+   */
+  private async fontEnv(context: ProjectContext, outputDir: string): Promise<NodeJS.ProcessEnv | undefined> {
+    const dirs = new Set<string>();
+    for (const f of context.brand.fonts) {
+      if (!f.file_path) continue;
+      const file = safeJoin(context.projectDir, f.file_path);
+      if (!existsSync(file)) throw new Error(`Brand font file not found: ${f.file_path}`);
+      dirs.add(path.dirname(file));
+    }
+    if (dirs.size === 0) return undefined;
+    const confPath = path.join(outputDir, 'fonts.conf');
+    const includes = [process.env.FONTCONFIG_FILE, '/opt/homebrew/etc/fonts/fonts.conf', '/usr/local/etc/fonts/fonts.conf', '/etc/fonts/fonts.conf']
+      .filter((p): p is string => !!p)
+      .map(p => `  <include ignore_missing="yes">${escapeHtml(p)}</include>`)
+      .join('\n');
+    const dirEls = [...dirs].map(d => `  <dir>${escapeHtml(d)}</dir>`).join('\n');
+    await fs.writeFile(
+      confPath,
+      `<?xml version="1.0"?>\n<!DOCTYPE fontconfig SYSTEM "fonts.dtd">\n<fontconfig>\n${includes}\n${dirEls}\n  <cachedir>${escapeHtml(path.join(os.tmpdir(), 'mgvideo-fontcache'))}</cachedir>\n</fontconfig>\n`,
+      'utf-8'
+    );
+    // Pango on macOS defaults to CoreText and ignores fontconfig; force the fontconfig backend.
+    return { ...process.env, FONTCONFIG_FILE: confPath, PANGOCAIRO_BACKEND: 'fc' };
+  }
+
   async renderStill(context: ProjectContext, frameNumber: number, options: RenderOptions): Promise<string> {
     const { settings, outputDir } = options;
     const stillPath = path.join(outputDir, `still_frame_${frameNumber}.png`);
@@ -289,11 +404,11 @@ export class HyperFramesAdapter implements VideoRendererAdapter {
       accumulated += sc.duration_seconds;
     }
 
-    const svgContent = this.generateSceneSvg(targetScene, context.brand, settings.width, settings.height);
+    const svgContent = this.generateSceneSvg(targetScene, context.brand, settings.width, settings.height, false, context);
     const svgPath = path.join(outputDir, `temp_still_${frameNumber}.svg`);
     await fs.writeFile(svgPath, svgContent, 'utf-8');
     try {
-      rasterizeSvg(svgPath, stillPath, settings.width, settings.height);
+      rasterizeSvg(svgPath, stillPath, settings.width, settings.height, await this.fontEnv(context, outputDir));
     } finally {
       await fs.rm(svgPath, { force: true });
     }
@@ -334,13 +449,14 @@ export class HyperFramesAdapter implements VideoRendererAdapter {
 
     const audioIn = ['-f', 'lavfi', '-i', `anullsrc=r=${settings.audio_sample_rate}:cl=stereo`];
     const finalOutputPath = path.join(outputDir, `final_output_${runId}.${fileExt}`);
+    const renderFontEnv = await this.fontEnv(context, outputDir);
 
     try {
       for (let i = 0; i < context.scenePlan.scenes.length; i++) {
         const scene = context.scenePlan.scenes[i];
         logs.push(`[HyperFrames] Rendering scene ${i + 1}/${context.scenePlan.scenes.length}: ${scene.scene_id} (${scene.duration_seconds}s)`);
 
-        const svgContent = this.generateSceneSvg(scene, context.brand, settings.width, settings.height, isTransparent);
+        const svgContent = this.generateSceneSvg(scene, context.brand, settings.width, settings.height, isTransparent, context);
         const svgPath = path.join(outputDir, `scene_${i}.svg`);
         const pngPath = path.join(outputDir, `scene_${i}.png`);
         const segPath = path.join(outputDir, `segment_${i}.${fileExt}`);
@@ -348,7 +464,7 @@ export class HyperFramesAdapter implements VideoRendererAdapter {
         await fs.writeFile(svgPath, svgContent, 'utf-8');
         tempFiles.push(svgPath);
         tempFiles.push(pngPath);
-        rasterizeSvg(svgPath, pngPath, settings.width, settings.height);
+        rasterizeSvg(svgPath, pngPath, settings.width, settings.height, renderFontEnv);
 
         const common = ['-y', '-loop', '1', '-framerate', String(fps), '-i', pngPath, ...audioIn, '-t', scene.duration_seconds.toString()];
         const scale = `scale=${settings.width}:${settings.height}`;
@@ -448,6 +564,22 @@ function jsonForScript(value: unknown): string {
 }
 
 /** Produces a quoted CSS font-family value from an untrusted family name. */
+/** Greedy word wrap to at most `maxChars` characters per line. */
+function wrapWords(text: string, maxChars: number): string[] {
+  const lines: string[] = [];
+  let current = '';
+  for (const word of text.split(/\s+/).filter(Boolean)) {
+    if (current && (current + ' ' + word).length > maxChars) {
+      lines.push(current);
+      current = word;
+    } else {
+      current = current ? current + ' ' + word : word;
+    }
+  }
+  if (current) lines.push(current);
+  return lines;
+}
+
 function cssFontFamily(family: string | undefined): string {
   if (!family) return 'system-ui';
   const cleaned = family.replace(/[^\p{L}\p{N} _-]/gu, '').trim();

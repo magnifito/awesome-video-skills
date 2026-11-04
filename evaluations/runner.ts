@@ -483,7 +483,7 @@ async function runAllEvaluations() {
   console.log('\n--- Test Suite 33: Shot Recipe Registry & Token Binding ---');
   const { ShotRecipeRegistry } = await import('../styles/recipes/registry.js');
   const recipeRegistry = new ShotRecipeRegistry();
-  assert(recipeRegistry.count() === 12, 'Recipe registry loads all 12 core shot recipes');
+  assert(recipeRegistry.count() === 13, 'Recipe registry loads all 13 core shot recipes');
   const boundRecipe = recipeRegistry.bindRecipe('cinematic-title', {
     colors: { primary: '#FFD700', accent: '#00FFFF' },
     typography: { primary_font: 'Cinzel, serif' }

@@ -226,12 +226,18 @@ function onPath(bin: string): boolean {
  * rsvg-convert, resvg, ImageMagick (magick/convert), macOS sips, or headless Chrome.
  * Throws a clear error when none is installed.
  */
-export function rasterizeSvg(svgPath: string, pngPath: string, width?: number, height?: number): void {
+export function rasterizeSvg(
+  svgPath: string,
+  pngPath: string,
+  width?: number,
+  height?: number,
+  env?: NodeJS.ProcessEnv,
+): void {
   const attempts: string[] = [];
   const tryRun = (bin: string, args: string[]): boolean => {
     if (!onPath(bin) && !path.isAbsolute(bin)) return false;
     try {
-      execFileSync(bin, args, DEFAULT_OPTS);
+      execFileSync(bin, args, env ? { ...DEFAULT_OPTS, env } : DEFAULT_OPTS);
       if (fs.existsSync(pngPath) && fs.statSync(pngPath).size > 0) return true;
       attempts.push(`${bin}: produced no output`);
     } catch (err) {
