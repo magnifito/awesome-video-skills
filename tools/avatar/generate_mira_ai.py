@@ -28,7 +28,7 @@ audio VAE is Stable Audio Open 1.0 under the
 Stability AI Community License (free commercial use only below US$1M annual revenue; Powered by
 Stability AI), re-hosted by SII-GAIR under an Apache tag.
 
-Usage (Apple Silicon, ~104 GB of weights, ~45 GB of unified memory at peak, ~14 min per 8 s take on an
+Usage (Apple Silicon, ~104 GB of weights, ~45 GB of unified memory at peak, ~10 min per 8 s take on an
 M2 Max; uv required):
 
     python3 -I tools/avatar/generate_mira_ai.py setup               # code + patch, venv, weights
@@ -91,7 +91,7 @@ SETTINGS = {"model": "distill-256p", "steps": 8, "cfg_number": 1, "fps": 25, "wi
 
 # Written to the repo's enhanced-prompt format (prompts/enhanced_prompt_design.md in the code):
 # a 150-200 word performance paragraph, the dialogue, the background sound. Hands stay out of frame.
-PROMPT = f"""A fictional woman in her early thirties with shoulder-length wavy chestnut-brown hair, warm light-olive skin, brown eyes and natural makeup, wearing a cream knit top under a soft caramel-brown blazer, sits centered facing the camera in a bright, minimal studio office with a plain cream wall and warm walnut wood shelves softly out of focus behind her, a small green potted plant at the edge of the frame. Her overall emotional disposition is calm, composed, warm and professional, like a news presenter. She looks directly into the lens with relaxed, fully open eyes and a slight, friendly smile, then begins speaking: her lips move naturally and precisely with each syllable, with moderate, understated mouth movements and no exaggerated expressions, as she says, "{LINES[0]}" in a warm, clear, mid-pitched voice at a relaxed conversational pace and moderate volume. Her eyebrows stay relaxed; she gives a small nod and continues, "{LINES[1]}" with crisp consonants and gentle, natural intonation, her head tilting slightly on the final words, then closes her lips into a soft smile. Her torso and shoulders stay still and her hands remain out of frame. Static medium close-up at eye level, subject centered, shallow depth of field with the face in sharp focus, soft diffused key light from the front left with warm fill, natural warm color grading.
+PROMPT = f"""A fictional, attractive woman in her early thirties with glossy shoulder-length wavy chestnut-brown hair, smooth warm light-olive skin, bright brown eyes, a symmetrical, well-proportioned face and polished, camera-ready makeup, wearing a cream knit top under a tailored caramel-brown blazer, faces the camera in a bright, minimal studio with a plain cream wall softly out of focus behind her. She is fresh, alert and confident, with a genuine warm expression, like a professional television news anchor. Her eyes are wide open, clear and bright, looking straight into the lens. She begins speaking: her lips move naturally and precisely with each syllable, with clean, moderate mouth shapes, as she says, "{LINES[0]}" in a warm, clear, mid-pitched voice at a relaxed conversational pace. She gives a small nod and continues, "{LINES[1]}" with crisp consonants and gentle intonation, then closes her lips into a natural, closed-mouth smile and holds still. Her head and shoulders stay steady and her hands remain out of frame. Static head-and-shoulders close-up at eye level, her face large in the centre of the frame and in sharp focus, flattering soft diffused beauty lighting from the front with gentle fill, clean natural colour grading.
 Dialogue:
 <Woman in caramel blazer, English>: "{LINES[0]} {LINES[1]}"
 Background Sound:
@@ -246,7 +246,7 @@ def main() -> None:
     if cmd == "setup":
         setup()
     elif cmd == "generate":
-        generate(args or [42])
+        generate(args or [3])
     else:
         if len(args) != 1:
             sys.exit("publish takes exactly one seed")
