@@ -1,0 +1,666 @@
+diff --git a/inference/common/arch.py b/inference/common/arch.py
+index bb279ca..483bdc9 100644
+--- a/inference/common/arch.py
++++ b/inference/common/arch.py
+@@ -16,13 +16,16 @@ import torch
+ 
+ 
+ def is_hopper_arch():
+-    return torch.cuda.get_device_capability()[0] == 9
++    return torch.cuda.is_available() and torch.cuda.get_device_capability()[0] == 9
+ 
+ 
+ def get_arch_memory(unit: str = "GB"):
+-    if not torch.cuda.is_available():
++    if torch.cuda.is_available():
++        total_bytes = torch.cuda.get_device_properties(torch.cuda.current_device()).total_memory
++    elif torch.backends.mps.is_available():
++        total_bytes = torch.mps.recommended_max_memory()
++    else:
+         return 0
+-    total_bytes = torch.cuda.get_device_properties(torch.cuda.current_device()).total_memory
+     if unit == "B":
+         return float(total_bytes)
+     elif unit == "KB":
+diff --git a/inference/common/cpu_offload_wrapper.py b/inference/common/cpu_offload_wrapper.py
+index 9cee52d..477d477 100644
+--- a/inference/common/cpu_offload_wrapper.py
++++ b/inference/common/cpu_offload_wrapper.py
+@@ -24,7 +24,9 @@ class CPUOffloadWrapper:
+         object.__setattr__(self, "is_running_on_gpu", is_running_on_gpu)
+ 
+         cpu_device = torch.device("cpu")
+-        cuda_device = torch.device("cuda")
++        from inference.utils import default_device
++
++        cuda_device = default_device()
+         object.__setattr__(self, "cpu_device", cpu_device)
+         object.__setattr__(self, "cuda_device", cuda_device)
+ 
+@@ -139,8 +141,9 @@ class CPUOffloadWrapper:
+             try:
+                 return func(*args, **kwargs)
+             finally:
+-                if torch.cuda.is_available():
+-                    torch.cuda.synchronize()
++                from inference.utils import device_synchronize
++
++                device_synchronize()
+                 self._restore_cpu_state(backups)
+         else:
+             # Make sure model and args are on the same device
+diff --git a/inference/infra/__init__.py b/inference/infra/__init__.py
+index 055acb5..ca8aa6e 100644
+--- a/inference/infra/__init__.py
++++ b/inference/infra/__init__.py
+@@ -20,7 +20,6 @@ from inference.utils import print_rank_0, set_random_seed
+ 
+ 
+ def initialize_infra():
+-    assert torch.cuda.is_available(), "Infra requires CUDA environment."
+ 
+     # Initialize distributed environment
+     initialize_distributed()
+diff --git a/inference/infra/checkpoint/load_model_checkpoint.py b/inference/infra/checkpoint/load_model_checkpoint.py
+index d7e1b3b..5cb6a2f 100644
+--- a/inference/infra/checkpoint/load_model_checkpoint.py
++++ b/inference/infra/checkpoint/load_model_checkpoint.py
+@@ -90,9 +90,22 @@ def load_sharded_safetensors_parallel_with_progress(checkpoint_dir):
+ 
+ def load_model_checkpoint(model, engine_config: EngineConfig):
+     print_rank_0("Loading checkpoint with safetensors format from pretrained_folder")
+-    state_dict = load_sharded_safetensors_parallel_with_progress(engine_config.load)
+-
+-    missing_keys, unexpected_keys = model.load_state_dict(state_dict, strict=False)
++    index_path = os.path.join(engine_config.load, "model.safetensors.index.json")
++    if os.path.exists(index_path):
++        with open(index_path, "r") as f:
++            weight_map = json.load(f)["weight_map"]
++        expected = set(model.state_dict().keys())
++        loaded, unexpected_keys = set(), []
++        for shard_file in tqdm(sorted(set(weight_map.values())), desc="Loading shards"):
++            shard = load_file(os.path.join(engine_config.load, shard_file))
++            _, unexpected = model.load_state_dict(shard, strict=False)
++            unexpected_keys += unexpected
++            loaded |= set(shard.keys())
++            del shard
++        missing_keys = sorted(expected - loaded)
++    else:
++        state_dict = load_sharded_safetensors_parallel_with_progress(engine_config.load)
++        missing_keys, unexpected_keys = model.load_state_dict(state_dict, strict=False)
+     print_rank_0(f"Load Weight Missing Keys: {missing_keys}")
+     print_rank_0(f"Load Weight Unexpected Keys: {unexpected_keys}")
+     print_rank_0("Load checkpoint successfully")
+diff --git a/inference/infra/distributed/init_dist_env.py b/inference/infra/distributed/init_dist_env.py
+index 9929c4e..eb78d6f 100644
+--- a/inference/infra/distributed/init_dist_env.py
++++ b/inference/infra/distributed/init_dist_env.py
+@@ -49,7 +49,7 @@ def initialize_distributed():
+         )
+ 
+     # Set the tp, pp and dp communicators.
+-    if device_count > 0:
++    if True:
+         if model_parallel_is_initialized():
+             return
+         initialize_model_parallel(
+diff --git a/inference/infra/distributed/utils.py b/inference/infra/distributed/utils.py
+index 04ffcb3..372c6df 100644
+--- a/inference/infra/distributed/utils.py
++++ b/inference/infra/distributed/utils.py
+@@ -41,7 +41,9 @@ def get_device(local_rank=None):
+         else:
+             device = torch.device(f"cuda:{local_rank}")
+     elif backend == "gloo":
+-        device = torch.device("cpu")
++        from inference.utils import default_device
++
++        device = default_device()
+     else:
+         raise RuntimeError
+     return device
+diff --git a/inference/model/dit/dit_model.py b/inference/model/dit/dit_model.py
+index dcc5490..338b352 100644
+--- a/inference/model/dit/dit_model.py
++++ b/inference/model/dit/dit_model.py
+@@ -33,10 +33,12 @@ def get_dit(model_config, engine_config):
+     )
+ 
+     model = load_model_checkpoint(model, engine_config)
+-    model.cuda(torch.cuda.current_device())
++    from inference.utils import default_device, device_empty_cache
++
++    model.to(default_device())
+     model.eval()
+     print_mem_info_rank_0("Load model successfully")
+ 
+     gc.collect()
+-    torch.cuda.empty_cache()
++    device_empty_cache()
+     return model
+diff --git a/inference/model/dit/dit_module.py b/inference/model/dit/dit_module.py
+index eda29f4..75260c3 100644
+--- a/inference/model/dit/dit_module.py
++++ b/inference/model/dit/dit_module.py
+@@ -22,9 +22,24 @@ import torch.nn as nn
+ from einops import rearrange, repeat
+ from inference.common import Modality, VarlenHandler, is_hopper_arch
+ from inference.infra.parallelism import ulysses_scheduler
+-from magi_compiler import magi_compile
+-from magi_compiler.api import magi_register_custom_op
+-from magi_compiler.config import CompileConfig
++try:
++    from magi_compiler import magi_compile
++    from magi_compiler.api import magi_register_custom_op
++    from magi_compiler.config import CompileConfig
++
++    HAS_MAGI_COMPILER = True
++except ImportError:
++    # MagiCompiler is CUDA-only. Without it the model runs eagerly: the decorators become no-ops.
++    HAS_MAGI_COMPILER = False
++    CompileConfig = Any
++
++    def magi_compile(*args, **kwargs):
++        if len(args) == 1 and callable(args[0]) and not kwargs:
++            return args[0]
++        return lambda obj: obj
++
++    def magi_register_custom_op(*args, **kwargs):
++        return lambda fn: fn
+ from torch import Tensor
+ from torch.nn import Parameter
+ 
+@@ -390,6 +405,8 @@ HAS_FA3 = importlib.util.find_spec("flash_attn_interface") is not None
+ 
+ @magi_register_custom_op(name="infra::flash_attn_func", is_subgraph_boundary=True)
+ def flash_attn_func(query: torch.Tensor, key: torch.Tensor, value: torch.Tensor) -> torch.Tensor:
++    if not torch.cuda.is_available():
++        return sdpa_attn_func(query, key, value)
+     if HAS_FA3 and is_hopper_arch():
+         from flash_attn_interface import flash_attn_func as fa3_flash_attn_func
+ 
+@@ -400,6 +417,32 @@ def flash_attn_func(query: torch.Tensor, key: torch.Tensor, value: torch.Tensor)
+         return fa2_flash_attn_func(query, key, value)
+ 
+ 
++SDPA_HEAD_CHUNK = 8
++
++
++def sdpa_attn_func(query: torch.Tensor, key: torch.Tensor, value: torch.Tensor) -> torch.Tensor:
++    """FlashAttention-compatible attention on PyTorch SDPA.
++
++    Inputs are [batch, seqlen, heads, head_dim]; key/value may have fewer heads (grouped-query
++    attention), as flash_attn_func accepts. Heads are processed in chunks to bound the size of the
++    attention matrix on backends without a fused kernel.
++    """
++    batch, seqlen_q, num_heads_q, head_dim = query.shape
++    num_heads_kv = key.shape[2]
++    group = num_heads_q // num_heads_kv
++    q = query.transpose(1, 2)
++    k = key.transpose(1, 2)
++    v = value.transpose(1, 2)
++    out = torch.empty_like(q)
++    for start in range(0, num_heads_q, SDPA_HEAD_CHUNK):
++        end = min(start + SDPA_HEAD_CHUNK, num_heads_q)
++        kv_index = torch.arange(start, end, device=q.device) // group
++        out[:, start:end] = torch.nn.functional.scaled_dot_product_attention(
++            q[:, start:end], k[:, kv_index], v[:, kv_index]
++        )
++    return out.transpose(1, 2)
++
++
+ def _split_q_range_with_no_overlap(
+     q_ranges: torch.Tensor, k_ranges: torch.Tensor
+ ) -> Tuple[List[List[int]], List[List[List[int]]]]:
+@@ -427,6 +470,17 @@ def _flash_attn_with_correction(
+     output = torch.zeros_like(query)
+     output_lse = torch.zeros((query.shape[0], query.shape[1]), dtype=torch.float32, device=query.device)
+ 
++    if not torch.cuda.is_available():
++        # Softmax over the concatenated key ranges equals the log-sum-exp merge of the per-range
++        # results below (duplicated keys are counted twice in both). The LSE output is unused.
++        for q_range, k_ranges in zip(q_ranges, k_range_list):
++            q_start, q_end = q_range
++            k_idx = torch.cat([torch.arange(s, e, device=query.device) for s, e in k_ranges])
++            output[q_start:q_end] = sdpa_attn_func(
++                query[q_start:q_end].unsqueeze(0), key[k_idx].unsqueeze(0), value[k_idx].unsqueeze(0)
++            ).squeeze(0)
++        return output, output_lse
++
+     from flash_attn.flash_attn_interface import flash_attn_func
+ 
+     for q_range, k_ranges in zip(q_ranges, k_range_list):
+@@ -515,7 +569,10 @@ def flash_attn_with_cp(q: torch.Tensor, k: torch.Tensor, v: torch.Tensor, cp_spl
+         k = k.unsqueeze(0)
+         v = v.unsqueeze(0)
+ 
+-    self_attn_out = torch.ops.infra.flash_attn_func(q, k, v).squeeze(0)
++    if HAS_MAGI_COMPILER:
++        self_attn_out = torch.ops.infra.flash_attn_func(q, k, v).squeeze(0)
++    else:
++        self_attn_out = flash_attn_func(q, k, v).squeeze(0)
+ 
+     if get_cp_world_size() > 1:
+         self_attn_out = scatter_seqlen_gather_head(self_attn_out, cp_split_sizes, get_cp_group(), async_op=False)
+@@ -546,7 +603,10 @@ def flex_flash_attn_with_cp(
+     if get_cp_world_size() > 1:
+         q, k, v = batch_scatter_head_gather_seqlen([q, k, v], cp_split_sizes, get_cp_group())
+ 
+-    out, _ = torch.ops.infra.flex_flash_attn_func(q, k, v, q_ranges=q_ranges, k_ranges=k_ranges)
++    if HAS_MAGI_COMPILER:
++        out, _ = torch.ops.infra.flex_flash_attn_func(q, k, v, q_ranges=q_ranges, k_ranges=k_ranges)
++    else:
++        out, _ = flex_flash_attn_func(q, k, v, q_ranges=q_ranges, k_ranges=k_ranges)
+ 
+     if get_cp_world_size() > 1:
+         out = scatter_seqlen_gather_head(out, cp_split_sizes, get_cp_group(), async_op=False)
+diff --git a/inference/model/turbo_vaed/turbo_vaed_module.py b/inference/model/turbo_vaed/turbo_vaed_module.py
+index bb5671b..51bd56d 100644
+--- a/inference/model/turbo_vaed/turbo_vaed_module.py
++++ b/inference/model/turbo_vaed/turbo_vaed_module.py
+@@ -19,6 +19,7 @@ import torch.nn as nn
+ from diffusers.configuration_utils import ConfigMixin, register_to_config
+ from diffusers.models.modeling_utils import ModelMixin
+ from einops import rearrange
++from inference.utils import default_device as _default_device
+ 
+ 
+ __all__ = ["TurboVAED"]
+@@ -853,7 +854,7 @@ class TurboVAED(ModelMixin, ConfigMixin):
+                 -0.0667,
+             ],
+             dtype=torch.float32,
+-            device="cuda",
++            device=_default_device(),
+         )
+         self.std = torch.tensor(
+             [
+@@ -907,7 +908,7 @@ class TurboVAED(ModelMixin, ConfigMixin):
+                 0.7744,
+             ],
+             dtype=torch.float32,
+-            device="cuda",
++            device=_default_device(),
+         )
+         self.scale = [self.mean, 1.0 / self.std]
+ 
+diff --git a/inference/model/vae2_2/vae2_2_model.py b/inference/model/vae2_2/vae2_2_model.py
+index 30cdc34..526a9ee 100644
+--- a/inference/model/vae2_2/vae2_2_model.py
++++ b/inference/model/vae2_2/vae2_2_model.py
+@@ -10,7 +10,9 @@ def get_vae2_2(model_path, device="cuda", weight_dtype=torch.float32) -> Wan2_2_
+     vae.vae.requires_grad_(False)
+     vae.vae.eval()
+     gc.collect()
+-    torch.cuda.empty_cache()
++    from inference.utils import device_empty_cache
++
++    device_empty_cache()
+     return vae
+ 
+ 
+diff --git a/inference/model/vae2_2/vae2_2_module.py b/inference/model/vae2_2/vae2_2_module.py
+index fe2ea7e..841b606 100644
+--- a/inference/model/vae2_2/vae2_2_module.py
++++ b/inference/model/vae2_2/vae2_2_module.py
+@@ -947,8 +947,11 @@ class Wan2_2_VAE:
+         dim_mult=[1, 2, 4, 4],
+         temperal_downsample=[False, True, True],
+         dtype=torch.float,
+-        device="cuda",
++        device=None,
+     ):
++        from inference.utils import default_device
++
++        device = device or default_device()
+         self.dtype = dtype
+         self.device = device
+ 
+diff --git a/inference/pipeline/data_proxy.py b/inference/pipeline/data_proxy.py
+index aa4ed03..6a6f68d 100644
+--- a/inference/pipeline/data_proxy.py
++++ b/inference/pipeline/data_proxy.py
+@@ -24,6 +24,8 @@ from inference.model.dit.dit_module import FFAHandler
+ from torch.nn import functional as F
+ from unfoldNd import UnfoldNd
+ 
++from inference.utils import default_device
++
+ if TYPE_CHECKING:
+     from inference.pipeline.video_generate import EvalInput
+ 
+@@ -55,8 +57,8 @@ def calc_local_qk_range(num_video_tokens, num_audio_and_txt_tokens, num_frames,
+     at_q_ranges = torch.tensor([[num_video_tokens, total_tokens]])
+     at_k_ranges = torch.tensor([[0, total_tokens]])
+ 
+-    q_ranges = torch.cat([local_q_range, video_q_range, at_q_ranges], dim=0).to(torch.int32).to("cuda", non_blocking=True)
+-    k_ranges = torch.cat([local_k_range, video_k_range, at_k_ranges], dim=0).to(torch.int32).to("cuda", non_blocking=True)
++    q_ranges = torch.cat([local_q_range, video_q_range, at_q_ranges], dim=0).to(torch.int32).to(default_device())
++    k_ranges = torch.cat([local_k_range, video_k_range, at_k_ranges], dim=0).to(torch.int32).to(default_device())
+ 
+     return (q_ranges, k_ranges)
+ 
+@@ -65,7 +67,7 @@ def calc_local_attn_ffa_handler(num_video_tokens, num_audio_and_txt_tokens, num_
+     q_ranges, k_ranges = calc_local_qk_range(num_video_tokens, num_audio_and_txt_tokens, num_frames, frame_receptive_field)
+     max_seqlen_q = num_video_tokens + num_audio_and_txt_tokens
+     max_seqlen_k = num_video_tokens + num_audio_and_txt_tokens
+-    attn_type_map = torch.zeros([q_ranges.shape[0]], device="cuda", dtype=torch.int32)
++    attn_type_map = torch.zeros([q_ranges.shape[0]], device=default_device(), dtype=torch.int32)
+     softmax_scale = None
+ 
+     ffa_handler = FFAHandler(
+@@ -367,10 +369,10 @@ class MagiDataProxy:
+             local_attn_handler = None
+ 
+         varlen_handler = VarlenHandler(
+-            cu_seqlens_q=simple_packed_data.cu_seqlen.to(torch.int32).cuda(),
+-            cu_seqlens_k=simple_packed_data.cu_seqlen.to(torch.int32).cuda(),
+-            max_seqlen_q=simple_packed_data.max_seqlen.to(torch.int32).cuda(),
+-            max_seqlen_k=simple_packed_data.max_seqlen.to(torch.int32).cuda(),
++            cu_seqlens_q=simple_packed_data.cu_seqlen.to(torch.int32).to(default_device()),
++            cu_seqlens_k=simple_packed_data.cu_seqlen.to(torch.int32).to(default_device()),
++            max_seqlen_q=simple_packed_data.max_seqlen.to(torch.int32).to(default_device()),
++            max_seqlen_k=simple_packed_data.max_seqlen.to(torch.int32).to(default_device()),
+         )
+ 
+         self.saved_for_output(simple_packed_data=simple_packed_data)
+diff --git a/inference/pipeline/entry.py b/inference/pipeline/entry.py
+index 10d8ed7..9decf90 100644
+--- a/inference/pipeline/entry.py
++++ b/inference/pipeline/entry.py
+@@ -15,6 +15,8 @@
+ import argparse
+ import sys
+ 
++import torch
++
+ from inference.common import parse_config
+ from inference.infra import initialize_infra
+ from inference.model.dit import get_dit
+@@ -64,6 +66,17 @@ def parse_arguments():
+ def main():
+     args = parse_arguments()
+     config = parse_config()
++    if not torch.cuda.is_available() and args.prompt:
++        # Stage 1: text encoder only. Stage 2 (below): DiT and VAEs without the text encoder.
++        from inference.pipeline.prompt_process import precompute_t5_gemma_embedding, release_text_encoder
++        from inference.utils import default_device, print_mem_info_rank_0
++
++        precompute_t5_gemma_embedding(
++            args.prompt, config.evaluation_config.txt_model_path, default_device(), torch.bfloat16
++        )
++        print_mem_info_rank_0("Stage 1: prompt encoded")
++        release_text_encoder()
++        print_mem_info_rank_0("Stage 1: text encoder released")
+     model = get_dit(config.arch_config, config.engine_config)
+     pipeline = MagiPipeline(model, config.evaluation_config)
+     save_path_prefix = args.save_path_prefix or args.output_path
+diff --git a/inference/pipeline/pipeline.py b/inference/pipeline/pipeline.py
+index be20d08..b7a715f 100644
+--- a/inference/pipeline/pipeline.py
++++ b/inference/pipeline/pipeline.py
+@@ -75,7 +75,8 @@ class MagiPipeline:
+         else:
+             save_path = f"{save_path_prefix}_{seconds}s_{br_width}x{br_height}.mp4"
+ 
+-        with torch.random.fork_rng(devices=[torch.cuda.current_device()]):
++        rng_devices = [torch.cuda.current_device()] if torch.cuda.is_available() else []
++        with torch.random.fork_rng(devices=rng_devices):
+             torch.random.manual_seed(seed)
+             video_np, audio_np = self.evaluator.evaluate(
+                 prompt,
+diff --git a/inference/pipeline/prompt_process.py b/inference/pipeline/prompt_process.py
+index 3bb869f..f978f27 100644
+--- a/inference/pipeline/prompt_process.py
++++ b/inference/pipeline/prompt_process.py
+@@ -46,6 +46,26 @@ def pad_or_trim(tensor: torch.Tensor, target_size: int, dim: int, pad_value: flo
+     return tensor[tuple(slicing)], target_size
+ 
+ 
++_embedding_cache: dict = {}
++
++
++def precompute_t5_gemma_embedding(prompt: str, model_path: str, device, weight_dtype: torch.dtype) -> None:
++    """Encode a prompt now and keep the result on the CPU for later get_padded_t5_gemma_embedding calls."""
++    _embedding_cache[prompt] = get_t5_gemma_embedding(prompt, model_path, device, weight_dtype).to("cpu")
++
++
++def release_text_encoder() -> None:
++    """Drop the cached T5Gemma encoder and return its memory."""
++    import gc
++
++    import inference.model.t5_gemma.t5_gemma_model as t5_module
++    from inference.utils import device_empty_cache
++
++    t5_module._t5_gemma_cache = None
++    gc.collect()
++    device_empty_cache()
++
++
+ def get_padded_t5_gemma_embedding(
+     prompt: str,
+     model_path: str,
+@@ -53,7 +73,10 @@ def get_padded_t5_gemma_embedding(
+     weight_dtype: torch.dtype,
+     target_length: int,
+ ) -> Tuple[torch.Tensor, int]:
+-    txt_feat = get_t5_gemma_embedding(prompt, model_path, device, weight_dtype)
++    if prompt in _embedding_cache:
++        txt_feat = _embedding_cache[prompt].to(device)
++    else:
++        txt_feat = get_t5_gemma_embedding(prompt, model_path, device, weight_dtype)
+     txt_feat, original_len = pad_or_trim(txt_feat, target_size=target_length, dim=1)
+     return txt_feat.to(torch.float32), original_len
+ 
+diff --git a/inference/pipeline/scheduler_unipc.py b/inference/pipeline/scheduler_unipc.py
+index 854e73f..8ab1995 100644
+--- a/inference/pipeline/scheduler_unipc.py
++++ b/inference/pipeline/scheduler_unipc.py
+@@ -735,8 +735,9 @@ class FlowUniPCMultistepScheduler(SchedulerMixin, ConfigMixin):
+ 
+         """
+         device = curr_state.device
+-        curr_t = self.sigmas[t]
+-        prev_t = self.sigmas[t + 1]
++        # float(): on MPS a 0-d CPU view such as self.sigmas[t] is read at offset 0 in mixed-device ops.
++        curr_t = float(self.sigmas[t])
++        prev_t = float(self.sigmas[t + 1])
+         variance_noise = randn_tensor(curr_state.shape, generator=generator, device=device, dtype=curr_state.dtype)
+         cur_clean_ = curr_state - curr_t * velocity
+         prev_state = prev_t * variance_noise + (1 - prev_t) * cur_clean_
+@@ -768,8 +769,9 @@ class FlowUniPCMultistepScheduler(SchedulerMixin, ConfigMixin):
+                 A random number generator.
+         """
+         device = curr_state.device
+-        curr_t = self.sigmas[t]
+-        prev_t = self.sigmas[t + 1]
++        # float(): on MPS a 0-d CPU view such as self.sigmas[t] is read at offset 0 in mixed-device ops.
++        curr_t = float(self.sigmas[t])
++        prev_t = float(self.sigmas[t + 1])
+         cos = torch.cos(torch.tensor(noise_theta) * torch.pi / 2).to(device)  # if noise_theta is 0, it degenerates to standard flow matching
+         sin = torch.sin(torch.tensor(noise_theta) * torch.pi / 2).to(device)
+         prev_sample_mean = (1 - prev_t + prev_t * cos) * (curr_state - curr_t * velocity) + prev_t * cos * velocity
+diff --git a/inference/pipeline/video_generate.py b/inference/pipeline/video_generate.py
+index d9adac3..e9940b1 100644
+--- a/inference/pipeline/video_generate.py
++++ b/inference/pipeline/video_generate.py
+@@ -34,7 +34,7 @@ from inference.model.dit import DiTModel
+ from inference.model.sa_audio import SAAudioFeatureExtractor
+ from inference.model.turbo_vaed import TurboVAED, get_turbo_vaed
+ from inference.model.vae2_2 import Wan2_2_VAE, get_vae2_2
+-from inference.utils import env_is_true, event_path_timer, print_mem_info_rank_0, print_rank_0, print_rank_last
++from inference.utils import default_device, device_empty_cache, env_is_true, event_path_timer, print_mem_info_rank_0, print_rank_0, print_rank_last
+ from .prompt_process import get_padded_t5_gemma_embedding, pad_or_trim
+ from .scheduler_unipc import FlowUniPCMultistepScheduler
+ from .data_proxy import MagiDataProxy
+@@ -168,7 +168,7 @@ class MagiEvaluator:
+         device: str = "cuda",
+         weight_dtype: torch.dtype = torch.bfloat16,
+     ):
+-        device = f"cuda:{torch.cuda.current_device()}"
++        device = default_device()
+ 
+         self.model = model
+         self.model.eval()
+@@ -226,13 +226,17 @@ class MagiEvaluator:
+         txt_encoder_device = "cpu" if get_arch_memory() <= 48 else self.device
+         self.txt_model_path = config.txt_model_path
+ 
+-        self.context_null, self.original_context_null_len = get_padded_t5_gemma_embedding(
+-            negative_prompt,
+-            self.txt_model_path,
+-            txt_encoder_device,
+-            self.dtype,
+-            config.t5_gemma_target_length,
+-        )
++        if config.cfg_number == 1 and (sr_model is None or config.sr_cfg_number == 1):
++            # Without classifier-free guidance the negative prompt is never used: skip the encoder.
++            self.context_null, self.original_context_null_len = None, 0
++        else:
++            self.context_null, self.original_context_null_len = get_padded_t5_gemma_embedding(
++                negative_prompt,
++                self.txt_model_path,
++                txt_encoder_device,
++                self.dtype,
++                config.t5_gemma_target_length,
++            )
+         print_mem_info_rank_0("After init t5 gamma")
+ 
+     def forward(self, eval_input: EvalInput, use_sr_model: bool = False):
+@@ -501,10 +505,10 @@ class MagiEvaluator:
+         return videos
+ 
+     def post_process(self, latent_video: torch.Tensor, latent_audio: torch.Tensor):
+-        torch.cuda.empty_cache()
++        device_empty_cache()
+         # CTHW -> THWC
+         videos_np = self.decode_video(latent_video, group=get_cp_group())
+-        torch.cuda.empty_cache()
++        device_empty_cache()
+         event_path_timer().synced_record("Step7: Decode Audio", print_fn=print_rank_last)
+ 
+         if torch.distributed.get_rank() == torch.distributed.get_world_size() - 1:
+diff --git a/inference/pipeline/video_process.py b/inference/pipeline/video_process.py
+index 905295e..852d9c2 100644
+--- a/inference/pipeline/video_process.py
++++ b/inference/pipeline/video_process.py
+@@ -179,7 +179,7 @@ def load_audio_and_encode(audio_vae: any, audio_path: str, seconds: Optional[int
+     window_size = int(audio_chunk_duration * sample_rate)
+     step_size = int(window_size * (1 - overlap_ratio))
+     if total_samples <= window_size:
+-        audio = torch.from_numpy(audio_full).cuda()
++        audio = torch.from_numpy(audio_full).to(audio_vae.device)
+         audio = audio.unsqueeze(0).expand(2, -1)
+         return audio_vae.vae_model.encode(audio)
+ 
+@@ -188,7 +188,7 @@ def load_audio_and_encode(audio_vae: any, audio_path: str, seconds: Optional[int
+     for offset_start in range(0, total_samples, step_size):
+         offset_end = min(offset_start + window_size, total_samples)
+         chunk = whisper.pad_or_trim(audio_full[offset_start:offset_end], length=window_size)
+-        chunk_tensor = torch.from_numpy(chunk).cuda().unsqueeze(0).expand(2, -1)
++        chunk_tensor = torch.from_numpy(chunk).to(audio_vae.device).unsqueeze(0).expand(2, -1)
+         encoded_chunk = audio_vae.vae_model.encode(chunk_tensor)
+ 
+         if latent_to_audio_ratio is None:
+diff --git a/inference/utils/__init__.py b/inference/utils/__init__.py
+index d3af72e..43c495e 100644
+--- a/inference/utils/__init__.py
++++ b/inference/utils/__init__.py
+@@ -12,7 +12,7 @@
+ # See the License for the specific language governing permissions and
+ # limitations under the License.
+ 
+-from .env import env_is_true
++from .env import default_device, device_empty_cache, device_synchronize, env_is_true
+ from .logger import print_mem_info_rank_0, print_model_size, print_rank_0, print_rank_last
+ from .math import (
+     divide,
+@@ -24,6 +24,9 @@ from .timer import event_path_timer
+ __all__ = [
+     # env
+     "env_is_true",
++    "default_device",
++    "device_empty_cache",
++    "device_synchronize",
+     # logger
+     "print_rank_0",
+     "print_mem_info_rank_0",
+diff --git a/inference/utils/env.py b/inference/utils/env.py
+index 1e096fa..b63de2f 100644
+--- a/inference/utils/env.py
++++ b/inference/utils/env.py
+@@ -14,6 +14,33 @@
+ 
+ import os
+ 
++import torch
++
++
++def default_device() -> torch.device:
++    """Return the compute device: CUDA when present, else Apple MPS, else CPU."""
++    if torch.cuda.is_available():
++        return torch.device("cuda", torch.cuda.current_device())
++    if os.environ.get("MAGI_FORCE_CPU") != "1" and torch.backends.mps.is_available():
++        return torch.device("mps")
++    return torch.device("cpu")
++
++
++def device_synchronize() -> None:
++    """Synchronize the active accelerator, if any."""
++    if torch.cuda.is_available():
++        torch.cuda.synchronize()
++    elif torch.backends.mps.is_available():
++        torch.mps.synchronize()
++
++
++def device_empty_cache() -> None:
++    """Release cached accelerator memory, if any."""
++    if torch.cuda.is_available():
++        torch.cuda.empty_cache()
++    elif torch.backends.mps.is_available():
++        torch.mps.empty_cache()
++
+ 
+ def env_is_true(env_name: str) -> bool:
+     return str(os.environ.get(env_name, "0")).lower() in {"1", "true", "yes", "y", "on", "enabled"}
+diff --git a/inference/utils/logger.py b/inference/utils/logger.py
+index ef2be8e..71878b0 100644
+--- a/inference/utils/logger.py
++++ b/inference/utils/logger.py
+@@ -80,10 +80,17 @@ def print_rank_last(message, *args, **kwargs):
+ 
+ def print_mem_info_rank_0(prefix: str = ""):
+     "Print the allocated and reserved GPU memory on device 0."
+-    allocated = torch.cuda.memory_allocated()
+-    max_allocated = torch.cuda.max_memory_allocated()
+-    reserved = torch.cuda.memory_reserved()
+-    max_reserved = torch.cuda.max_memory_reserved()
++    if torch.cuda.is_available():
++        allocated = torch.cuda.memory_allocated()
++        max_allocated = torch.cuda.max_memory_allocated()
++        reserved = torch.cuda.memory_reserved()
++        max_reserved = torch.cuda.max_memory_reserved()
++    elif torch.backends.mps.is_available():
++        # MPS exposes tensor allocations and the driver's total; no peak counters.
++        allocated = max_allocated = torch.mps.current_allocated_memory()
++        reserved = max_reserved = torch.mps.driver_allocated_memory()
++    else:
++        allocated = max_allocated = reserved = max_reserved = 0
+ 
+     allocated = round(allocated / 1024 / 1024 / 1024, 2)
+     reserved = round(reserved / 1024 / 1024 / 1024, 2)
+diff --git a/inference/utils/timer.py b/inference/utils/timer.py
+index 51892a6..851a4f3 100644
+--- a/inference/utils/timer.py
++++ b/inference/utils/timer.py
+@@ -60,7 +60,9 @@ class EventPathTimer:
+         and calculates the elapsed time since the last recorded message, if any.
+         It then logs the elapsed time along with the previous and current messages.
+         """
+-        torch.cuda.synchronize()
++        from .env import device_synchronize
++
++        device_synchronize()
+         current_time = datetime.now()
+         if self.prev_message is not None:
+             print_fn(

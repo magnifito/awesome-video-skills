@@ -1,0 +1,30 @@
+{
+  "id": "11-ai-presenter",
+  "title": "AI presenter: a photoreal, fictional Mira, lip-synced to her voice",
+  "type": "AI presenter",
+  "skill": "magnifito-edit",
+  "engine": "lower-third",
+  "caption": "An AI-generated presenter: a photoreal but fictional Mira, generated from a text prompt by daVinci-MagiHuman and lip-synced to her designed Qwen3-TTS voice, then finished with a Magnifito lower third and an always-on AI label. She is not a real person and no photo was used; the clip is labelled as AI-generated on screen.",
+  "prompt": "Here is an AI-generated presenter clip (presenter/mira-ai.mp4: Mira, a fictional presenter made by daVinci-MagiHuman from a text prompt and lip-synced to her Qwen3-TTS voice; see presenter/mira-ai.json). Finish it for a 16:9 1080p social post: scale it to 1920x1080, add a lower third with name \"Mira\" and role \"AI presenter, Magnifito\" from 0.5 s for 5 seconds in the Magnifito colours (dark brown #2b1c17 badge, beige #d8c6b4 accent), and keep an \"AI-generated presenter · fictional\" label in the top-left corner and a small model credit in the bottom-right for the whole clip (labels.svg, Geist from fonts/), so nobody mistakes her for a real person. Keep her voice.",
+  "commands": [
+    "ffmpeg -i presenter/mira-ai.mp4 -vf scale=1920:1080:flags=lanczos,format=yuv420p -c:v libx264 -crf 16 -preset medium -c:a aac -b:a 160k work/source.mp4",
+    "mgvideo lower-third work/source.mp4 --name 'Mira' --title 'AI presenter, Magnifito' --start 0.5 --duration 5 --color '#d8c6b4' --bg '#2b1c17' --out work/lower-third.mp4",
+    "node rasterize.mjs labels.svg work/labels.png 1920 1080",
+    "ffmpeg -i work/lower-third.mp4 -i work/labels.png -filter_complex [0:v][1:v]overlay=0:0,format=yuv420p[v] -map [v] -map 0:a -c:v libx264 -crf 20 -preset medium -c:a aac -b:a 160k work/final.mp4"
+  ],
+  "output": "work/final.mp4",
+  "poster_at": 3.0,
+  "expect": {
+    "width": 1920,
+    "height": 1080,
+    "duration_seconds": 8,
+    "audio": true
+  },
+  "synthetic_footage": true,
+  "credits": [
+    "Presenter (presenter/mira-ai.mp4): AI-generated, a fictional person, not based on a photo or a real person; made by tools/avatar/generate_mira_ai.py from a text prompt with daVinci-MagiHuman (SII-GAIR and Sand.ai): code Apache-2.0, DiT and Turbo VAE weights Apache-2.0 (model card), Wan2.2 VAE Apache-2.0, T5Gemma text encoder under the Gemma Terms of Use, Stable Audio Open 1.0 audio VAE under the Stability AI Community License (used below the US$1M revenue threshold). Powered by Stability AI",
+    "Mira's voice (07-broll/voice/mira.wav, lines 1 and 2) AI-generated with Qwen3-TTS-12Hz-1.7B-VoiceDesign (Qwen, Apache-2.0) by tools/voice/generate_mira.py: a designed voice, not based on a real person",
+    "Geist typeface by Vercel, SIL Open Font License 1.1 (fonts/OFL-Geist.txt)",
+    "Mira is a fictional presenter name used across this showcase; full licences in notices/THIRD_PARTY_NOTICES.md"
+  ]
+}

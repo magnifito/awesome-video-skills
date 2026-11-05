@@ -17,7 +17,7 @@ import {
 } from '../../showcase/lib.js';
 import { probe } from '../../packages/media/src/proc.js';
 
-const EXPECTED_TYPES = 10;
+const EXPECTED_TYPES = 11;
 /** mgvideo commands that change what a viewer sees or hears; each must appear in a recipe. */
 const SHOWN_COMMANDS = [
   'render', 'sfx', 'concat', 'batch', 'broll', 'separate', 'plan', 'storyboard', 'montage',

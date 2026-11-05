@@ -25,3 +25,5 @@ docs/magnifito-super-video-blueprint.txt
 # Showcase build scratch (rendered deliverables live in showcase/videos/)
 showcase/*/work/
 _site/
+__pycache__/
+*.pyc

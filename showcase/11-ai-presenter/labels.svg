@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080">
+  <g font-family="Geist" font-weight="600" letter-spacing="0.3">
+    <rect x="40" y="40" width="540" height="56" rx="28" fill="#2b1c17" fill-opacity="0.88"/>
+    <circle cx="72" cy="68" r="7" fill="#8acf31"/>
+    <text x="94" y="78" font-size="28" fill="#f0eadf">AI-generated presenter · fictional</text>
+    <text x="1880" y="1052" font-size="20" font-weight="500" fill="#f0eadf" fill-opacity="0.85" text-anchor="end">Made with daVinci-MagiHuman · voice: Qwen3-TTS · Powered by Stability AI</text>
+  </g>
+</svg>

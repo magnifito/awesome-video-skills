@@ -91,3 +91,49 @@ As established in the Magnifito Super Video Blueprint (2 November 2026), all ups
   looks up each spoken word's phonemes and times them against the committed `mira.wav`. Only the
   derived timing (the `visemes` block of `showcase/<project>/voice/mira.json`: phoneme symbols with
   start and end times and a mouth shape) is committed, not the dictionary. No model is involved.
+
+### Mira as an AI presenter (`showcase/11-ai-presenter`)
+
+`showcase/11-ai-presenter/presenter/mira-ai.mp4` is AI-generated: a photoreal but fictional
+woman, generated from a text prompt only (no photo, no reference image, no real person's likeness,
+no celebrity name) and lip-synced to Mira's designed Qwen3-TTS voice above. It is labelled as
+AI-generated on screen, in the caption and in the credits. `tools/avatar/generate_mira_ai.py`
+makes it outside the repository; only the MP4 and its provenance file `mira-ai.json` are
+committed. No model weights, code checkout or Python environment are committed.
+
+- **Code**: `GAIR-NLP/daVinci-MagiHuman` (GitHub), commit
+  `209209b7086eba2020c5439265221495a8357322`, by SII-GAIR and Sand.ai.
+  - **License**: Apache-2.0, stated in the README and in the header of every source file
+    ("Copyright (c) 2026 SandAI"). The repository has no LICENSE file.
+  - Run with a local port to Apple MPS (`tools/avatar/magihuman-mps.patch`: PyTorch SDPA instead
+    of FlashAttention, MagiCompiler optional, no CUDA-only calls, sampler sigmas read as Python
+    floats to avoid an MPS mixed-device bug). The patch is a derivative work
+    under Apache-2.0 and keeps the original headers.
+- **DiT weights (15B, distilled, 256p)**: `SII-GAIR/daVinci-MagiHuman-Distill-256p`
+  (Hugging Face), revision `e13bade0a867fb0a01f453797cfbc33dbdd1615f`, folder `transformer/`.
+  - **License**: Apache-2.0 (model card).
+- **Turbo VAE decoder**: `GAIR/daVinci-MagiHuman`, revision
+  `7fe95e50c11bd92bdadf94cd51dbec18427f8e0c`, folder `turbo_vae/`.
+  - **License**: Apache-2.0 per the model card. Provenance unclear: a Sand.ai retrain of
+    Turbo-VAED (`hustvl/Turbo-VAED`), whose GitHub repository states no license.
+- **Video VAE**: `vae/Wan2.2_VAE.pth` in the Distill-256p repository, from Wan2.2-TI2V-5B
+  (`Wan-AI/Wan2.2-TI2V-5B`).
+  - **License**: Apache-2.0.
+- **Text encoder**: `text_encoder/` in the Distill-256p repository, T5Gemma 9B-9B UL2
+  (`google/t5gemma-9b-9b-ul2`, model card `license: gemma`).
+  - **License**: Gemma Terms of Use (https://ai.google.dev/gemma/terms) and the Gemma Prohibited
+    Use Policy. Not Apache-2.0. The weights are not redistributed here; only generated output is.
+- **Audio VAE**: `audio_vae/` in the Distill-256p repository. This is the Stable Audio Open 1.0
+  autoencoder (`stabilityai/stable-audio-open-1.0`, gated): the official configs name
+  `stable-audio-open-1.0`, the loader is the "Stable Audio Feature Extractor", and the
+  `model.safetensors` (4,853,889,016 bytes) and `model_config.json` match the original's sizes.
+  SII-GAIR re-hosts it under the repository's Apache-2.0 tag, which does not relicense it.
+  - **License**: Stability AI Community License Agreement (last updated July 5, 2024),
+    https://stability.ai/community-license-agreement. Free commercial use is allowed only for
+    individuals and organisations with **less than US$1,000,000 in annual revenue**; above that,
+    a Stability AI Enterprise licence is required. The licence is revocable and includes Stability
+    AI's Acceptable Use Policy.
+  - **Condition of use here**: Magnifito uses it under the Community License on the basis that its
+    annual revenue is below US$1M. Re-check before reusing this clip or the generator if that
+    changes.
+  - **Attribution**: Powered by Stability AI.
