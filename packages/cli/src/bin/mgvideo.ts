@@ -47,6 +47,7 @@ import { BlurBackgroundEngine } from '../../../media/src/blur_bg.js';
 import { runQualityGate } from '../commands/gate.js';
 import { FrameRateConverter } from '../../../media/src/framerate.js';
 import { DeinterlaceEngine } from '../../../media/src/deinterlace.js';
+import { HdrConverter, detectDynamicRange } from '../../../media/src/hdr.js';
 import { AudioEqualizerEngine } from '../../../media/src/equalizer.js';
 import { MontageGenerator } from '../../../media/src/montage.js';
 import { MaskEngine, parseMaskBox } from '../../../media/src/mask.js';
@@ -511,6 +512,8 @@ program
       console.log(` • Alpha Channel   : ${probe.has_alpha ? 'Yes (Transparent)' : 'No (Opaque)'}`);
       console.log(` • Audio Loudness  : ${loudness.lufs} LUFS (True Peak: ${loudness.true_peak_db} dBTP)`);
       console.log(` • Rec.709 Color   : ${color.is_rec709_compliant ? 'Compliant ✅' : 'Non-compliant ⚠️'}`);
+      const range = probe.video_codec ? detectDynamicRange(targetFile) : undefined;
+      if (range) console.log(` • Dynamic Range   : ${range.hdr ? `HDR (${range.kind.toUpperCase()}) ⚠️ run \`mgvideo sdr\` before editing` : 'SDR'}`);
       console.log('--------------------------------------------------------------------------------\n');
     } catch (err) {
       console.error('Inspect command failed:', err);
@@ -1135,6 +1138,27 @@ program
       console.log(`Output: ${res.outputPath}\n`);
     } catch (err) {
       console.error('Deinterlace failed:', err);
+      process.exit(1);
+    }
+  });
+
+// mgvideo sdr <video>
+program
+  .command('sdr <video>')
+  .description('Tone-map HDR footage (HLG or PQ) to SDR BT.709 at the BT.2408 reference white')
+  .option('-o, --out <path>', 'Custom output video path')
+  .option('--crf <n>', 'x264 CRF for the SDR copy', '18')
+  .action((video, opts) => {
+    try {
+      const fullVideo = path.resolve(process.cwd(), video);
+      const res = HdrConverter.toSdr(fullVideo, {
+        outputPath: opts.out ? path.resolve(process.cwd(), opts.out) : undefined,
+        crf: Number(opts.crf)
+      });
+      console.log(`\n🌗 HDR (${res.source.kind.toUpperCase()}) converted to SDR BT.709`);
+      console.log(`Output: ${res.outputPath}\n`);
+    } catch (err) {
+      console.error('SDR conversion failed:', err);
       process.exit(1);
     }
   });

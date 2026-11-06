@@ -5,10 +5,17 @@
   "comment": "Approved upstream commits and file hashes for production verification. An upstream commit becomes approved only after full sandbox qualification.",
   "approved_baselines": {
     "hyperframes": {
-      "approved_commit": "5c5794287bd0dc2c94f238ca89f4752ecaa045a2",
+      "approved_commit": "3e86def58e49019a2046303dbeed1cec6cde741d",
       "license": "Apache-2.0",
-      "approved_date": "2026-11-02T21:00:44.797Z",
-      "verification_status": "approved"
+      "approved_date": "2026-11-06T09:30:00.000Z",
+      "verification_status": "approved",
+      "history": [
+        {
+          "approved_commit": "5c5794287bd0dc2c94f238ca89f4752ecaa045a2",
+          "approved_date": "2026-11-02T21:00:44.797Z"
+        }
+      ],
+      "notes": "Not vendored. No hyperframes code runs here; adapters/hyperframes and packages/media reimplement ideas in our own code (HDR to SDR at the BT.2408 reference white adopted at this commit)."
     },
     "barty-motion-graphics": {
       "approved_commit": "3d83d987d658601d8a1269eb691622bdcd427335",

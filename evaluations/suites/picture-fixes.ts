@@ -3,10 +3,11 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import type { SuiteContext } from '../run-suites.js';
-import { runFfmpeg } from '../../packages/media/src/proc.js';
+import { probe, runFfmpeg } from '../../packages/media/src/proc.js';
 import { AudioWaveformVisualizer } from '../../packages/media/src/waveform.js';
 import { ChromaKeyEngine } from '../../packages/media/src/chromakey.js';
 import { MaskEngine, parseMaskBox } from '../../packages/media/src/mask.js';
+import { HdrConverter, detectDynamicRange, ffmpegMajorVersion } from '../../packages/media/src/hdr.js';
 
 const W = 320;
 const H = 240;
@@ -160,6 +161,31 @@ export async function run(t: SuiteContext): Promise<void> {
     const single = MaskEngine.applyRedaction(src, { ...A, mode: 'solid' }, { outputPath: path.join(tmp, 'single.mp4') });
     const solid = decode(single.outputPath, 'rgb24', 3);
     t.assert(near(meanRgb(solid, A.x + 10, A.y + 10, 60, 50), [0, 0, 0], 8), 'single solid box blacks out its region for the whole clip');
+
+    // --- sdr: HLG footage tone-maps to SDR at the BT.2408 reference white ----------------
+    const major = ffmpegMajorVersion();
+    if (major !== undefined && major < 8) {
+      t.skip(`mgvideo sdr needs FFmpeg 8 or newer, found ${major}`);
+    } else {
+      // Left half at HLG 75 % (reference white), right half at 38 %, 10-bit BT.2020 HLG, with sound.
+      const hdrTags = (trc: string) => `setparams=color_primaries=bt2020:color_trc=${trc}:colorspace=bt2020nc:range=tv`;
+      const patches = `color=c=gray:s=${W}x${H}:d=1,format=yuv420p10le,geq=lum='64+876*if(lt(X,${W / 2}),0.75,0.38)':cb=512:cr=512`;
+      const hlg = path.join(tmp, 'hlg.mkv');
+      runFfmpeg(['-f', 'lavfi', '-i', `${patches},${hdrTags('arib-std-b67')}`, '-f', 'lavfi', '-i', 'sine=frequency=440:duration=1',
+        '-c:v', 'ffv1', '-c:a', 'pcm_s16le', '-shortest', hlg]);
+      const pq = path.join(tmp, 'pq.mkv');
+      runFfmpeg(['-f', 'lavfi', '-i', `${patches},${hdrTags('smpte2084')}`, '-frames:v', '1', '-c:v', 'ffv1', pq]);
+      t.assert(detectDynamicRange(hlg).kind === 'hlg' && detectDynamicRange(pq).kind === 'pq', 'HLG and PQ streams are detected as HDR');
+      const sdr = HdrConverter.toSdr(hlg, { outputPath: path.join(tmp, 'hlg-sdr.mp4') });
+      const px = decode(sdr.outputPath, 'rgb24', 0.5);
+      const white = meanRgb(px, 20, 20, 100, 100);
+      const mid = meanRgb(px, W / 2 + 20, 20, 100, 100);
+      t.assert(white.every(c => c >= 245), 'HLG reference white becomes SDR white', `rgb ${white.map(c => c.toFixed(0)).join(',')}`);
+      t.assert(mid.every(c => c > 90 && c < 130), 'a darker HLG level keeps its place below white', `rgb ${mid.map(c => c.toFixed(0)).join(',')}`);
+      t.assert(sdr.outputTransfer === 'bt709' && !detectDynamicRange(sdr.outputPath).hdr, 'the SDR copy is tagged BT.709');
+      t.assert(probe(sdr.outputPath).hasAudio, 'the SDR copy keeps the sound');
+      t.assert(throws(() => HdrConverter.toSdr(sdr.outputPath), /not HDR/), 'SDR input is refused instead of re-encoded');
+    }
   } finally {
     fs.rmSync(tmp, { recursive: true, force: true });
   }

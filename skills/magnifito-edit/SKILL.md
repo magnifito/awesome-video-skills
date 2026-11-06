@@ -18,6 +18,20 @@ Editing alters presentation times. Word timestamps from the original transcript 
    - B-roll, captions, and graphics target the output timeline via `TimelineMapper`.
    - Never overwrite or mutate the original transcript timestamps.
 
+## HDR Footage (`mgvideo sdr`)
+
+Many phones record HDR video (HLG or PQ) by default. Run `mgvideo inspect <clip>` on every
+client recording first; when it reports `Dynamic Range: HDR`, convert before any other command:
+
+```bash
+mgvideo sdr raw/clip.mov --out work/clip-sdr.mp4
+```
+
+It maps the HDR reference white (BT.2408) to SDR white, so faces keep normal brightness and only
+bright highlights clip. Every other command assumes SDR BT.709; fed HDR, they re-tag it and the
+result plays back dim and washed out. Mixing HDR and SDR clips in one `concat` gives visible jumps
+in brightness. It needs FFmpeg 8 or newer and refuses SDR input.
+
 ## Pacing Rules
 
 - **Silence Removal**: Truncate pauses longer than 600ms down to 150-250ms for punchy pacing.

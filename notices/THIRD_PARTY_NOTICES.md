@@ -18,7 +18,7 @@ As established in the Magnifito Super Video Blueprint (2 November 2026), all ups
 
 ### 3. HyperFrames
 - **Repository**: `heygen-com/hyperframes`
-- **Audited Commit**: `5c5794287bd0dc2c94f238ca89f4752ecaa045a2`
+- **Audited Commit**: `3e86def58e49019a2046303dbeed1cec6cde741d`
 - **License**: Apache-2.0
 - **Copyright**: (c) 2024-2026 HeyGen Inc.
 - **Component Notices**: Audio files require individual attribution check.

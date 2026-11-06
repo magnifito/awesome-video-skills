@@ -62,20 +62,21 @@
       "repo": "hyperframes",
       "github_repo_id": 874512963,
       "tracking_branch": "main",
-      "observed_commit": "5c5794287bd0dc2c94f238ca89f4752ecaa045a2",
-      "approved_commit": "5c5794287bd0dc2c94f238ca89f4752ecaa045a2",
+      "observed_commit": "3e86def58e49019a2046303dbeed1cec6cde741d",
+      "approved_commit": "3e86def58e49019a2046303dbeed1cec6cde741d",
       "license": "Apache-2.0",
       "component_licenses": {
         "audio/historical": "Separate-Attribution-Required"
       },
-      "skills_count": 7,
+      "skills_count": 9,
       "main_contribution": "HTML video engine and authoring skills",
       "magnifito_decision": "Primary renderer candidate; curate skills and service policy",
       "source_paths": [
-        "packages/cli",
-        "packages/renderer",
-        "skills/render",
-        "skills/composition"
+        "packages/core",
+        "packages/engine",
+        "packages/producer",
+        "skills/hyperframes",
+        "skills/hyperframes-cli"
       ],
       "review_status": "observed"
     },
