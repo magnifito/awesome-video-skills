@@ -3,7 +3,7 @@ title: Showcase videos and GitHub Pages site
 summary: "Definition of the Magnifito showcase: every video type, visual recipe, format, finishing command and variation the toolkit makes, as reproducible example videos checked by a test suite and shown on a GitHub Pages site"
 kind: plan
 status: draft
-updated: 2026-11-04
+updated: 2026-11-06
 ---
 
 # Showcase videos and GitHub Pages site
@@ -121,8 +121,8 @@ change is easier to see side by side, the clip shows before and after (`multicam
 
 Commands not shown, because they change nothing a viewer can see or hear in a short clip:
 `framerate`, `deinterlace`, `proxy`, `resample`, `channel-map`, `pan`, `sanitize`, `concat`
-(used inside 03), `thumbnail` (makes every poster), `inspect` (used in 03). The CLI tests cover
-them.
+(used inside 03), `thumbnail` (makes every poster), `inspect` (used in 03), and `sdr`, which only
+changes HDR footage and the showcase has none. The CLI tests cover them.
 
 ## Section 4: Variations (3)
 

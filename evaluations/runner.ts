@@ -113,7 +113,9 @@ async function runAllEvaluations() {
   const upstreamRep = await runUpstreamCheck(workspaceRoot);
   assert(upstreamRep.total_tracked === 13, 'Catalog tracks exactly 13 upstream repositories');
   const proposal = await runUpstreamPropose(workspaceRoot, 'hyperframes');
-  assert(proposal.frozen_commit === '5c5794287bd0dc2c94f238ca89f4752ecaa045a2', 'Upstream proposal freezes exact audited commit SHA');
+  const hyperframesEntry = JSON.parse(nodeFs.readFileSync(path.join(workspaceRoot, 'registry', 'upstreams.json'), 'utf8'))
+    .repositories.find((r: { id: string }) => r.id === 'hyperframes');
+  assert(proposal.frozen_commit === hyperframesEntry.observed_commit && /^[0-9a-f]{40}$/.test(proposal.frozen_commit), 'Upstream proposal freezes exact audited commit SHA');
 
   // Test 3: Packaging Allowlist Integrity
   console.log('\n--- Test Suite 3: Skill Packaging Allowlist ---');

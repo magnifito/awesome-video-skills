@@ -15,7 +15,7 @@
 | Document | Status | Updated | Summary |
 |---|---|---|---|
 | [Motion engine (Barty-Bart motion-graphics integration)](plans/motion-engine.md) | `draft` | 2026-11-04 | Vendor Barty-Bart/motion-graphics at 3d83d98 and add a motion renderer, recipes, transparent B-roll, sound effects and object separation |
-| [Showcase videos and GitHub Pages site](plans/showcase-videos.md) | `draft` | 2026-11-04 | Definition of the Magnifito showcase: every video type, visual recipe, format, finishing command and variation the toolkit makes, as reproducible example videos checked by a test suite and shown on a GitHub Pages site |
+| [Showcase videos and GitHub Pages site](plans/showcase-videos.md) | `draft` | 2026-11-06 | Definition of the Magnifito showcase: every video type, visual recipe, format, finishing command and variation the toolkit makes, as reproducible example videos checked by a test suite and shown on a GitHub Pages site |
 
 ## reference (9)
 

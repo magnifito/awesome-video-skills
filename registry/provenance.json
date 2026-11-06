@@ -6,9 +6,9 @@
     {
       "source_id": "hyperframes",
       "origin_url": "https://github.com/heygen-com/hyperframes",
-      "commit": "5c5794287bd0dc2c94f238ca89f4752ecaa045a2",
+      "commit": "3e86def58e49019a2046303dbeed1cec6cde741d",
       "license": "Apache-2.0",
-      "modifications": "Extracted seekable browser composition pattern; wrapped with Magnifito brand, claims, and ffprobe validation",
+      "modifications": "Extracted seekable browser composition pattern; wrapped with Magnifito brand, claims, and ffprobe validation. At 3e86def, reimplemented the idea of tone-mapping HLG and PQ footage to SDR at the BT.2408 reference white as mgvideo sdr (packages/media/src/hdr.ts), using ffmpeg only; no upstream code copied.",
       "attribution": "Copyright (c) 2024-2026 HeyGen Inc."
     },
     {

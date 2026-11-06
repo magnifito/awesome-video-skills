@@ -36,7 +36,7 @@ All 13 audited repositories are tracked by immutable commit hash in `registry/up
 | :--- | :--- | :--- | :--- |
 | **Barty Bart Motion Graphics** | `3d83d987d658601d8a1269eb691622bdcd427335` | MIT | B-roll engine & sound utilities |
 | **Charlie Motion Graphics Skills**| `229022ebca76972e119e36ada23a1648d51665ab` | MIT | Creative direction & brand intake recipes |
-| **HyperFrames** | `5c5794287bd0dc2c94f238ca89f4752ecaa045a2` | Apache-2.0 | **Primary Default Renderer** |
+| **HyperFrames** | `3e86def58e49019a2046303dbeed1cec6cde741d` | Apache-2.0 | **Primary Default Renderer** |
 | **Video Shotcraft** | `1266a3ec4831289c4d893d42dd5102723658039a` | MIT | Shot recipes & visual rhythm |
 | **Herk Edit Kit** | `10511e5af86fc47756ea89803b397422e2d89284` | MIT | Footage editing & transcript retiming |
 | **Noam SaaS Product Demo** | `74f4f7150810b1bb5bf9160c4a2742c5dce69b62` | MIT | Music-led software demonstrations |
