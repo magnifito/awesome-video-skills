@@ -43,7 +43,7 @@ As established in the Magnifito Super Video Blueprint (2 November 2026), all ups
 
 ### 7. Official Remotion Skills
 - **Repository**: `remotion-dev/skills`
-- **Audited Commit**: `30d4553ecd46fbc5212fd0ff006ae43af522158b`
+- **Audited Commit**: `a2824c67f8b4585c294a8101db9f9f0ad3c643f8`
 - **License**: Remotion Company License / Remotion Commercial Terms
 - **Notice**: Remotion engine terms require explicit licensing evaluation based on whether client receives rendered MP4 vs source project.
 
