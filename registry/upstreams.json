@@ -149,19 +149,19 @@
       "repo": "skills",
       "github_repo_id": 789234510,
       "tracking_branch": "main",
-      "observed_commit": "30d4553ecd46fbc5212fd0ff006ae43af522158b",
+      "observed_commit": "a2824c67f8b4585c294a8101db9f9f0ad3c643f8",
       "approved_commit": null,
       "license": "Remotion-Company-License",
       "component_licenses": {
         "engine": "Remotion-Commercial-License-Terms"
       },
-      "skills_count": 12,
+      "skills_count": 13,
       "main_contribution": "Official React video guidance",
       "magnifito_decision": "Reference and documented installation; resolve copying rights",
       "source_paths": [
-        "skills/best-practices",
-        "skills/compositions",
-        "skills/audio-sync"
+        "skills/remotion-best-practices",
+        "skills/remotion-render",
+        "skills/remotion-captions"
       ],
       "review_status": "observed"
     },

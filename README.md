@@ -40,7 +40,7 @@ All 13 audited repositories are tracked by immutable commit hash in `registry/up
 | **Video Shotcraft** | `1266a3ec4831289c4d893d42dd5102723658039a` | MIT | Shot recipes & visual rhythm |
 | **Herk Edit Kit** | `10511e5af86fc47756ea89803b397422e2d89284` | MIT | Footage editing & transcript retiming |
 | **Noam SaaS Product Demo** | `74f4f7150810b1bb5bf9160c4a2742c5dce69b62` | MIT | Music-led software demonstrations |
-| **Official Remotion Skills** | `30d4553ecd46fbc5212fd0ff006ae43af522158b` | Remotion Co. | Isolated alternative profile (tracked) |
+| **Official Remotion Skills** | `a2824c67f8b4585c294a8101db9f9f0ad3c643f8` | Remotion Co. | Isolated alternative profile (tracked) |
 | **Iart B-Roll Skills** | `a51e34b0a8def533759373733bde1869c21075fb` | MIT | Speech-timed canvas overlays |
 | **Iart Ecommerce Video Skills** | `2bd0dd19c9b2df5230f5d8f7453861b9681e49b4` | MIT | Retail offers & batch commerce |
 | **Noam HTML Product Video** | `dfbe716495abfad263b2b8c783c21b3940b8e225` | MIT | Lightweight HTML video experimental reference |
