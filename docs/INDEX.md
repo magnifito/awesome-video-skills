@@ -2,7 +2,7 @@
 
 # Documentation index
 
-12 documents. Agents should read `docs/index.json` instead of this file.
+13 documents. Agents should read `docs/index.json` instead of this file.
 
 ## engineering (1)
 
@@ -10,11 +10,12 @@
 |---|---|---|---|
 | [Upstream sync](engineering/upstream-sync.md) | `draft` | 2026-11-04 | Nightly upstream detection opens one upstream-update issue per source; a maintainer asks a local Claude Code session to turn an issue into a pull request |
 
-## plan (2)
+## plan (3)
 
 | Document | Status | Updated | Summary |
 |---|---|---|---|
 | [Motion engine (Barty-Bart motion-graphics integration)](plans/motion-engine.md) | `draft` | 2026-11-04 | Vendor Barty-Bart/motion-graphics at 3d83d98 and add a motion renderer, recipes, transparent B-roll, sound effects and object separation |
+| [raea adoption: quality floor, checks and craft guides](plans/raea-adoption.md) | `draft` | 2026-11-10 | What Magnifito takes from shinyobjectz/raea (FSL engine, ideas only) and raea-skills (Apache-2.0, vendored as data): a P0-P3 validate report, ffmpeg and DOM-measured checks, a reconciled quality floor, craft modes and verbs, a blind judge loop, HyperFrames determinism and skill lint |
 | [Showcase videos and GitHub Pages site](plans/showcase-videos.md) | `draft` | 2026-11-04 | Definition of the Magnifito showcase: every video type, visual recipe, format, finishing command and variation the toolkit makes, as reproducible example videos checked by a test suite and shown on a GitHub Pages site |
 
 ## reference (9)

@@ -1,6 +1,6 @@
 {
   "generated": "scripts/gen-docs-index.mjs",
-  "count": 12,
+  "count": 13,
   "docs": [
     {
       "path": "docs/engineering/upstream-sync.md",
@@ -17,6 +17,14 @@
       "kind": "plan",
       "status": "draft",
       "updated": "2026-11-04"
+    },
+    {
+      "path": "docs/plans/raea-adoption.md",
+      "title": "raea adoption: quality floor, checks and craft guides",
+      "summary": "What Magnifito takes from shinyobjectz/raea (FSL engine, ideas only) and raea-skills (Apache-2.0, vendored as data): a P0-P3 validate report, ffmpeg and DOM-measured checks, a reconciled quality floor, craft modes and verbs, a blind judge loop, HyperFrames determinism and skill lint",
+      "kind": "plan",
+      "status": "draft",
+      "updated": "2026-11-10"
     },
     {
       "path": "docs/plans/showcase-videos.md",
