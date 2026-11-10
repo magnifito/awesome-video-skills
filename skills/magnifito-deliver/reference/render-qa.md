@@ -15,7 +15,8 @@ Paths below use `<project>/runs/<run-id>/final_output_<run-id>.mp4` as `final.mp
 ## 0. What the tools already check
 
 `mgvideo validate <run>` (`latest` or no run id: the newest run of `-p <project>`; `--out <file>`
-saves the report, `--json` makes it JSON) does exactly this, and nothing more:
+saves the report, `--json` makes it JSON) does exactly this, and nothing more. Each failed
+check is ranked P0 to P3 with a fix; the run fails (exit 1) only on P0 or P1:
 - **[validate]** Every output file exists and its SHA-256 matches `render-result.json`.
 - **[validate]** Width and height match the render request; fps within 1.0 of it; an audio stream exists.
 - **[validate]** `scene-plan.json` and `claims.json` still hash to what the run was rendered from.

@@ -251,17 +251,18 @@ program
   .option('-p, --project <project>', 'Project directory (optional if run is relative or absolute; for "latest" defaults to cwd)')
   .option('-o, --out <file>', 'Also write the printed report to this file')
   .option('--json', 'Print (and write) the validation report as JSON', false)
-  .addHelpText('after', '\nRun: a run id, a run directory, or "latest" (the default) for the newest run in the project.')
+  .addHelpText('after', '\nRun: a run id, a run directory, or "latest" (the default) for the newest run in the project.\nFailed checks are ranked P0 (breaks delivery) to P3 (note). Exit 0: no P0 or P1 failed; 1: a P0 or P1 failed; 2: validation could not run.')
   .action(async (runPath, opts) => {
     try {
       const report = await runValidate(runPath ?? LATEST_RUN, opts.project);
       const text = opts.json ? JSON.stringify(report, null, 2) : formatValidationReport(report);
       console.log(opts.json ? text : `\n${text}\n`);
       if (opts.out) writeOutputFile(opts.out, text);
+      // Exit 1 when a P0 or P1 check failed; 2 when validation could not run at all.
       if (!report.passed) process.exit(1);
     } catch (err) {
       console.error('Validate command failed:', err);
-      process.exit(1);
+      process.exit(2);
     }
   });
 

@@ -30,6 +30,13 @@ Before packaging, `mgvideo validate <run-id>` executes:
 3. **Claims Preservation**: Asserts that copy in rendered scenes matches `claims.json` verbatim.
 4. **Rights Clearance**: Verifies no assets carry `status: "unresolved"` or `status: "expired"`.
 
+Every failed check is an issue with a rule id, a severity and a fix, listed most severe first:
+P0 breaks the delivery (wrong file, changed inputs, claims wording), P1 must be fixed before
+delivery, P2 should be fixed, P3 is a note. `validate` exits 0 when no P0 or P1 failed, 1 when one
+did, and 2 when it could not run (no run, missing manifest). `--json` gives
+`{ issues: [{ rule, severity, at_s?, says, fix }], counts, items, ... }`. `mgvideo package`
+refuses a run with any P0 or P1 issue.
+
 The run id is optional: `mgvideo validate latest -p <project>` (or no run id) picks the newest
 `runs/run-*` of the project. `--out <file>` saves the printed report next to the delivery, and
 `--json --out <file>` saves the JSON report. `mgvideo chapters <project> --out chapters.txt`
