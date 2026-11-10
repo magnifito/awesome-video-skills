@@ -8,7 +8,7 @@ updated: 2026-11-04
 
 # Upstream sync
 
-How new commits in the 13 tracked upstreams reach this repository: a nightly job opens one issue
+How new commits in the 15 tracked upstreams reach this repository: a nightly job opens one issue
 per upstream, and a maintainer decides whether to ask a local agent to turn that issue into a pull
 request. No language model runs in GitHub Actions.
 

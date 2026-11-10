@@ -73,6 +73,23 @@ As established in the Magnifito Super Video Blueprint (2 November 2026), all ups
 - **License**: Core MIT; `@motion-canvas/ffmpeg` exporter is GPL-3.0.
 
 
+### 13. raea Skills
+- **Repository**: `shinyobjectz/raea-skills`
+- **Audited Commit**: `c507860150995eb7c22ef9db23dee636c832428a`
+- **License**: Apache-2.0, Copyright Shane Murphy.
+- **Use**: craft and motion guides vendored unchanged as data at
+  `vendor/raea-skills/c507860150995eb7c22ef9db23dee636c832428a/`; rules restated in our own words
+  in `skills/magnifito-*/reference/`. Its `skills/raea/craft/NOTICE` credits the method to
+  Impeccable (`pbakaus/impeccable`, Copyright Paul Bakaus and contributors, Apache-2.0).
+
+### 14. raea
+- **Repository**: `shinyobjectz/raea`
+- **Audited Commit**: `d6f41c605ab71275162050cd08632cb56bd00e8a`
+- **License**: FSL-1.1-ALv2 (Functional Source License, Apache-2.0 future licence), Copyright
+  2026 Shane Murphy.
+- **Use**: watchlist only. No code or text is copied or vendored; check designs are reimplemented
+  from description in Magnifito's own code.
+
 ## Generated media (model outputs, no model files committed)
 
 ### Mira's voice in the showcase

@@ -309,6 +309,64 @@
         "skills/kinetic-reel"
       ],
       "review_status": "approved"
+    },
+    {
+      "id": "raea",
+      "name": "raea (Render Anything Engine)",
+      "owner": "shinyobjectz",
+      "repo": "raea",
+      "github_repo_id": 1424671157,
+      "tracking_branch": "main",
+      "observed_commit": "d6f41c605ab71275162050cd08632cb56bd00e8a",
+      "approved_commit": null,
+      "license": "FSL-1.1-ALv2",
+      "component_licenses": {
+        "NOTICE (HyperFrames port in sdk/ui/src/html*.ts)": "Apache-2.0"
+      },
+      "skills_count": 0,
+      "main_contribution": "GPU render engine with a measured quality check (loudness, freeze, flash, clipped text, safe zones, contrast, reading time, cue drift) and cut-by-transcript",
+      "magnifito_decision": "Watchlist, ideas only. FSL-1.1-ALv2 forbids competing products, so no code or text is copied or vendored; checks are reimplemented from description (docs/plans/raea-adoption.md)",
+      "source_paths": [
+        "apps/check",
+        "engine/cli",
+        "sdk/ui/src"
+      ],
+      "review_status": "observed"
+    },
+    {
+      "id": "raea-skills",
+      "name": "raea Skills",
+      "owner": "shinyobjectz",
+      "repo": "raea-skills",
+      "github_repo_id": 1450507816,
+      "tracking_branch": "main",
+      "observed_commit": "c507860150995eb7c22ef9db23dee636c832428a",
+      "approved_commit": "c507860150995eb7c22ef9db23dee636c832428a",
+      "license": "Apache-2.0",
+      "component_licenses": {
+        "skills/raea/craft": "Apache-2.0 (method after Impeccable, Apache-2.0; see craft/NOTICE)"
+      },
+      "skills_count": 0,
+      "main_contribution": "Renderer-neutral craft guides: a quality floor, P0-P3 rubric, modes, revision verbs, motion, caption, sound and platform numbers, and a blind judge loop",
+      "magnifito_decision": "Vendor the craft guides, renderer-neutral motion guides, platform table, judge prompts and authoring rules as data; restate rules in Magnifito skill references; exclude raea-API, Bevy, games and 3D material",
+      "source_paths": [
+        "LICENSE",
+        "README.md",
+        "skills/raea/craft/",
+        "skills/raea/motion/timing.md",
+        "skills/raea/motion/animating.md",
+        "skills/raea/motion/words.md",
+        "skills/raea/motion/sound.md",
+        "skills/raea/motion/music.md",
+        "skills/raea/motion/footage.md",
+        "skills/raea/motion/placement.md",
+        "skills/raea/motion/layout.md",
+        "skills/raea/motion/delivery.md",
+        "skills/raea/reference/platforms.md",
+        "skills/raea/3d/prompts.md",
+        "docs/"
+      ],
+      "review_status": "approved"
     }
   ]
 }

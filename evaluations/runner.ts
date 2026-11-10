@@ -111,7 +111,7 @@ async function runAllEvaluations() {
   // Test 2: Upstream Tracking & Catalog
   console.log('\n--- Test Suite 2: Upstream Catalog & Tracking ---');
   const upstreamRep = await runUpstreamCheck(workspaceRoot);
-  assert(upstreamRep.total_tracked === 13, 'Catalog tracks exactly 13 upstream repositories');
+  assert(upstreamRep.total_tracked === 15, 'Catalog tracks exactly 15 upstream repositories');
   const proposal = await runUpstreamPropose(workspaceRoot, 'hyperframes');
   assert(proposal.frozen_commit === '5c5794287bd0dc2c94f238ca89f4752ecaa045a2', 'Upstream proposal freezes exact audited commit SHA');
 
@@ -495,8 +495,8 @@ async function runAllEvaluations() {
   // Test 34: Upstream Tracking Status & Catalog Coherence
   console.log('\n--- Test Suite 34: Upstream Tracking Coherence ---');
   const freshUpstreamStatus = await runUpstreamCheck(workspaceRoot);
-  assert(freshUpstreamStatus.total_tracked === 13, 'Upstream check monitors all 13 tracked repositories');
-  assert(freshUpstreamStatus.repositories.length === 13, 'Upstream check lists all 13 tracked repositories');
+  assert(freshUpstreamStatus.total_tracked === 15, 'Upstream check monitors all 15 tracked repositories');
+  assert(freshUpstreamStatus.repositories.length === 15, 'Upstream check lists all 15 tracked repositories');
 
   // Test 35: Asset Manifest & Cryptographic Checksum Auditor
   console.log('\n--- Test Suite 35: Asset Manifest & Integrity Hash Auditor ---');
@@ -975,7 +975,7 @@ async function runAllEvaluations() {
   const { runDashboard } = await import('../packages/cli/src/commands/dashboard.js');
   const dashStatus = await runDashboard(workspaceRoot);
   assert(dashStatus.doctorPassed === true, 'Dashboard confirms doctor checks passed');
-  assert(dashStatus.trackedReposCount === 13, 'Dashboard tracks 13 quarantined upstreams');
+  assert(dashStatus.trackedReposCount === 15, 'Dashboard tracks 15 quarantined upstreams');
   assert(dashStatus.workflows.length === 5, 'Dashboard monitors 5 canonical workflows');
   assert(dashStatus.mediaBudgetZeroEnforced === true, 'Dashboard enforces zero-spend policy');
 
@@ -1118,7 +1118,7 @@ async function runAllEvaluations() {
   // Test 80: Comprehensive Production Readiness Gate
   console.log('\n--- Test Suite 80: Comprehensive Production Readiness Gate ---');
   const upstreamsData = JSON.parse(nodeFs.readFileSync(path.join(workspaceRoot, 'registry', 'upstreams.json'), 'utf8'));
-  assert(upstreamsData.repositories.length === 13, 'Quarantine catalog tracks exactly 13 upstreams');
+  assert(upstreamsData.repositories.length === 15, 'Quarantine catalog tracks exactly 15 upstreams');
   assert(
     upstreamsData.repositories.every((r: { observed_commit: string; license?: string }) => /^[0-9a-f]{40}$/.test(r.observed_commit) && Boolean(r.license)),
     'Every upstream is pinned to a 40-hex commit SHA and has a recorded license'
@@ -1476,8 +1476,8 @@ async function runAllEvaluations() {
   const enterpriseDoctor = await runDoctor();
   assert(enterpriseDoctor.passed, 'Enterprise environment doctor passes all host tool assertions');
   const catalogAudit = await runUpstreamCheck(workspaceRoot);
-  assert(catalogAudit.total_tracked === 13, '13 upstreams maintained in quarantine catalog');
-  assert(catalogAudit.repositories.every(r => r.observed_commit.length === 40), 'All 13 repositories pinned by 40-character commit hashes');
+  assert(catalogAudit.total_tracked === 15, '15 upstreams maintained in quarantine catalog');
+  assert(catalogAudit.repositories.every(r => r.observed_commit.length === 40), 'All 15 repositories pinned by 40-character commit hashes');
   console.log('🏆 GRAND ENTERPRISE PLATFORM: 110 Test Suites Verified with Zero Failures!\n');
 
   // Test 111: Smart Aspect Ratio Re-Framing & Focal Crop
@@ -1592,7 +1592,7 @@ async function runAllEvaluations() {
   // Test 120: Sovereign Invariant Assurance & Triple-Zero Audit
   console.log('\n--- Test Suite 120: Sovereign Invariant Assurance & Triple-Zero Audit ---');
   const catalogFinal = await runUpstreamCheck(workspaceRoot);
-  assert(catalogFinal.total_tracked === 13, 'Quarantine catalog retains all 13 upstreams');
+  assert(catalogFinal.total_tracked === 15, 'Quarantine catalog retains all 15 upstreams');
   const skillsCheck = await packageSkills('antigravity', './dist/final-skills-pack');
   assert(skillsCheck.verifiedAllowlist, 'Allowlist strictly preserved: exactly 10 canonical skills');
 
