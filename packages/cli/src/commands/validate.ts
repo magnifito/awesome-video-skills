@@ -1,12 +1,15 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import crypto from 'node:crypto';
-import type {
-  RenderResult,
-  RenderRequest,
-  ClaimsRegister
+import {
+  ValidateConfigSchema,
+  type RenderResult,
+  type RenderRequest,
+  type ClaimsRegister,
+  type ValidateConfig
 } from '../../../contracts/src/index.js';
-import { inspectMedia } from '../../../media/src/inspector.js';
+import { inspectMedia, measureAudioLoudness, type MediaProbeResult } from '../../../media/src/inspector.js';
+import { detectBlack, detectFlashes, detectFreezes, findDeadStops, rmsWindows } from '../../../media/src/quality_checks.js';
 import { LayoutAuditor } from '../../../media/src/layout.js';
 import { resolveRunDir, resolveProjectDir, sha256String, findLatestRunDir } from './_shared.js';
 
@@ -36,6 +39,8 @@ export interface ValidationItem {
   at_s?: number;
   /** What to do about a failure. */
   fix?: string;
+  /** Set when the project's validate.json changed this rule's severity. */
+  override_reason?: string;
 }
 
 /** One failed check, as listed in `issues`. */
@@ -106,6 +111,8 @@ export async function runValidate(runPathOrId: string = LATEST_RUN, projectDir?:
 
   const items: ValidationItem[] = [];
   const unresolvedReviewItems: string[] = [];
+  const projDir = resolveProjectDir(runDir, projectDir);
+  const config = await readValidateConfig(projDir);
 
   // 1. Output files presence and hashes
   for (const file of renderResult.output_files) {
@@ -182,6 +189,9 @@ export async function runValidate(runPathOrId: string = LATEST_RUN, projectDir?:
     });
     if (!probe.has_audio) unresolvedReviewItems.push('Missing audio track in delivery file.');
 
+    // 2a. Measured picture and sound (ffmpeg only).
+    items.push(...await measuredChecks(primaryFile.path, probe, renderRequest, config));
+
     // 2b. Safe Zone Layout Audit for Mobile Formats (9:16)
     if (renderRequest.settings.width === 1080 && renderRequest.settings.height === 1920) {
       const cardWidth = Math.round(1080 * 0.78);
@@ -207,7 +217,6 @@ export async function runValidate(runPathOrId: string = LATEST_RUN, projectDir?:
   }
 
   // 3. Factual Claims Check against claims register
-  const projDir = resolveProjectDir(runDir, projectDir);
   try {
     const claimsStr = await fs.readFile(path.join(projDir, 'claims.json'), 'utf-8');
     const scenesStr = await fs.readFile(path.join(projDir, 'scene-plan.json'), 'utf-8');
@@ -270,12 +279,131 @@ export async function runValidate(runPathOrId: string = LATEST_RUN, projectDir?:
     unresolvedReviewItems.push(`Claims register audit failed: ${(err as Error).message}`);
   }
 
-  const report = summarize(renderResult.run_id, items, unresolvedReviewItems);
+  const report = summarize(renderResult.run_id, applyOverrides(items, config), unresolvedReviewItems);
 
   await fs.writeFile(path.join(runDir, 'validation-report.json'), JSON.stringify(report, null, 2), 'utf-8');
   return report;
 }
 
+/** Reads `<project>/validate.json` when present; defaults otherwise. Invalid files fail loudly. */
+export async function readValidateConfig(projDir: string): Promise<ValidateConfig> {
+  const file = path.join(projDir, 'validate.json');
+  let raw: string;
+  try {
+    raw = await fs.readFile(file, 'utf-8');
+  } catch {
+    return ValidateConfigSchema.parse({});
+  }
+  const parsed = ValidateConfigSchema.safeParse(JSON.parse(raw));
+  if (!parsed.success) {
+    throw new Error(`Invalid ${file}: ${parsed.error.issues.map(i => `${i.path.join('.')}: ${i.message}`).join('; ')}`);
+  }
+  return parsed.data;
+}
+
+/** Applies validate.json rule overrides: changes severity, or drops the rule ('off'). */
+export function applyOverrides(items: ValidationItem[], config: ValidateConfig): ValidationItem[] {
+  const out: ValidationItem[] = [];
+  for (const item of items) {
+    const o = config.rules[item.rule];
+    if (!o) {
+      out.push(item);
+    } else if (o.severity !== 'off') {
+      out.push({ ...item, severity: o.severity, override_reason: o.reason, details: `${item.details} (severity ${item.severity} → ${o.severity} by validate.json: ${o.reason})` });
+    }
+  }
+  return out;
+}
+
+const round = (n: number, d = 1) => Number(n.toFixed(d));
+
+/**
+ * Loudness, true peak, silence, stills, black, dead stops and flashes, measured on the final file.
+ * A measurement that cannot run is a P1 failure, never a silent pass.
+ */
+async function measuredChecks(file: string, probe: MediaProbeResult, request: RenderRequest, config: ValidateConfig): Promise<ValidationItem[]> {
+  const items: ValidationItem[] = [];
+  const measure = async (rule: string, label: string, fn: () => Promise<void> | void) => {
+    try {
+      await fn();
+    } catch (err) {
+      items.push({ rule, severity: 'P1', check: label, passed: false, details: `Could not measure: ${(err as Error).message.slice(0, 300)}`, fix: 'Check the file decodes with ffmpeg, then validate again.' });
+    }
+  };
+
+  if (probe.has_audio) {
+    await measure('loudness', 'Integrated Loudness', async () => {
+      const target = config.loudness_lufs ?? request.settings.target_loudness_lufs ?? -16;
+      const ceiling = config.true_peak_max_db ?? request.settings.true_peak_ceiling_db ?? -1;
+      const tol = config.loudness_tolerance_lu;
+      const { lufs, true_peak_db } = await measureAudioLoudness(file);
+      // ebur128 reports silence as -70 LUFS (its absolute gate), or -inf.
+      if (!Number.isFinite(lufs) || lufs <= -69.5) {
+        items.push({ rule: 'audio-silent', severity: 'P2', check: 'Audible Audio', passed: false, actual: lufs, details: 'The audio track is silent.', fix: 'Add narration, music or sound, or confirm a silent delivery with a validate.json override.' });
+        return;
+      }
+      items.push({ rule: 'audio-silent', severity: 'P2', check: 'Audible Audio', passed: true, details: 'The audio track is audible.' });
+      const inRange = Math.abs(lufs - target) <= tol;
+      items.push({
+        rule: 'loudness', severity: 'P1', check: 'Integrated Loudness', passed: inRange,
+        expected: `${target} ±${tol} LUFS`, actual: round(lufs),
+        details: inRange ? `${round(lufs)} LUFS, within ±${tol} LU of ${target}.` : `${round(lufs)} LUFS, ${round(lufs - target)} LU from the ${target} LUFS target.`,
+        fix: `Normalize the mix to ${target} LUFS (see the magnifito-audio skill), then re-render.`
+      });
+      const peakOk = true_peak_db <= ceiling;
+      items.push({
+        rule: 'true-peak', severity: 'P1', check: 'True Peak', passed: peakOk,
+        expected: `<= ${ceiling} dBTP`, actual: round(true_peak_db),
+        details: peakOk ? `True peak ${round(true_peak_db)} dBTP.` : `True peak ${round(true_peak_db)} dBTP is above ${ceiling} dBTP.`,
+        fix: `Limit to ${ceiling} dBTP with a true-peak limiter after normalization.`
+      });
+    });
+
+    await measure('dead-stop', 'Dead Stops', () => {
+      const stops = findDeadStops(rmsWindows(file));
+      for (const at of stops) {
+        items.push({ rule: 'dead-stop', severity: 'P1', check: 'Dead Stop', passed: false, at_s: at, details: `Steady sound cuts out with no fade at ${at.toFixed(2)} s.`, fix: 'Fade the bed out over about 1 s, or end it under a cut with a short (about 12 ms) fade.' });
+      }
+      if (stops.length === 0) items.push({ rule: 'dead-stop', severity: 'P1', check: 'Dead Stops', passed: true, details: 'No steady sound cuts out without a fade.' });
+    });
+  }
+
+  const duration = probe.duration_seconds;
+  await measure('freeze', 'Still Picture', () => {
+    const spans = detectFreezes(file, config.freeze_min_s);
+    for (const s of spans) {
+      const len = s.end - s.start;
+      const blocking = len >= config.freeze_blocking_s || (duration > 0 && len >= duration / 2);
+      items.push({
+        rule: 'freeze', severity: blocking ? 'P1' : 'P2', check: 'Still Picture', passed: false, at_s: round(s.start, 2),
+        details: `Picture does not change for ${len.toFixed(1)} s (${s.start.toFixed(2)}–${s.end.toFixed(2)} s).`,
+        fix: 'Add motion (a slow push-in, a reveal) or shorten the hold, unless the stillness is the point; then say so in validate.json.'
+      });
+    }
+    if (spans.length === 0) items.push({ rule: 'freeze', severity: 'P2', check: 'Still Picture', passed: true, details: `Nothing stays still for ${config.freeze_min_s} s or more.` });
+  });
+
+  await measure('black', 'Black Picture', () => {
+    const spans = detectBlack(file, config.black_min_s);
+    for (const s of spans) {
+      items.push({
+        rule: 'black', severity: 'P2', check: 'Black Picture', passed: false, at_s: round(s.start, 2),
+        details: `Black for ${(s.end - s.start).toFixed(1)} s (${s.start.toFixed(2)}–${s.end.toFixed(2)} s).`,
+        fix: 'Check for a missing clip or a late first frame; keep dips to black between scenes under 0.5 s.'
+      });
+    }
+    if (spans.length === 0) items.push({ rule: 'black', severity: 'P2', check: 'Black Picture', passed: true, details: `No black span of ${config.black_min_s} s or more.` });
+  });
+
+  await measure('flash', 'Flashing', () => {
+    const worst = detectFlashes(file, probe.fps || request.settings.fps);
+    items.push(worst
+      ? { rule: 'flash', severity: 'P1', check: 'Flashing (WCAG 2.3.1)', passed: false, at_s: worst.at_s, details: `${worst.swings} luminance swings in one second from ${worst.at_s.toFixed(2)} s (more than 3 flashes).`, fix: 'Slow the strobe below 3 flashes a second, shrink it, or lower its contrast.' }
+      : { rule: 'flash', severity: 'P1', check: 'Flashing (WCAG 2.3.1)', passed: true, details: 'No more than 3 flashes in any second.' });
+  });
+
+  return items;
+}
 
 /** Human-readable report, as printed by `mgvideo validate`. */
 export function formatValidationReport(report: ValidationReport): string {

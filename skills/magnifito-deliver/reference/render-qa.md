@@ -24,8 +24,26 @@ check is ranked P0 to P3 with a fix; the run fails (exit 1) only on P0 or P1:
   `copy_text`. This checks the plan text, not the pixels: still read the frames.
 - **[validate]** 9:16 at 1080x1920 only: a safe-zone item. It tests a fixed template card rectangle,
   not anything measured from the video.
+- **[validate]** Measured on the final file with ffmpeg:
+  - loudness: integrated LUFS within 1 LU of the request's `target_loudness_lufs` (default -16), P1;
+  - true peak at or below `true_peak_ceiling_db` (default -1 dBTP), P1;
+  - a silent audio track, P2;
+  - dead stop: a steady bed (1 s, under 3 dB spread, above -50 dBFS) that drops 12 dB in 10 ms
+    and stays 24 dB down for 0.3 s, P1;
+  - still picture (`freezedetect=n=-60dB:d=3`): P2 from 3 s, P1 from 6 s or half the video;
+  - black (`blackdetect`, 0.5 s or more), P2;
+  - flashing: more than 3 flashes (6 opposing luminance swings) in one second over a quarter of a
+    third-of-frame window (WCAG 2.3.1; red flashes are not checked), P1.
 
-Not in validate: loudness, pixels, contrast, captions. Asset rights are enforced earlier, by
+`<project>/validate.json` sets targets (`loudness_lufs`, `loudness_tolerance_lu`,
+`true_peak_max_db`, `freeze_min_s`, `freeze_blocking_s`, `black_min_s`) and per-rule overrides,
+each with a reason that the report prints next to the check:
+```json
+{ "rules": { "freeze": { "severity": "P3", "reason": "the closing logo hold is deliberate" } } }
+```
+A severity of `"off"` drops the rule. An invalid file stops validate (exit 2).
+
+Not in validate: text pixels, contrast, captions. Asset rights are enforced earlier, by
 `mgvideo render` (assets must be `approved` and not expired). `mgvideo gate <project>` adds brief
 JSON, zero media budget, Cyrillic glyph coverage of the brand font for `bg` projects, and a master
 with audio and non-zero duration.
@@ -107,11 +125,11 @@ Never call a render done without looking at frames of the current render.
 ## 6. Dead air, empty beats, holds
 
 Detectors only flag candidates. Look at each flagged range: a hold may be intended.
-- **[cmd]** No visual change (freeze):
+- **[validate]** No visual change (freeze) from 3 s, and black spans from 0.5 s, are measured by
+  `mgvideo validate`. To look at one by hand:
   ```bash
-  ffmpeg -v info -i final.mp4 -vf "freezedetect=n=-60dB:d=2.5" -map 0:v:0 -f null - 2>&1 | grep freeze_
+  ffmpeg -v info -i final.mp4 -vf "freezedetect=n=-60dB:d=3" -map 0:v:0 -f null - 2>&1 | grep freeze_
   ```
-  Upstream warns at max(2.5 s, 35% of runtime) without change and fails at 60% (frozen timeline).
 - **[cmd]** Near-empty or black spans of 0.5 s or more (a shorter dip between scenes can be a cut):
   ```bash
   ffmpeg -v info -i final.mp4 -vf "blackdetect=d=0.5:pix_th=0.10" -map 0:v:0 -f null - 2>&1 | grep black_
@@ -144,8 +162,8 @@ Full rules are in `skills/magnifito-audio/reference/beat-and-sound-sync.md`. At 
 2. **[validate]** `mgvideo validate <run>` passes. **[cmd]** `mgvideo gate <project>` passes.
 3. **[cmd]** Specs: `ffprobe -v error -select_streams v:0 -show_entries stream=codec_name,pix_fmt,width,height,r_frame_rate -of default=nw=1 final.mp4`
    (expect `yuv420p` for opaque H.264).
-4. **[cmd]** Loudness: `mgvideo inspect final.mp4`. Target -16 LUFS within 1 LU, true peak at or below
-   -1 dBTP (see `magnifito-audio`).
+4. **[validate]** Loudness: -16 LUFS within 1 LU, true peak at or below -1 dBTP (see
+   `magnifito-audio`); `mgvideo inspect final.mp4` shows the numbers.
 5. **[cmd]** Determinism (section 1) and detectors (section 6) run on this exact file.
 6. **[manual]** Sheets and transition strips reviewed (sections 2 to 5); captions watched (section 7).
 7. **[manual]** Listened on headphones; names, numbers and qualifiers checked against `claims.json`.
