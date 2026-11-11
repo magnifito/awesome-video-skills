@@ -314,10 +314,10 @@ async function runAllEvaluations() {
   console.log('\n--- Test Suite 18: Mobile Safe Zone Layout Analysis ---');
   const { LayoutAuditor } = await import('../packages/media/src/layout.js');
   const safeRect = { x: 86, y: 550, width: 842, height: 800 };
-  const safeCheck = LayoutAuditor.checkElementInSafeZone('card', safeRect, 1080, 1920, '9:16');
+  const safeCheck = LayoutAuditor.checkElementInSafeZone('card', safeRect, 1080, 1920);
   assert(safeCheck.length === 0, 'Centered mobile card respects 9:16 platform safe margins');
   const encroachingRect = { x: 50, y: 1800, width: 900, height: 100 };
-  const encroachCheck = LayoutAuditor.checkElementInSafeZone('bottom_btn', encroachingRect, 1080, 1920, '9:16');
+  const encroachCheck = LayoutAuditor.checkElementInSafeZone('bottom_btn', encroachingRect, 1080, 1920);
   assert(encroachCheck.length > 0, 'Layout auditor flags element encroaching mobile bottom UI ticker zone');
 
   // Test 19: Audio Mixer with Sidechain Ducking

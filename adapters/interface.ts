@@ -43,6 +43,8 @@ export interface AdapterRenderOutput {
     measured_true_peak_db?: number;
   };
   logs: string[];
+  /** Path of the text manifest (see TextManifestSchema), when the adapter records one. */
+  textManifestPath?: string;
 }
 
 export interface VideoRendererAdapter {
