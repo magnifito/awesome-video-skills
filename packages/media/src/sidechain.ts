@@ -45,7 +45,7 @@ export class SidechainDuckingEngine {
     // Ranges follow ffmpeg's sidechaincompress option limits.
     const threshold = inRange(options.threshold ?? 0.08, 0.000976563, 1, 'threshold');
     const ratio = inRange(options.ratio ?? 4.0, 1, 20, 'ratio');
-    const attack = inRange(options.attackMs ?? 20, 0.01, 2000, 'attackMs');
+    const attack = inRange(options.attackMs ?? 40, 0.01, 2000, 'attackMs');
     const release = inRange(options.releaseMs ?? 350, 0.01, 9000, 'releaseMs');
 
     const outPath = options.outputPath ?? path.join(

@@ -30,7 +30,7 @@ export interface MotionProfile {
   enter: number;
   /** Seconds between the starts of consecutive elements. */
   stagger: number;
-  /** Rise distance as a fraction of the frame height. */
+  /** Rise distance in px at a 1080 px short side (scaled with the frame). */
   rise: number;
   /** Overshoot factor for the rise (1 = none). */
   overshoot: number;
@@ -41,23 +41,29 @@ export interface MotionProfile {
   exit: number;
 }
 
+/**
+ * Entrance per brand tempo. The base move is the storyboard "rise": 30 px over 6 frames
+ * (0.2 s at 30 fps), ease-out-cubic, no overshoot (motion-timing.md). Slower tempos take a few
+ * more frames; none bounces. Overshoot is a named move (pop) that a recipe asks for, not a default.
+ */
 const TEMPO: Record<Brand['motion_preferences']['tempo'], { enter: number; stagger: number; rise: number; overshoot: number }> = {
-  energetic: { enter: 0.45, stagger: 0.07, rise: 0.04, overshoot: 1 },
-  punchy: { enter: 0.38, stagger: 0.05, rise: 0.05, overshoot: 1.05 },
-  smooth: { enter: 0.6, stagger: 0.09, rise: 0.03, overshoot: 1 },
-  calm: { enter: 0.8, stagger: 0.12, rise: 0.02, overshoot: 1 },
+  energetic: { enter: 0.2, stagger: 0.07, rise: 30, overshoot: 1 },
+  punchy: { enter: 0.2, stagger: 0.05, rise: 30, overshoot: 1 },
+  smooth: { enter: 0.27, stagger: 0.09, rise: 30, overshoot: 1 },
+  calm: { enter: 0.4, stagger: 0.12, rise: 24, overshoot: 1 },
 };
 
 /** Recipe motion values that change the entrance or add a camera move. */
 const RECIPE_MOTION: Record<string, Partial<Pick<MotionProfile, 'enter' | 'stagger' | 'overshoot' | 'driftFrom' | 'driftTo'>>> = {
-  'kinetic-typography': { stagger: 0.06, overshoot: 1.05 },
+  'kinetic-typography': { stagger: 0.06 },
   'cinematic-title': { driftFrom: 0.97, driftTo: 1.03, enter: 0.9 },
-  'product-reveal': { driftFrom: 1, driftTo: 1.03 },
+  'product-reveal': { driftFrom: 1, driftTo: 1.04 },
   'interview-speaker-card': { enter: 0.3, driftFrom: 1, driftTo: 1.04 },
   'isometric-feature-grid': { stagger: 0.15 },
   'retail-card': { stagger: 0.15 },
   'newsletter-promo': { enter: 0.45 },
   'broll-lower-third': { enter: 0.3, stagger: 0.05 },
+  // The one number of the card lands with a pop (overshoot 8 %), the named emphasis move.
   'broll-stat-callout': { overshoot: 1.08 },
 };
 
@@ -151,16 +157,16 @@ export interface FrameState {
 }
 
 /** Animated state at local scene time `t` (seconds). */
-export function frameState(parts: SvgParts, profile: MotionProfile, t: number, duration: number, height: number): FrameState {
+export function frameState(parts: SvgParts, profile: MotionProfile, t: number, duration: number, height: number, width = height): FrameState {
   const animated = parts.elements.filter(e => !e.static).length;
   // The whole entrance must finish within 45% of the scene, so long cards compress the stagger.
   const budget = Math.max(0, duration * 0.45 - profile.enter);
   const stagger = animated > 1 ? Math.min(profile.stagger, budget / (animated - 1)) : 0;
-  const rise = profile.rise * height;
+  const rise = profile.rise * Math.min(width, height) / 1080;
   const elements: [number, number][] = [];
   for (let i = 0; i < animated; i++) {
     const p = profile.enter > 0 ? clamp01((t - i * stagger) / profile.enter) : 1;
-    const opacity = round(easeOutCubic(clamp01(p * 1.6)), 3);
+    const opacity = round(easeOutCubic(clamp01(p * 1.2)), 3);
     const dy = round((1 - easeOutBack(p, profile.overshoot)) * rise, 1);
     elements.push([opacity, dy]);
   }

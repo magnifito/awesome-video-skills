@@ -117,7 +117,7 @@ export async function buildTextManifest(
     const steps = Math.max(1, Math.round(scene.duration_seconds / SAMPLE_STEP_S));
     for (let i = 0; i < steps; i++) {
       const t = i * SAMPLE_STEP_S;
-      const state = frameState(parts, profile, t, scene.duration_seconds, height);
+      const state = frameState(parts, profile, t, scene.duration_seconds, height, width);
       const [elOpacity, dy] = state.elements[p.element];
       const s = state.scale;
       const cx = width / 2;

@@ -14,7 +14,9 @@ The `magnifito-variants` skill adapts proven video compositions across aspect ra
 Never blindly crop a 16:9 composition to 9:16:
 - **9:16 (Vertical Mobile)**:
   - Stack headline above product card.
-  - Safe margins: keep interactive elements within top 15% and bottom 20% clear zones (prevent UI overlap from TikTok/Reels/Shorts).
+  - Safe margins: keep text and key action out of the platform UI zones in
+    [`../magnifito-deliver/reference/floor.md`](../magnifito-deliver/reference/floor.md)
+    (9:16 generic: 220 px top, 420 px bottom, 140 px right at 1080 wide); `mgvideo validate` checks them.
 - **16:9 (Landscape Desktop/TV)**:
   - Side-by-side arrangement: product on left/right, kinetic copy on the opposing side.
 - **1:1 (Square Feed)**:
