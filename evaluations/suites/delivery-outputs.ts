@@ -6,7 +6,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { SuiteContext } from '../run-suites.js';
 import { runFfmpeg } from '../../packages/media/src/proc.js';
-import { runValidate } from '../../packages/cli/src/commands/validate.js';
+import { runValidate, summarize, type ValidationItem } from '../../packages/cli/src/commands/validate.js';
 import { runBrandCheck } from '../../packages/cli/src/commands/brand.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
@@ -97,6 +97,39 @@ export async function run(t: SuiteContext): Promise<void> {
     // Without -p, "latest" looks in the current directory.
     const vc = mgvideo(['validate', '--json'], project);
     t.assert(vc.status === 0 && JSON.parse(vc.stdout).run_id === newer, 'validate with no run and no -p uses the cwd project');
+
+    // --- ranked report: every check carries a rule id and a severity ------------------------
+    t.assert(latest.items.every(i => /^[a-z0-9-]+$/.test(i.rule) && /^P[0-3]$/.test(i.severity)),
+      'every validate check has a rule id and a P0-P3 severity');
+    t.assert(latest.issues.length === 0 && latest.counts.P0 === 0 && latest.counts.P1 === 0, 'a passing run has no issues');
+    t.assert(/ ok file-integrity /.test(v.stdout), 'the text report lists passed checks as ok lines', v.stdout.slice(0, 400));
+
+    const item = (rule: string, severity: ValidationItem['severity'], passed: boolean, at_s?: number): ValidationItem =>
+      ({ rule, severity, passed, check: rule, details: `${rule} says`, ...(at_s !== undefined ? { at_s } : {}), fix: `${rule} fix` });
+    const advisory = summarize('r', [item('a', 'P2', false), item('b', 'P3', false), item('c', 'P0', true)], []);
+    t.assert(advisory.passed && advisory.failed_checks === 2 && advisory.counts.P2 === 1,
+      'P2 and P3 failures are reported but do not fail the report');
+    const ranked = summarize('r', [item('late', 'P2', false, 9), item('early', 'P2', false, 1), item('blocker', 'P1', false), item('worst', 'P0', false, 5)], []);
+    t.assert(!ranked.passed, 'a P1 or P0 failure fails the report');
+    t.assert(ranked.issues.map(i => i.rule).join(',') === 'worst,blocker,early,late',
+      'issues are ranked by severity, then by time', ranked.issues.map(i => i.rule).join(','));
+    t.assert(ranked.issues[0].says === 'worst says' && ranked.issues[0].fix === 'worst fix' && ranked.issues[0].at_s === 5,
+      'an issue carries what it says, the fix and the time');
+
+    // A changed claims register is a P0 failure: exit 1, ranked first in the text report.
+    const changed = path.join(tmp, 'changed');
+    fs.cpSync(project, changed, { recursive: true });
+    fs.appendFileSync(path.join(changed, 'claims.json'), '\n');
+    const vf = mgvideo(['validate', 'latest', '-p', changed]);
+    t.assert(vf.status === 1 && /\n P0 inputs-unchanged: /.test(vf.stdout) && /fix: Re-render/.test(vf.stdout),
+      'validate exits 1 and ranks a changed input as P0 with a fix', vf.stdout.slice(0, 600));
+    const vfj = mgvideo(['validate', 'latest', '-p', changed, '--json']);
+    const fj = vfj.status === 1 ? JSON.parse(vfj.stdout) : null;
+    t.assert(fj?.issues?.[0]?.rule === 'inputs-unchanged' && fj?.issues?.[0]?.severity === 'P0' && fj?.counts?.P0 >= 1,
+      'validate --json lists the ranked issues with counts');
+    // Validation that cannot run at all exits 2, not 1.
+    const v2 = mgvideo(['validate', 'latest', '-p', path.join(tmp, 'empty')]);
+    t.assert(v2.status === 2, 'validate exits 2 when there is no run to validate', `status ${v2.status}`);
 
     // --- chapters --out: file holds the printed chapter text --------------------------------
     const chaptersTxt = path.join(tmp, 'out', 'chapters.txt');

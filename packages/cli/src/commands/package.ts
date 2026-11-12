@@ -51,7 +51,7 @@ export async function runPackage(
   const validation = await runValidate(runDir, projDir);
   if (!validation.passed) {
     throw new Error(
-      `Cannot package delivery: run validation failed with ${validation.failed_checks} errors: ${validation.unresolved_review_items.join('; ')}`
+      `Cannot package delivery: run validation failed with ${validation.counts.P0 + validation.counts.P1} blocking issue(s) (P0/P1): ${validation.unresolved_review_items.join('; ')}`
     );
   }
 
