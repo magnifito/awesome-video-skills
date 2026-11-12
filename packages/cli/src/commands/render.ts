@@ -248,6 +248,9 @@ export async function runRender(projectDir: string, options?: RenderCliOptions):
     ],
     measurements: renderOutput.measurements,
     logs: renderOutput.logs,
+    ...(renderOutput.textManifestPath
+      ? { text_manifest: { path: renderOutput.textManifestPath, hash: sha256File(renderOutput.textManifestPath) } }
+      : {}),
     // Pre-render adapter and policy validation; post-render checks are recorded by `mgvideo validate`.
     validation_results: {
       passed: validation.valid,

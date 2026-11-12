@@ -18,6 +18,7 @@ import { inspectMedia, measureAudioLoudness, MediaProbeResult } from '../../pack
 import { loadSceneImages, renderRecipeSvg, type SceneImage } from './recipes.js';
 import { renderStyleRecipeSvg } from './style-recipes.js';
 import { composeFrame, frameState, motionProfile, splitSvg } from './animate.js';
+import { buildTextManifest } from './text_manifest.js';
 
 /** Frames rasterized at the same time. */
 const PARALLEL_FRAMES = 8;
@@ -448,6 +449,7 @@ export class HyperFramesAdapter implements VideoRendererAdapter {
 
     const audioIn = ['-f', 'lavfi', '-i', `anullsrc=r=${settings.audio_sample_rate}:cl=stereo`];
     const finalOutputPath = path.join(outputDir, `final_output_${runId}.${fileExt}`);
+    const textManifestPath = path.join(outputDir, 'text-manifest.json');
     const renderFontEnv = await this.fontEnv(context, outputDir);
 
     try {
@@ -516,12 +518,24 @@ export class HyperFramesAdapter implements VideoRendererAdapter {
 
       await execFileAsync('ffmpeg', ['-y', '-f', 'concat', '-safe', '0', '-i', concatListPath, '-c', 'copy', finalOutputPath], { maxBuffer: 64 * 1024 * 1024 });
       logs.push(`[HyperFrames] Successfully assembled final video: ${finalOutputPath}`);
+
+      // 4. Record where every text element is on screen, for `mgvideo validate`.
+      const manifest = await buildTextManifest(
+        context,
+        i => this.generateSceneSvg(context.scenePlan.scenes[i], context.brand, settings.width, settings.height, isTransparent, context),
+        settings.width,
+        settings.height,
+        path.join(outputDir, 'text_probe'),
+        renderFontEnv
+      );
+      await fs.writeFile(textManifestPath, JSON.stringify(manifest, null, 1), 'utf-8');
+      logs.push(`[HyperFrames] Text manifest: ${manifest.texts.length} text elements`);
     } finally {
       // Always clean up intermediate files, also when a scene fails.
       await Promise.all([...tempFiles, ...tempDirs].map(f => fs.rm(f, { force: true, recursive: true })));
     }
 
-    // 4. Measure output and calculate hash
+    // 5. Measure output and calculate hash
     const probe = await inspectMedia(finalOutputPath);
     const loudness = await measureAudioLoudness(finalOutputPath);
     const fileBuffer = await fs.readFile(finalOutputPath);
@@ -539,7 +553,8 @@ export class HyperFramesAdapter implements VideoRendererAdapter {
         measured_loudness_lufs: loudness.lufs,
         measured_true_peak_db: loudness.true_peak_db
       },
-      logs
+      logs,
+      textManifestPath
     };
   }
 

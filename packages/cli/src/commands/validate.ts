@@ -2,6 +2,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import {
+  TextManifestSchema,
   ValidateConfigSchema,
   type RenderResult,
   type RenderRequest,
@@ -10,7 +11,7 @@ import {
 } from '../../../contracts/src/index.js';
 import { inspectMedia, measureAudioLoudness, type MediaProbeResult } from '../../../media/src/inspector.js';
 import { detectBlack, detectFlashes, detectFreezes, findDeadStops, rmsWindows } from '../../../media/src/quality_checks.js';
-import { LayoutAuditor } from '../../../media/src/layout.js';
+import { textChecks } from './text_checks.js';
 import { resolveRunDir, resolveProjectDir, sha256String, findLatestRunDir } from './_shared.js';
 
 /**
@@ -192,28 +193,8 @@ export async function runValidate(runPathOrId: string = LATEST_RUN, projectDir?:
     // 2a. Measured picture and sound (ffmpeg only).
     items.push(...await measuredChecks(primaryFile.path, probe, renderRequest, config));
 
-    // 2b. Safe Zone Layout Audit for Mobile Formats (9:16)
-    if (renderRequest.settings.width === 1080 && renderRequest.settings.height === 1920) {
-      const cardWidth = Math.round(1080 * 0.78);
-      const cardHeight = Math.round(1920 * 0.42);
-      const cardX = Math.round(1080 * 0.08);
-      const cardY = Math.round((1920 - cardHeight) / 2);
-      const cardRect = { x: cardX, y: cardY, width: cardWidth, height: cardHeight };
-      const safeViolations = LayoutAuditor.checkElementInSafeZone('card_bounds', cardRect, 1080, 1920, '9:16');
-      items.push({
-        rule: 'safe-zone-template',
-        severity: 'P1',
-        check: 'Mobile Safe Zones (9:16)',
-        passed: safeViolations.length === 0,
-        fix: 'Move text and key graphics out of the platform UI zones.',
-        details: safeViolations.length === 0
-          ? 'Layout strictly conforms to mobile safe zone margins (TikTok/Reels).'
-          : `Safe margin encroachment: ${safeViolations.map(v => v.reason).join(', ')}`
-      });
-      if (safeViolations.length > 0) {
-        unresolvedReviewItems.push('Layout encroaches mobile safe zone margins.');
-      }
-    }
+    // 2b. Text the renderer recorded: clipped, safe zone, size, reading time, overlap, contrast.
+    items.push(...await textManifestChecks(renderResult, renderRequest, primaryFile.path, config));
   }
 
   // 3. Factual Claims Check against claims register
@@ -283,6 +264,34 @@ export async function runValidate(runPathOrId: string = LATEST_RUN, projectDir?:
 
   await fs.writeFile(path.join(runDir, 'validation-report.json'), JSON.stringify(report, null, 2), 'utf-8');
   return report;
+}
+
+/** Text checks over the run's text manifest; a run without one gets a P3 note. */
+async function textManifestChecks(result: RenderResult, request: RenderRequest, videoPath: string, config: ValidateConfig): Promise<ValidationItem[]> {
+  const ref = result.text_manifest;
+  if (!ref) {
+    return [{
+      rule: 'text-manifest', severity: 'P3', check: 'Text measured', passed: false,
+      fix: 'Render with the hyperframes or html engine to record text, or check text by hand (render QA sections 3-5).',
+      details: 'The renderer recorded no text manifest; on-screen text was not checked.'
+    }];
+  }
+  let raw: string;
+  try {
+    raw = await fs.readFile(ref.path, 'utf-8');
+  } catch {
+    raw = '';
+  }
+  if (!raw || sha256String(raw) !== ref.hash) {
+    return [{
+      rule: 'text-manifest', severity: 'P0', check: 'Text manifest integrity', passed: false,
+      fix: 'Re-render the run; never edit the text manifest by hand.',
+      expected: ref.hash, actual: raw ? sha256String(raw) : 'missing',
+      details: raw ? 'text-manifest.json does not match the hash recorded at render.' : 'text-manifest.json is missing.'
+    }];
+  }
+  const manifest = TextManifestSchema.parse(JSON.parse(raw));
+  return textChecks(manifest, { platform: config.platform, videoPath: request.settings.transparent ? undefined : videoPath });
 }
 
 /** Reads `<project>/validate.json` when present; defaults otherwise. Invalid files fail loudly. */

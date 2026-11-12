@@ -211,8 +211,14 @@ ${bar > 0 && !x.transparent ? `<rect width="${w}" height="${bar}" fill="#000000"
  */
 function kineticTypography(x: Ctx): string {
   const { width: w, height: h, s, c } = x;
-  const maxChars = num(x.layout.max_characters_per_line, 26);
-  const size = Math.min(120 * s, (w * 0.86) / (maxChars * 0.56));
+  const tw = textWidth(x);
+  let maxChars = num(x.layout.max_characters_per_line, 26);
+  let size = Math.min(120 * s, tw / (maxChars * 0.6));
+  if (size < copyFloor(x) * 1.05) {
+    // Fewer characters per line rather than type below the floor.
+    size = copyFloor(x) * 1.05;
+    maxChars = Math.max(6, Math.floor(tw / (size * 0.6)));
+  }
   const lh = size * 1.08;
   const plain = x.seg[0] ? wrapWords(x.seg[0], maxChars) : [];
   const emph = x.seg[1] ? wrapWords(x.seg[1], maxChars) : [];
@@ -249,7 +255,9 @@ function productReveal(x: Ctx): string {
   const name = x.seg[0] ?? '';
   const badge = (x.seg[1] ?? '').toUpperCase();
   const tagline = x.seg[2] ?? '';
-  const nameSize = Math.round(62 * s);
+  const nameMaxW = textWidth(x);
+  const nameSize = Math.max(copyFloor(x) * 1.05, fitSize(name, 62 * s, nameMaxW, 0.6, 3));
+  const nameLines = wrapWords(name, Math.max(6, Math.floor(nameMaxW / (nameSize * 0.6))));
   const tagSize = Math.round(32 * s);
   const nameY = cy + ph / 2 + 100 * s;
   const badgeSize = Math.round(22 * s);
@@ -271,8 +279,8 @@ ${product ? sparkle(cx + pw * 0.4, cy - ph * 0.42, 30 * s, '#ffffff') : ''}
 ${badge ? `<rect x="${bx}" y="${by}" width="${badgeW}" height="${badgeSize * 2.4}" rx="${badgeSize * 1.2}" fill="${c.primary}"/>
 ${text(bx + badgeW / 2, by + badgeSize * 1.58, badge, { size: badgeSize, fill: c.bg, font: x.font, weight: x.weight, anchor: 'middle', ls: badgeSize * 0.08 })}` : ''}
 ${logo ? `<image x="${right ? 80 * s : w - 80 * s - logoW}" y="${by}" width="${logoW}" height="${logoW * logo.aspect}" preserveAspectRatio="xMidYMid meet" href="${logo.dataUri}"/>` : ''}
-${text(cx, nameY, name, { size: nameSize, fill: c.ink, font: x.font, weight: x.weight, anchor: 'middle' })}
-${tagline ? text(cx, nameY + tagSize * 1.7, tagline, { size: tagSize, fill: c.primary, font: x.font, weight: '500', anchor: 'middle' }) : ''}`;
+${nameLines.map((l, i) => text(cx, nameY + i * nameSize * 1.15, l, { size: nameSize, fill: c.ink, font: x.font, weight: x.weight, anchor: 'middle' })).join('\n')}
+${tagline ? text(cx, nameY + (nameLines.length - 1) * nameSize * 1.15 + tagSize * 1.7, tagline, { size: tagSize, fill: c.primary, font: x.font, weight: '500', anchor: 'middle' }) : ''}`;
 }
 
 /**
@@ -311,10 +319,13 @@ function saasInterfaceTour(x: Ctx): string {
   const tSize = Math.round(36 * s);
   const bSize = Math.round(25 * s);
   const cardW = 600 * s;
+  const titleLines = wrapWords(title, Math.max(6, Math.floor((cardW - 112 * s) / (tSize * 0.58))));
+  const titleH = titleLines.length * tSize * 1.2;
   const bodyLines = wrapWords(bodyText, Math.floor((cardW - 80 * s) / (bSize * 0.52)));
-  const cardH = 68 * s + tSize * 1.2 + bodyLines.length * bSize * 1.4 + 28 * s;
+  const cardH = 68 * s + titleH + bodyLines.length * bSize * 1.4 + 28 * s;
   const cardX = left ? w * 0.03 : w - w * 0.03 - cardW;
-  const cardY = h - h * 0.05 - cardH;
+  // Keep the card above the bottom UI zone (floor.md: 120 px at 1080).
+  const cardY = h - Math.max(h * 0.05, 130 * s) - cardH;
   const curX = hx + hw * 0.18;
   const curY = hy + hh * 0.12;
   const rr = 18 * s;
@@ -338,8 +349,8 @@ ${glowOn ? `<rect x="${hx - hw / 2}" y="${hy - hh / 2}" width="${hw}" height="${
 <path transform="translate(${curX} ${curY}) scale(${(1.7 * s * squash).toFixed(3)} ${(1.7 * s).toFixed(3)})" d="M0 0 L0 34 L9 26 L15 40 L21 37 L15 24 L27 24 Z" fill="${c.ink}" stroke="${c.paper}" stroke-width="2" stroke-linejoin="round"/>
 <rect x="${cardX}" y="${cardY}" width="${cardW}" height="${cardH}" rx="${20 * s}" fill="${c.ink}" filter="url(#stShadow)"/>
 <circle cx="${cardX + 48 * s}" cy="${cardY + 40 * s + tSize * 0.48}" r="${9 * s}" fill="${c.accent}"/>
-${text(cardX + 72 * s, cardY + 40 * s + tSize * 0.82, title, { size: tSize, fill: c.bg, font: x.font, weight: x.weight })}
-${bodyLines.map((l, i) => text(cardX + 40 * s, cardY + 68 * s + tSize * 1.2 + i * bSize * 1.4 + bSize * 0.6, l, { size: bSize, fill: c.soft, font: x.font, weight: '400' })).join('\n')}`;
+${titleLines.map((l, i) => text(cardX + 72 * s, cardY + 40 * s + tSize * 0.82 + i * tSize * 1.2, l, { size: tSize, fill: c.bg, font: x.font, weight: x.weight })).join('\n')}
+${bodyLines.map((l, i) => text(cardX + 40 * s, cardY + 68 * s + titleH + i * bSize * 1.4 + bSize * 0.6, l, { size: bSize, fill: c.soft, font: x.font, weight: '400' })).join('\n')}`;
 }
 
 /**
@@ -352,14 +363,20 @@ function retailCard(x: Ctx): string {
   const { width: w, height: h, s, c } = x;
   const [logo] = x.images;
   const pad = num(x.layout.card_padding_px, 40) * s * 1.6;
-  const cardW = 1080 * s;
+  const portrait = h > w;
+  const cardW = portrait ? w - 2 * 100 * s : 1080 * s;
   const cardH = 640 * s;
   const cx = (w - cardW) / 2;
   const cy = (h - cardH) / 2;
   const r = (x.brand.motion_preferences.border_radius ?? 24) * 1.5 * s;
   const [name = '', price = '', badge = '', cta = '', fine = ''] = x.seg;
-  const nameSize = Math.round(54 * s);
+  const nameMaxW = cardW - 2 * pad;
+  const nameSize = Math.max(Math.round(54 * s), Math.ceil(copyFloor(x)));
+  const nameLines = wrapWords(name, Math.max(6, Math.floor(nameMaxW / (nameSize * 0.6)))).slice(0, 3);
   const priceSize = Math.round(132 * s);
+  // Card text in whichever brand colour reads on the card.
+  const cardInk = readableOn(c.paper, c.ink, c.bg);
+  const priceInk = contrast(c.primary, c.paper) >= 3 ? c.primary : cardInk;
   const ctaSize = Math.round(34 * s);
   const ctaH = (x.layout.cta_button_prominence === 'low' ? 72 : 96) * s;
   const ctaW = estWidth(cta, ctaSize, 0.58) + 150 * s;
@@ -383,9 +400,9 @@ ${x.transparent ? '' : `<rect width="${w}" height="${h}" fill="url(#rcBg)"/>`}
 <rect x="${cx}" y="${cy}" width="${cardW}" height="${cardH}" rx="${r}" fill="${c.paper}" filter="url(#rcShadow)"/>
 <g clip-path="url(#rcCard)"><rect x="${cx + cardW * 0.55}" y="${cy - cardH * 0.2}" width="${170 * s}" height="${cardH * 1.4}" transform="rotate(20 ${cx + cardW * 0.55} ${cy})" fill="url(#rcShimmer)"/></g>
 ${logo ? `<image x="${cx + pad}" y="${cy + pad}" width="${logoW}" height="${logoH}" preserveAspectRatio="xMidYMid meet" href="${logo.dataUri}"/>` : ''}
-${text(cx + pad, nameY, name, { size: nameSize, fill: c.ink, font: x.font, weight: x.weight })}
-${text(cx + pad - 6 * s, nameY + priceSize * 1.1, price, { size: priceSize, fill: c.primary, font: x.font, weight: '800', ls: -priceSize * 0.03 })}
-${fine ? text(cx + pad, cy + cardH - pad - 4 * s, fine, { size: Math.round(22 * s), fill: c.primary, font: x.font, weight: '500' }) : ''}
+${nameLines.map((l, i) => text(cx + pad, nameY + i * nameSize * 1.15, l, { size: nameSize, fill: cardInk, font: x.font, weight: x.weight })).join('\n')}
+${price ? text(cx + pad - 6 * s, nameY + (nameLines.length - 1) * nameSize * 1.15 + priceSize * 1.1, price, { size: priceSize, fill: priceInk, font: x.font, weight: '800', ls: -priceSize * 0.03 }) : ''}
+${fine ? text(cx + pad, cy + cardH - pad - 4 * s, fine, { size: Math.round(22 * s), fill: priceInk, font: x.font, weight: '500' }) : ''}
 ${cta ? `<rect x="${ctaX}" y="${ctaY}" width="${ctaW}" height="${ctaH}" rx="${ctaH / 2}" fill="${c.ink}"/>
 ${text(ctaX + ctaW / 2 - 18 * s, ctaY + ctaH / 2 + ctaSize * 0.36, cta, { size: ctaSize, fill: c.bg, font: x.font, weight: x.weight, anchor: 'middle' })}
 <path d="M${ctaX + ctaW - 70 * s} ${ctaY + ctaH / 2} h${30 * s} m${-12 * s} ${-12 * s} l${12 * s} ${12 * s} l${-12 * s} ${12 * s}" fill="none" stroke="${c.accent}" stroke-width="${4 * s}" stroke-linecap="round" stroke-linejoin="round"/>` : ''}
@@ -514,6 +531,36 @@ function wrapWords(content: string, maxChars: number): string[] {
   }
   if (current) lines.push(current);
   return lines;
+}
+
+/**
+ * Width a centred text block may use. In a vertical frame the platform buttons cover the right
+ * edge (floor.md: 140 px at 1080 wide), so the block keeps that clear on both sides.
+ */
+function textWidth(x: Ctx): number {
+  return x.height > x.width ? x.width - 2 * 150 * x.s : x.width * 0.84;
+}
+
+/** Smallest size for copy that must be read: 60 px at 1080 wide in a vertical frame (floor.md). */
+function copyFloor(x: Ctx): number {
+  return x.height > x.width ? 60 * (x.width / 1080) : x.height / 60;
+}
+
+/** The candidate with the highest WCAG contrast against `background`. */
+function readableOn(background: string, ...candidates: string[]): string {
+  return candidates.reduce((best, c) => (contrast(c, background) > contrast(best, background) ? c : best));
+}
+
+function contrast(a: string, b: string): number {
+  const lum = (hex: string) => {
+    const [r, g, bl] = rgb(hex).map(v => {
+      const c = v / 255;
+      return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+    });
+    return 0.2126 * r + 0.7152 * g + 0.0722 * bl;
+  };
+  const [la, lb] = [lum(a), lum(b)];
+  return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05);
 }
 
 function num(v: unknown, fallback: number): number {

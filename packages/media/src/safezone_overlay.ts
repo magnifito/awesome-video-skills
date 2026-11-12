@@ -4,7 +4,9 @@ import crypto from 'node:crypto';
 import { runFfmpeg, probe, rasterizeSvg, safeCssColor, escapeXml } from './proc.js';
 import { estimateTextWidth, fitFontSize } from './overlay_text.js';
 
-export type SafeZonePlatform = 'tiktok' | 'reels' | 'shorts' | 'generic';
+import { VERTICAL_SAFE_ZONES, type SafeZoneMargins, type SafeZonePlatform } from '../../contracts/src/index.js';
+
+export type { SafeZoneMargins, SafeZonePlatform };
 
 export interface SafeZoneOverlayOptions {
   platform?: SafeZonePlatform;
@@ -12,24 +14,11 @@ export interface SafeZoneOverlayOptions {
   outputPath?: string;
 }
 
-/** Unsafe margins in pixels on a 1080x1920 vertical canvas. */
-export interface SafeZoneMargins {
-  top: number;
-  bottom: number;
-  left: number;
-  right: number;
-}
-
 /**
- * Approximate per-platform UI overlay margins for 1080x1920 vertical video.
- * These are planning guides, not official platform specifications.
+ * Per-platform UI margins for 1080x1920 vertical video, from the delivery floor
+ * (skills/magnifito-deliver/reference/floor.md). `mgvideo validate` checks text against the same table.
  */
-export const SAFE_ZONE_MARGINS: Record<SafeZonePlatform, SafeZoneMargins> = {
-  tiktok: { top: 120, bottom: 320, left: 60, right: 160 },
-  reels: { top: 220, bottom: 420, left: 60, right: 120 },
-  shorts: { top: 120, bottom: 380, left: 60, right: 140 },
-  generic: { top: 96, bottom: 96, left: 96, right: 96 },
-};
+export const SAFE_ZONE_MARGINS: Record<SafeZonePlatform, SafeZoneMargins> = VERTICAL_SAFE_ZONES;
 
 const CANVAS_W = 1080;
 const CANVAS_H = 1920;

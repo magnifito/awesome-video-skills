@@ -22,8 +22,15 @@ check is ranked P0 to P3 with a fix; the run fails (exit 1) only on P0 or P1:
 - **[validate]** `scene-plan.json` and `claims.json` still hash to what the run was rendered from.
 - **[validate]** Every `claims_refs` id exists, and its `approved_wording` appears in the scene's
   `copy_text`. This checks the plan text, not the pixels: still read the frames.
-- **[validate]** 9:16 at 1080x1920 only: a safe-zone item. It tests a fixed template card rectangle,
-  not anything measured from the video.
+- **[validate]** On-screen text, from the `text-manifest.json` the HyperFrames and html engines write
+  (other engines: a P3 note, check text by hand). Every text element is placed with its animation;
+  the numbers are in [`floor.md`](floor.md):
+  - text resting more than 1 px outside the frame, P0;
+  - text inside the platform UI zones (`"platform"` in `validate.json`, default `generic`), P1;
+  - text below the size floor, P1 for scene copy, P2 for labels;
+  - contrast under 3:1 against the pixels behind it in the final file, P1; body text under 4.5:1, P2;
+  - unnarrated copy readable for less than max(0.3 s per word, 1 s), P2;
+  - two visible texts overlapping more than 20 % of the smaller one, P2.
 - **[validate]** Measured on the final file with ffmpeg:
   - loudness: integrated LUFS within 1 LU of the request's `target_loudness_lufs` (default -16), P1;
   - true peak at or below `true_peak_ceiling_db` (default -1 dBTP), P1;
@@ -36,14 +43,14 @@ check is ranked P0 to P3 with a fix; the run fails (exit 1) only on P0 or P1:
     third-of-frame window (WCAG 2.3.1; red flashes are not checked), P1.
 
 `<project>/validate.json` sets targets (`loudness_lufs`, `loudness_tolerance_lu`,
-`true_peak_max_db`, `freeze_min_s`, `freeze_blocking_s`, `black_min_s`) and per-rule overrides,
+`true_peak_max_db`, `freeze_min_s`, `freeze_blocking_s`, `black_min_s`, `platform`) and per-rule overrides,
 each with a reason that the report prints next to the check:
 ```json
 { "rules": { "freeze": { "severity": "P3", "reason": "the closing logo hold is deliberate" } } }
 ```
 A severity of `"off"` drops the rule. An invalid file stops validate (exit 2).
 
-Not in validate: text pixels, contrast, captions. Asset rights are enforced earlier, by
+Not in validate: text over faces, red flashes, captions. Asset rights are enforced earlier, by
 `mgvideo render` (assets must be `approved` and not expired). `mgvideo gate <project>` adds brief
 JSON, zero media budget, Cyrillic glyph coverage of the brand font for `bg` projects, and a master
 with audio and non-zero duration.
@@ -93,32 +100,30 @@ Never call a render done without looking at frames of the current render.
 
 ## 3. Text collisions and clipping
 
-- **[manual]** Two visible text blocks must not overlap. Upstream fails when the overlap is more than
-  20% of the smaller box while both are at least 30% opaque. Deliberate layering (title over
-  footage) is fine; say so in the scene notes.
-- **[manual]** No text more than about 4 px past the frame edge, unless a camera move carries it
-  through and it rests inside the frame.
+- **[validate]** Overlap (`text-overlap`) and clipping (`text-clipped`) are measured for the
+  HyperFrames and html engines. Deliberate layering (title over footage) is fine; record it as a
+  `validate.json` override with the reason.
 - **[manual]** No truncated labels, no descenders cut by a mask (mask height at least 1.3x the font
   size), no text crossed by a moving element, no one-frame flash of a layer in its end position,
   no layer popping in or out without motion.
-- **[cmd]** Safe areas: `mgvideo safezone final.mp4 --platform reels -o safezone.mp4` burns the
-  platform guide on (`--platform tiktok|reels|shorts|generic`, default `tiktok`; `--color` sets the
-  dashed outline), then make a sheet of it. Margins are planning guides defined on 1080x1920 and
-  stretched to the frame; labels are white on dark backings, sized with the short side of the frame.
-  Keep anything important about 60 px from every edge.
+- **[validate]** Safe areas (`text-safe-zone`): text against the UI zones in [`floor.md`](floor.md).
+- **[cmd]** To see the zones: `mgvideo safezone final.mp4 --platform reels -o safezone.mp4` burns the
+  same 9:16 margins on (`--platform tiktok|reels|shorts|generic`, default `tiktok`; `--color` sets
+  the dashed outline), then make a sheet of it. Logos and faces have no check; keep them out too.
 
 ## 4. Contrast
 
-- **[manual]** Body text at least 4.5:1 against what is actually behind it; large text (24 px and up,
-  or 18.66 px and up at bold) at least 3:1. Upstream fails below 3.0:1 for body and 1.5:1 for
-  large, and warns in between. Treat the warning band as a fix, not a pass.
+- **[validate]** `text-contrast`: 3:1 against the pixels behind the text (P1), 4.5:1 for body text
+  (P2). The background is the half of the box's pixels least like the text colour, at the middle of
+  the text's settled time. Text over moving footage can pass at that moment and fail at another;
+  look at the sheet.
 - **[manual]** Text over busy graphics or footage (upstream: over 14% of the text box): add a scrim,
-  move the text, or pause the background. Measure ratios from a still; mgvideo does not yet.
+  move the text, or pause the background.
 
 ## 5. Minimum type size
 
-- **[manual]** Floor: frame height / 60 (18 px at 1080, 32 px on a 1920-tall vertical). Aim for about
-  20 px at 1080p for anything that must be read. Check at phone width, not at 100% on a monitor.
+- **[validate]** `text-size`: 60 px at 1080 wide for 9:16, frame height / 60 for other aspects (see
+  [`floor.md`](floor.md)). Check at phone width, not at 100% on a monitor.
 - **[manual]** If the brand font did not load, every width is wrong. Fix the font before judging layout.
 - **[cmd]** `mgvideo gate <project>` confirms Cyrillic coverage for `bg` projects.
 
@@ -137,9 +142,8 @@ Detectors only flag candidates. Look at each flagged range: a hold may be intend
 - **[cmd]** Silence: `ffmpeg -v info -i final.mp4 -af "silencedetect=n=-50dB:d=1" -f null - 2>&1 | grep silence_`
 - **[manual]** Frame 0 is a composed image, not black (feeds use it as the thumbnail; check with
   `mgvideo thumbnail final.mp4 -t 0`). The last 0.1 s is settled, not mid-motion.
-- **[manual]** Reading holds: each result stays 1 to 2 s before the next action. A line needs
-  roughly 1 s plus 0.25 s per word beyond three once it has stopped moving; the final line at
-  least 2 s.
+- **[validate]** Reading time (`text-reading-time`): unnarrated copy readable for max(0.3 s per
+  word, 1 s). **[manual]** The final line holds at least 2 s, and a number gets time to land.
 - **[manual]** Something new every 2 to 4 s, and scenes hand over to each other instead of fading
   to an empty frame and back.
 
@@ -162,7 +166,7 @@ Full rules are in `skills/magnifito-audio/reference/beat-and-sound-sync.md`. At 
 2. **[validate]** `mgvideo validate <run>` passes. **[cmd]** `mgvideo gate <project>` passes.
 3. **[cmd]** Specs: `ffprobe -v error -select_streams v:0 -show_entries stream=codec_name,pix_fmt,width,height,r_frame_rate -of default=nw=1 final.mp4`
    (expect `yuv420p` for opaque H.264).
-4. **[validate]** Loudness: -16 LUFS within 1 LU, true peak at or below -1 dBTP (see
+4. **[validate]** Loudness: -16 LUFS within 1 LU, true peak at or below -1 dBTP (see [`floor.md`](floor.md) and
    `magnifito-audio`); `mgvideo inspect final.mp4` shows the numbers.
 5. **[cmd]** Determinism (section 1) and detectors (section 6) run on this exact file.
 6. **[manual]** Sheets and transition strips reviewed (sections 2 to 5); captions watched (section 7).

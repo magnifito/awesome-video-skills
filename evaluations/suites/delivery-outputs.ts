@@ -102,7 +102,9 @@ export async function run(t: SuiteContext): Promise<void> {
     // --- ranked report: every check carries a rule id and a severity ------------------------
     t.assert(latest.items.every(i => /^[a-z0-9-]+$/.test(i.rule) && /^P[0-3]$/.test(i.severity)),
       'every validate check has a rule id and a P0-P3 severity');
-    t.assert(latest.issues.length === 0 && latest.counts.P0 === 0 && latest.counts.P1 === 0, 'a passing run has no issues');
+    // The synthetic run has no text manifest, so its only issue is the P3 note that text was not measured.
+    t.assert(latest.issues.length === 1 && latest.issues[0].rule === 'text-manifest' && latest.issues[0].severity === 'P3' && latest.counts.P0 === 0 && latest.counts.P1 === 0,
+      'a passing run has no issues beyond the P3 text-manifest note', latest.issues.map(i => `${i.severity} ${i.rule}`).join(', '));
     t.assert(/ ok file-integrity /.test(v.stdout), 'the text report lists passed checks as ok lines', v.stdout.slice(0, 400));
 
     const item = (rule: string, severity: ValidationItem['severity'], passed: boolean, at_s?: number): ValidationItem =>

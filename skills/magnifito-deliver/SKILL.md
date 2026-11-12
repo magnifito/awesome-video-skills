@@ -39,7 +39,10 @@ refuses a run with any P0 or P1 issue.
 
 `validate` also measures the final file: loudness and true peak against the render request's
 targets, a silent track, a bed that cuts out with no fade, still picture (3 s, blocking from 6 s),
-black spans and flashing (WCAG 2.3.1). A deliberate exception goes in `<project>/validate.json`
+black spans and flashing (WCAG 2.3.1). For the HyperFrames and html engines it also checks every
+text element the renderer drew: clipped, inside the platform UI zones, too small, too low contrast
+against the pixels behind it, too short to read, or overlapping. The numbers are in
+[`reference/floor.md`](reference/floor.md). A deliberate exception goes in `<project>/validate.json`
 with a reason, which the report prints; see [`reference/render-qa.md`](reference/render-qa.md).
 
 The run id is optional: `mgvideo validate latest -p <project>` (or no run id) picks the newest

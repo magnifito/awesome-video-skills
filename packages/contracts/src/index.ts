@@ -400,6 +400,8 @@ export const RenderResultSchema = z.object({
   output_files: z.array(OutputFileSchema),
   measurements: MeasurementsSchema,
   logs: z.array(z.string()).default([]),
+  /** Text manifest written by the renderer, when it records one. */
+  text_manifest: z.object({ path: z.string(), hash: z.string() }).optional(),
   validation_results: z.object({
     passed: z.boolean(),
     failures: z.array(z.string()).default([])
@@ -496,11 +498,105 @@ export const ValidateConfigSchema = z.object({
   freeze_blocking_s: z.number().positive().default(6),
   /** Shortest black span reported, in seconds. */
   black_min_s: z.number().positive().default(0.5),
+  /** Platform whose UI zones text must stay out of (9:16 only); `generic` covers all three apps. */
+  platform: z.enum(['generic', 'tiktok', 'reels', 'shorts']).default('generic'),
   /** Per-rule severity changes, keyed by rule id. */
   rules: z.record(ValidateRuleOverrideSchema).default({})
 });
 
 export type ValidateConfig = z.infer<typeof ValidateConfigSchema>;
+
+/**
+ * Where on-screen text must not go: the margins each platform covers with its own interface,
+ * in pixels on a frame whose short side is 1080 (scale by short side / 1080). Organic posts;
+ * paid placements cover more (see skills/magnifito-deliver/reference/floor.md).
+ */
+export type SafeZoneAspect = '9:16' | '4:5' | '1:1' | '16:9';
+export type SafeZonePlatform = 'generic' | 'tiktok' | 'reels' | 'shorts';
+
+export interface SafeZoneMargins {
+  top: number;
+  bottom: number;
+  left: number;
+  right: number;
+}
+
+export const VERTICAL_SAFE_ZONES: Record<SafeZonePlatform, SafeZoneMargins> = {
+  generic: { top: 220, bottom: 420, left: 60, right: 140 },
+  tiktok: { top: 108, bottom: 320, left: 60, right: 120 },
+  reels: { top: 210, bottom: 310, left: 60, right: 84 },
+  shorts: { top: 120, bottom: 300, left: 60, right: 96 },
+};
+
+export const SAFE_ZONES: Record<Exclude<SafeZoneAspect, '9:16'>, SafeZoneMargins> = {
+  '4:5': { top: 110, bottom: 170, left: 60, right: 60 },
+  '1:1': { top: 70, bottom: 120, left: 60, right: 60 },
+  '16:9': { top: 120, bottom: 120, left: 60, right: 60 },
+};
+
+/** Nearest delivery aspect for a frame size. */
+export function safeZoneAspect(width: number, height: number): SafeZoneAspect {
+  const ratio = width / height;
+  const options: [SafeZoneAspect, number][] = [['9:16', 9 / 16], ['4:5', 4 / 5], ['1:1', 1], ['16:9', 16 / 9]];
+  return options.reduce((best, o) => (Math.abs(Math.log(o[1] / ratio)) < Math.abs(Math.log(best[1] / ratio)) ? o : best))[0];
+}
+
+/** Safe-zone margins in pixels for a frame, scaled by its short side. */
+export function safeZoneFor(width: number, height: number, platform: SafeZonePlatform = 'generic'): SafeZoneMargins & { aspect: SafeZoneAspect } {
+  const aspect = safeZoneAspect(width, height);
+  const base = aspect === '9:16' ? VERTICAL_SAFE_ZONES[platform] : SAFE_ZONES[aspect];
+  const s = Math.min(width, height) / 1080;
+  return { aspect, top: base.top * s, bottom: base.bottom * s, left: base.left * s, right: base.right * s };
+}
+
+/**
+ * Smallest font size for text that has to be read, in pixels: 60 px at 1080 wide for
+ * vertical social frames, frame height / 60 otherwise.
+ */
+export function minTextSize(width: number, height: number): number {
+  return safeZoneAspect(width, height) === '9:16' ? 60 * (width / 1080) : height / 60;
+}
+
+/**
+ * Text manifest: every text element a renderer drew, with its ink box sampled over time.
+ * Written by the renderer beside the output, checked by `mgvideo validate`.
+ */
+export const TextManifestEntrySchema = z.object({
+  id: z.string(),
+  scene_id: z.string(),
+  text: z.string(),
+  words: z.number().int().nonnegative(),
+  /** Font size in output pixels at rest. */
+  font_size: z.number().positive(),
+  bold: z.boolean().default(false),
+  /** Dominant ink colour, #rrggbb. */
+  color: z.string(),
+  /** Text taken from the scene copy (must be read), as opposed to labels and decoration. */
+  is_copy: z.boolean(),
+  /** The scene has narration, so the words are also heard. */
+  narrated: z.boolean().default(false),
+  /** Ink box and opacity (0-1) at sample times in seconds from the start of the video. */
+  samples: z.array(z.object({
+    t: z.number().nonnegative(),
+    x: z.number(),
+    y: z.number(),
+    w: z.number().nonnegative(),
+    h: z.number().nonnegative(),
+    opacity: z.number().min(0).max(1)
+  }))
+});
+
+export const TextManifestSchema = z.object({
+  schema_version: z.literal('1.0.0').default('1.0.0'),
+  width: z.number().int().positive(),
+  height: z.number().int().positive(),
+  /** Seconds between samples. */
+  sample_step_s: z.number().positive(),
+  texts: z.array(TextManifestEntrySchema)
+});
+
+export type TextManifestEntry = z.infer<typeof TextManifestEntrySchema>;
+export type TextManifest = z.infer<typeof TextManifestSchema>;
 
 export * from './migrate.js';
 
