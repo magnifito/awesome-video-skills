@@ -45,7 +45,7 @@ Each clip opens from and closes on the same centred dot, so plan scenes back to 
    - Every metric, discount, accreditation, or timeline in `copy_text` must explicitly cite a `claim_id`.
    - Modifying copy invalidates the scene plan and requires re-running validation.
 
-References: `reference/motion-timing.md` (durations, stagger, reading holds, scene order) and `reference/script-and-shot-plan.md` (evidence-linked script and shot plan onto claims, brief and scene plan).
+References: `reference/motion-timing.md` (durations, stagger, named moves, reading holds, scene order) and `reference/script-and-shot-plan.md` (evidence-linked script and shot plan onto claims, brief and scene plan). Patterns refused by default (template captions, the same move on every beat, constant-tempo cuts, stacked effects): `reference/refuse.md`. Notes like "too long" or "it drags": `reference/moves.md` (distill, retime).
 
 ## Stopping Conditions
 

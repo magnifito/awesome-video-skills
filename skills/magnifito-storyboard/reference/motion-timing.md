@@ -70,6 +70,42 @@ Upstream's "total stagger under 500 ms" is a UI rule; a six-item list on video c
 `kinetic-typography` lands at 1.05 (5%). Pick recipes whose overshoot fits the brand's
 `motion_preferences.tempo`; a `calm` brand should not get a celebration bounce.
 
+## Named moves
+
+The vocabulary for judging a render and arguing for a recipe change. Frames are at 30 fps.
+
+| Move | Numbers | Use it for |
+|---|---|---|
+| rise | y 30 px to 0 over 6 frames, ease-out-cubic; opacity in over 5 frames | Text and small parts arriving |
+| pop | scale 0.6, 1.08 at frame 4, 1 at frame 8 | A badge, a number, one emphasis |
+| slam | scale 1.3, 0.96 at frame 4, 1 at frame 8 | A hit on a downbeat; once or twice per film |
+| slide | 30 px from one side over 7 frames | A card or panel arriving |
+| fade | opacity 0 to 1 over 6 frames | Anything that should not draw the eye |
+| push-in | scale 1 to 1.04 over 90 frames, linear | Footage or a held still that must not freeze |
+
+- **Settle with ease-out-cubic.** Between two resting places use in-out-cubic; leaving, in-cubic;
+  continuous motion, linear.
+- **No reflex bounce.** Overshoot and elastic curves only where the idea is literally bouncy, within
+  the overshoot budget above. Never a spring on body text.
+- **Tune, do not invent.** Change distance, frames or peak of a named move (rise 40 px over 10
+  frames) instead of a new curve per part, and vary the move by the part's role: the same move on
+  every beat is on the refuse list ([`refuse.md`](refuse.md)).
+- **Exits mirror entrances**, shorter (see Element durations).
+
+What the renderers do today (recipe code, not tunable from the plan):
+
+| Move | HyperFrames (`adapters/hyperframes/animate.ts`) | Motion engine (`packages/motion/src/recipes/`) |
+|---|---|---|
+| rise | Every element rises 2–5 % of frame height (38–96 px on a 1920-high frame) over 0.38–0.8 s (11–24 frames), by `tempo` | Words rise about 0.42 × font size on a spring |
+| pop, slam, slide | Not drawn | Not drawn as named moves |
+| push-in | Camera drift over the whole scene, linear: `product-reveal` 1 to 1.03, `interview-speaker-card` 1 to 1.04, `cinematic-title` 0.97 to 1.03 | `motion-kinetic-type` camera 1 to 1.05 over the scene, eased both ends |
+| settle | ease-out-cubic when overshoot is off | Springs |
+| bounce | `punchy` tempo overshoots 5 %; `kinetic-typography` 5 % and `broll-stat-callout` 8 % at any tempo | Word springs overshoot slightly by design |
+
+So a HyperFrames render moves slower and further than the named moves, and a `punchy` brand gets
+overshoot on every card. When that is wrong for the piece, use a calmer `tempo` in `brand.json`,
+or pick a recipe without overshoot.
+
 ## Choreography rules
 
 - **Hero first.** The main element enters first or with the biggest move.
@@ -133,3 +169,6 @@ Recipe windows are derived from the recipe code; confirm them by watching the re
 | Mechanical, flat | Same duration everywhere | Vary durations, keep one held beat |
 | Busy, tiring | Too many items per scene | Split the scene, one focal point each |
 | Ending feels cut off | Final hold under 2 s | Lengthen the last scene |
+
+Sources: Named moves adapted from raea-skills (shinyobjectz/raea-skills, Apache-2.0)
+`skills/raea/motion/animating.md`, method credited to Impeccable (pbakaus/impeccable, Apache-2.0).

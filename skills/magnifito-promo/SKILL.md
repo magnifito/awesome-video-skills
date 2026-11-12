@@ -30,6 +30,8 @@ Brand colours, the heading/body fonts (`fonts[].file_path` is embedded; Geist ot
 
 Kinetic type and beat-locked reels (beat grid, words on screen, sound rules, HyperFrames pitfalls): `reference/kinetic-and-beat-reels.md`.
 
+Pitch mode (hook within 2 s, one belief, one proof, end card at least 2 s, works muted) and its failure table: `reference/pitch-mode.md`. Review notes such as "too busy" or "more punch": `reference/moves.md` (quieter, bolder, delight).
+
 ## Production Workflow
 
 1. **Intake Review**:

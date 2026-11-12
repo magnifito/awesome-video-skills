@@ -70,7 +70,7 @@ The cue types and their library mapping are in `../SKILL.md` (Sound Pass). How t
 - `typing` takes `dur` equal to the typing on screen. `scene_cut`/`movement` whooshes already start
   2 frames early; do not offset them again.
 - Level order: the reveal loudest, supporting cues clearly under it, the music as a bed
-  (`--music-db`, default -12). Under speech the bed ducks 12 to 15 dB (see `../SKILL.md`).
+  (`--music-db`, default -12). Under speech the bed ducks 10 to 14 dB (see [`mix-levels.md`](mix-levels.md)).
 - Same `--seed` gives the same takes. Swap a take through `report.html` and `--swaps swaps.json`,
   not by editing files.
 - Only the bundled CC0 effects and music the user has cleared. Pass `--music-source` and

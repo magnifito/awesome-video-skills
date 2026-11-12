@@ -12,7 +12,8 @@ The `magnifito-audio` skill handles audio tracks, sound effects placement, music
 - **Sample Rate**: 48,000 Hz, 16-bit or 24-bit PCM / 192kbps AAC stereo.
 - **Target Integrated Loudness**: `-16.0 LUFS` (standard for web and mobile streaming).
 - **True-Peak Ceiling**: `-1.0 dBFS` (prevents inter-sample clipping on mobile DACs).
-- **Voice-to-Music Ducking**: Attenuate background music by `-12 dB` to `-15 dB` when speech is present, with 100ms attack and 350ms release.
+- **Voice-to-Music Ducking**: Attenuate background music by 10 to 14 dB when speech is present, with a 40 ms attack and 300 to 400 ms release.
+- **Bed and fades**: Bed 15 to 20 LU under the voice, 1 to 1.4 s fade at the end of the bed, 12 ms fades at cuts, never boost a near-silent take by more than 3 dB. Details: [`reference/mix-levels.md`](reference/mix-levels.md).
 
 ## Sound Source Modes
 
@@ -26,7 +27,7 @@ Each project brief defines its audio mode:
 - Fail if measured integrated loudness deviates by more than `±1.0 LUFS` from target.
 - Fail if true peak exceeds `-0.5 dBFS`.
 
-For beat grids, cutting music on whole bars, cue placement from one timeline and voice/caption sync checks, see [`reference/beat-and-sound-sync.md`](reference/beat-and-sound-sync.md).
+For beat grids, cutting music on whole bars, cue placement from one timeline and voice/caption sync checks, see [`reference/beat-and-sound-sync.md`](reference/beat-and-sound-sync.md). Notes about the mix ("can't hear her", "music too loud"): [`reference/moves.md`](reference/moves.md) (remix).
 
 
 ## Sound Pass (`mgvideo sfx <video> --cues`)

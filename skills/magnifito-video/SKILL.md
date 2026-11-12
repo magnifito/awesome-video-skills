@@ -41,6 +41,8 @@ When a user initiates video work, classify the request into one of five canonica
 5. **Batch Commerce / Variants (`magnifito-variants`)**:
    - Multi-aspect ratios (16:9, 9:16, 1:1), Bulgarian/multilingual copy, SKU batches.
 
+Also decide the mode (pitch, explain or story): what success looks like for the viewer, and which guide applies. See `reference/modes.md`, which also holds the story guide. Review notes map to named moves and the skill that owns each: `reference/moves.md`.
+
 ## Deterministic Prerequisites & Guardrails
 
 - **Zero-Budget Default**: Media budget defaults to `$0.00`. Never call paid generative media APIs (e.g., ElevenLabs, HeyGen, Midjourney) without explicit written producer authorization.
