@@ -500,6 +500,8 @@ export const ValidateConfigSchema = z.object({
   black_min_s: z.number().positive().default(0.5),
   /** Platform whose UI zones text must stay out of (9:16 only); `generic` covers all three apps. */
   platform: z.enum(['generic', 'tiktok', 'reels', 'shorts']).default('generic'),
+  /** Product or brand names, besides brand.json `name`, that must be on screen while the narration says them. */
+  names: z.array(z.string().min(1)).default([]),
   /** Per-rule severity changes, keyed by rule id. */
   rules: z.record(ValidateRuleOverrideSchema).default({})
 });

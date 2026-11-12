@@ -1,9 +1,13 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import crypto from 'node:crypto';
+import { existsSync } from 'node:fs';
 import {
   TextManifestSchema,
+  TranscriptSchema,
   ValidateConfigSchema,
+  type TextManifest,
+  type Transcript,
   type RenderResult,
   type RenderRequest,
   type ClaimsRegister,
@@ -12,6 +16,8 @@ import {
 import { inspectMedia, measureAudioLoudness, type MediaProbeResult } from '../../../media/src/inspector.js';
 import { detectBlack, detectFlashes, detectFreezes, findDeadStops, rmsWindows } from '../../../media/src/quality_checks.js';
 import { textChecks } from './text_checks.js';
+import { parseCaptionWords } from '../../../media/src/caption_words.js';
+import { captionDrift, spokenNames, DRIFT_EARLY_S, DRIFT_LATE_S, type CaptionCue } from '../../../media/src/captions.js';
 import { resolveRunDir, resolveProjectDir, sha256String, findLatestRunDir } from './_shared.js';
 
 /**
@@ -195,6 +201,7 @@ export async function runValidate(runPathOrId: string = LATEST_RUN, projectDir?:
 
     // 2b. Text the renderer recorded: clipped, safe zone, size, reading time, overlap, contrast.
     items.push(...await textManifestChecks(renderResult, renderRequest, primaryFile.path, config));
+    items.push(...await speechChecks(runDir, projDir, renderResult, primaryFile.hash, config));
   }
 
   // 3. Factual Claims Check against claims register
@@ -292,6 +299,100 @@ async function textManifestChecks(result: RenderResult, request: RenderRequest, 
   }
   const manifest = TextManifestSchema.parse(JSON.parse(raw));
   return textChecks(manifest, { platform: config.platform, videoPath: request.settings.transparent ? undefined : videoPath });
+}
+
+/**
+ * The run's transcript (`<run>/transcript.json`, from `mgvideo transcribe`) when it was made from
+ * the file with `outputHash`; null when there is none or it belongs to another file.
+ */
+export async function readRunTranscript(runDir: string, outputHash: string): Promise<Transcript | null> {
+  try {
+    const t = TranscriptSchema.parse(JSON.parse(await fs.readFile(path.join(runDir, 'transcript.json'), 'utf-8')));
+    return t.source_audio_hash === outputHash ? t : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Checks that need the words actually spoken, from `<run>/transcript.json`: caption cues start
+ * with their first word, and names the narration says are on screen while they are said.
+ * Runs without a transcript get no speech items.
+ */
+async function speechChecks(runDir: string, projDir: string, result: RenderResult, outputHash: string, config: ValidateConfig): Promise<ValidationItem[]> {
+  const file = path.join(runDir, 'transcript.json');
+  if (!existsSync(file)) return [];
+  const transcript = await readRunTranscript(runDir, outputHash);
+  if (!transcript) {
+    return [{
+      rule: 'speech-transcript', severity: 'P1', check: 'Transcript of this render', passed: false,
+      fix: `Transcribe this render again: mgvideo transcribe <video> -o ${path.relative(process.cwd(), file) || file}`,
+      details: 'transcript.json is unreadable or was made from a different file than this run\'s output.'
+    }];
+  }
+  const items: ValidationItem[] = [];
+  const words = transcript.words;
+
+  // Caption drift: the run's caption file, else the project's.
+  const captionFile = ['captions.srt', 'captions.vtt'].flatMap(n => [path.join(runDir, n), path.join(projDir, n)]).find(f => existsSync(f));
+  if (captionFile) {
+    const cues = captionCues(await fs.readFile(captionFile, 'utf-8'));
+    const { drifting, matched } = captionDrift(cues, words);
+    for (const d of drifting) {
+      items.push({
+        rule: 'caption-drift', severity: 'P1', check: 'Caption timing', passed: false, at_s: d.cue.start_ms / 1000,
+        fix: 'Rebuild the captions from the transcript (mgvideo package does when the run has one), or move the cue to the word.',
+        actual: `${d.drift_s > 0 ? '+' : ''}${d.drift_s.toFixed(2)} s`, expected: `-${DRIFT_EARLY_S} s to +${DRIFT_LATE_S} s`,
+        details: `Cue ${d.cue.index} "${d.cue.text}" appears ${Math.abs(d.drift_s).toFixed(2)} s ${d.drift_s > 0 ? 'after' : 'before'} its first word (${path.basename(captionFile)}).`
+      });
+    }
+    if (drifting.length === 0) {
+      items.push({
+        rule: 'caption-drift', severity: 'P1', check: 'Caption timing', passed: true,
+        details: `${matched}/${cues.length} cues matched to speech in ${path.basename(captionFile)}; all within -${DRIFT_EARLY_S} s to +${DRIFT_LATE_S} s.`
+      });
+    }
+  }
+
+  // Names on screen while they are said.
+  let brandName = '';
+  try {
+    brandName = JSON.parse(await fs.readFile(path.join(projDir, 'brand.json'), 'utf-8')).name ?? '';
+  } catch { /* names from validate.json only */ }
+  const names = [brandName, ...config.names].filter(Boolean);
+  let manifest: TextManifest | null = null;
+  try {
+    if (result.text_manifest) manifest = TextManifestSchema.parse(JSON.parse(await fs.readFile(result.text_manifest.path, 'utf-8')));
+  } catch { /* integrity is reported by the text-manifest rule */ }
+  if (manifest && names.length > 0) {
+    const said = spokenNames(names, words, manifest);
+    const missing = said.filter(s => !s.onScreen);
+    for (const s of missing) {
+      items.push({
+        rule: 'name-on-screen', severity: 'P2', check: 'Names on screen', passed: false, at_s: s.start_ms / 1000,
+        fix: `Show "${s.name}" on screen while it is said, or add it to the scene copy.`,
+        details: `The narration says "${s.name}" at ${(s.start_ms / 1000).toFixed(2)} s with no text showing it.`
+      });
+    }
+    if (missing.length === 0) {
+      items.push({
+        rule: 'name-on-screen', severity: 'P2', check: 'Names on screen', passed: true,
+        details: said.length ? `${said.length} spoken name(s) shown while said.` : `No listed name (${names.join(', ')}) is spoken.`
+      });
+    }
+  }
+  return items;
+}
+
+/** Cues of an SRT or VTT file: start of each cue and its text. */
+function captionCues(text: string): CaptionCue[] {
+  const cues: CaptionCue[] = [];
+  for (const w of parseCaptionWords(text)) {
+    const c = cues[w.cue];
+    if (c) c.text += ` ${w.word}`;
+    else cues[w.cue] = { index: w.cue + 1, start_ms: Math.round(w.start * 1000), end_ms: Math.round(w.end * 1000), text: w.word };
+  }
+  return cues.filter(Boolean);
 }
 
 /** Reads `<project>/validate.json` when present; defaults otherwise. Invalid files fail loudly. */

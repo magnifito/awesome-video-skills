@@ -152,6 +152,10 @@ mgvideo plan projects/my-promo
 # 5. Render Video via Pinned Adapter
 mgvideo render projects/my-promo --format 9:16
 
+# 5a. Transcribe Speech Locally (faster-whisper; `mgvideo setup transcribe` once) and Cut by Lines
+mgvideo transcribe raw.mp4 -l bg -o transcript.json
+mgvideo edit cut raw.mp4 -t transcript.json -k keep.txt -o edl.json
+
 # 5b. Check On-Screen Text Without Rendering (silent when clean; the plugin runs it after edits)
 mgvideo check projects/my-promo --quick
 
