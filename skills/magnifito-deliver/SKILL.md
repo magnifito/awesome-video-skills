@@ -45,6 +45,11 @@ against the pixels behind it, too short to read, or overlapping. The numbers are
 [`reference/floor.md`](reference/floor.md). A deliberate exception goes in `<project>/validate.json`
 with a reason, which the report prints; see [`reference/render-qa.md`](reference/render-qa.md).
 
+After the measured checks pass, run a blind review: `mgvideo review prepare <run>` makes numbered
+frame sheets and a blind brief, a fresh subagent that sees only those scores the piece, and
+`mgvideo review judge <run>` decides pass, continue or stop in code. Judge findings are advisory
+until calibrated against a person. See [`reference/blind-review.md`](reference/blind-review.md).
+
 The text rules also run before any render: `mgvideo check <project> --quick` measures the text
 straight from the scene plan (no video encode, a few seconds) and prints nothing when it is clean.
 The plugin runs it after every edit of a project file (`hooks/hooks.json`): P0 and P1 come back as

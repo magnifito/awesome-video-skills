@@ -415,6 +415,61 @@ export type Measurements = z.infer<typeof MeasurementsSchema>;
 export type RenderResult = z.infer<typeof RenderResultSchema>;
 
 /**
+ * Blind review rounds (see skills/magnifito-deliver/reference/blind-review.md). A reviewer that
+ * sees only the frame sheets and the blind brief scores the piece on the axes of its mode and
+ * lists defects by tile. Whether a round passes is decided in code (`mgvideo review judge`).
+ */
+export const REVIEW_MODES = ['pitch', 'explain', 'story'] as const;
+export type ReviewMode = (typeof REVIEW_MODES)[number];
+
+/** Axes per mode, from the raea-skills rubric questions that frames alone can answer. */
+export const REVIEW_AXES: Record<ReviewMode, readonly string[]> = {
+  pitch: ['open', 'point', 'shown', 'land', 'pace', 'read', 'world', 'own'],
+  explain: ['point', 'shown', 'loop', 'land', 'pace', 'read', 'world', 'own'],
+  story: ['open', 'point', 'pull', 'land', 'pace', 'read', 'world', 'own'],
+};
+
+export const ReviewDefectSchema = z.object({
+  /** Sheet tile number (1-based, printed on the tile). */
+  tile: z.number().int().positive(),
+  /** Where in the tile: "top third", "headline", "bottom-left logo". */
+  where: z.string().min(1),
+  wrong: z.string().min(1),
+  fix: z.string().min(1),
+  level: z.enum(['P0', 'P1', 'P2', 'P3']),
+});
+
+export const ReviewRoundSchema = z.object({
+  schema_version: z.literal('1.0.0').default('1.0.0'),
+  round: z.number().int().positive(),
+  mode: z.enum(REVIEW_MODES),
+  /** What the reviewer thinks the piece is and who it is for, before scoring. */
+  blind_read: z.string().min(1),
+  scores: z.record(z.string(), z.number().min(0).max(10)),
+  defects: z.array(ReviewDefectSchema).default([]),
+  /** The one thing changed since the previous round (empty for round 1). */
+  changed: z.string().default(''),
+});
+
+export type ReviewDefect = z.infer<typeof ReviewDefectSchema>;
+export type ReviewRound = z.infer<typeof ReviewRoundSchema>;
+
+/** Person verdicts next to judge verdicts; the judge may block delivery once they agree. */
+export const JudgeCalibrationSchema = z.object({
+  schema_version: z.literal('1.0.0').default('1.0.0'),
+  entries: z.array(z.object({
+    run: z.string().min(1),
+    round: z.number().int().positive(),
+    judge_pass: z.boolean(),
+    person_pass: z.boolean(),
+    recorded_at: z.string(),
+    note: z.string().default(''),
+  })).default([]),
+});
+
+export type JudgeCalibration = z.infer<typeof JudgeCalibrationSchema>;
+
+/**
  * 10. Review Record Contract
  * Essential fields: reviewer, timestamp, decision, approval scope, exact approved revision/hash, export checks
  */

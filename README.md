@@ -162,6 +162,9 @@ mgvideo check projects/my-promo --quick
 # 6. Validate Output Files, ffprobe Specs & Claims Verification
 mgvideo validate latest --project projects/my-promo   # or a run id; --out report.txt saves the report
 
+# 6b. Blind Review: numbered frame sheets for a reviewer that sees no code; pass decided in code
+mgvideo review prepare latest -p projects/my-promo && mgvideo review judge latest -p projects/my-promo
+
 # 7. Package and Sign Delivery Bundle with Three-Role Sign-off & Cost Breakdown
 mgvideo package <run-id> --project projects/my-promo --reviewer "Kiril Kirov"
 
