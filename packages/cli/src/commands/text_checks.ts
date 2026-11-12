@@ -24,6 +24,11 @@ export interface TextCheckOptions {
   platform: SafeZonePlatform;
   /** Video to measure contrast on; omitted (or transparent output) skips the contrast rule. */
   videoPath?: string;
+  /**
+   * Frame source for the contrast rule when there is no video: RGB24 pixels, width x height of
+   * the manifest, at `t` seconds. `videoPath` wins when both are given.
+   */
+  frameAt?: (t: number) => Promise<Buffer>;
 }
 
 /** Checks over a text manifest: clipped, safe zone, size, reading time, overlap and contrast. */
@@ -126,15 +131,17 @@ export async function textChecks(manifest: TextManifest, options: TextCheckOptio
   items.push(...orPass(overlaps, 'text-overlap', 'P2', 'Text overlap', 'No two visible texts overlap.'));
 
   // Contrast against the pixels actually behind the text.
-  if (options.videoPath) {
-    items.push(...await contrastChecks(visible, options.videoPath, W, H, label));
+  const videoPath = options.videoPath;
+  const frameAt = videoPath ? (t: number) => grabFrame(videoPath, t, W, H) : options.frameAt;
+  if (frameAt) {
+    items.push(...await contrastChecks(visible, frameAt, W, H, label));
   }
   return items;
 }
 
 async function contrastChecks(
   texts: TextManifestEntry[],
-  videoPath: string,
+  frameAt: (t: number) => Promise<Buffer>,
   W: number,
   H: number,
   label: (t: TextManifestEntry) => string
@@ -154,11 +161,11 @@ async function contrastChecks(
     let frame = frames.get(s.t);
     if (!frame) {
       try {
-        frame = await grabFrame(videoPath, s.t, W, H);
+        frame = await frameAt(s.t);
       } catch (err) {
         out.push({
           rule: 'text-contrast', severity: 'P1', check: 'Text contrast', passed: false, at_s: s.t,
-          fix: 'Check that ffmpeg can decode the output, then validate again.',
+          fix: 'Check that ffmpeg can decode the output (or rsvg-convert can draw the scene), then check again.',
           details: `Could not measure: ${(err as Error).message.split('\n')[0]}`
         });
         return out;
@@ -202,9 +209,11 @@ export function contrastBehind(rgb: Buffer, W: number, x0: number, y0: number, x
   return (Math.max(lt, lb) + 0.05) / (Math.min(lt, lb) + 0.05);
 }
 
-async function grabFrame(file: string, t: number, W: number, H: number): Promise<Buffer> {
+/** RGB24 pixels of the frame at `t` seconds of a video (or of an image, with t = 0), scaled to W x H. */
+export async function grabFrame(file: string, t: number, W: number, H: number): Promise<Buffer> {
+  const seek = t > 0 ? ['-ss', t.toFixed(3)] : [];
   const { stdout } = await execFileAsync('ffmpeg', [
-    '-v', 'error', '-ss', t.toFixed(3), '-i', file, '-frames:v', '1', '-vf', `scale=${W}:${H}`, '-f', 'rawvideo', '-pix_fmt', 'rgb24', '-'
+    '-v', 'error', ...seek, '-i', file, '-frames:v', '1', '-vf', `scale=${W}:${H}`, '-f', 'rawvideo', '-pix_fmt', 'rgb24', '-'
   ], { encoding: 'buffer', maxBuffer: W * H * 3 + 1024 });
   const buf = stdout as Buffer;
   if (buf.length < W * H * 3) throw new Error(`no frame at ${t.toFixed(2)} s`);

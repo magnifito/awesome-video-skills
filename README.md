@@ -91,6 +91,11 @@ mgvideo doctor
 
 Update later with `/plugin marketplace update magnifito-video`.
 
+The plugin also ships one hook (`hooks/hooks.json`): after Claude edits a project file
+(`scene-plan.json`, `brand.json`, ...) of a HyperFrames or html project, it runs
+`mgvideo check <project> --quick` and hands any clipped, hidden, small, low-contrast or rushed text
+back to Claude. It stays silent when the text is clean or `mgvideo` is not installed.
+
 ---
 
 ## Showcase
@@ -146,6 +151,9 @@ mgvideo plan projects/my-promo
 
 # 5. Render Video via Pinned Adapter
 mgvideo render projects/my-promo --format 9:16
+
+# 5b. Check On-Screen Text Without Rendering (silent when clean; the plugin runs it after edits)
+mgvideo check projects/my-promo --quick
 
 # 6. Validate Output Files, ffprobe Specs & Claims Verification
 mgvideo validate latest --project projects/my-promo   # or a run id; --out report.txt saves the report
