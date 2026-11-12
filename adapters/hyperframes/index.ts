@@ -669,6 +669,19 @@ function escapeHtml(str: string): string {
     .replace(/'/g, '&#039;');
 }
 
+/**
+ * Faces built with the same glyph widths as a common family, so text lays out identically
+ * (fontconfig aliases them on Linux). Drawing Arial text in Liberation Sans is not a fallback.
+ */
+const METRIC_COMPATIBLE: Record<string, string[]> = {
+  arial: ['liberation sans', 'arimo'],
+  helvetica: ['liberation sans', 'arimo', 'nimbus sans', 'nimbus sans l'],
+  'times new roman': ['liberation serif', 'tinos'],
+  times: ['liberation serif', 'tinos', 'nimbus roman'],
+  'courier new': ['liberation mono', 'cousine'],
+  courier: ['liberation mono', 'cousine', 'nimbus mono ps'],
+};
+
 const GENERIC_FAMILIES = new Set(['serif', 'sans-serif', 'monospace', 'cursive', 'fantasy', 'system-ui', 'ui-sans-serif', 'ui-serif', 'ui-monospace', 'blinkmacsystemfont']);
 
 /**
@@ -680,7 +693,9 @@ const GENERIC_FAMILIES = new Set(['serif', 'sans-serif', 'monospace', 'cursive',
 export async function brandFontWarnings(context: ProjectContext, env: NodeJS.ProcessEnv | undefined): Promise<string[] | undefined> {
   const resolves = async (family: string): Promise<string | null> => {
     const { stdout } = await execFileAsync('fc-match', ['-f', '%{family}', family], { env: env ?? process.env });
-    return stdout.split(',').some(f => f.trim().toLowerCase() === family.toLowerCase()) ? null : stdout.split(',')[0].trim();
+    const got = stdout.split(',').map(f => f.trim().toLowerCase());
+    const ok = [family.toLowerCase(), ...(METRIC_COMPATIBLE[family.toLowerCase()] ?? [])];
+    return got.some(f => ok.includes(f)) ? null : stdout.split(',')[0].trim();
   };
   const warnings: string[] = [];
   try {

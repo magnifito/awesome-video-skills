@@ -95,7 +95,7 @@ export class TitleBurner {
     return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
   <defs>
     <filter id="shadow" x="-5%" y="-5%" width="110%" height="110%">
-      <feDropShadow dx="0" dy="${r(8 * s)}" stdDeviation="${r(12 * s)}" flood-color="#000000" flood-opacity="0.4" />
+      <feGaussianBlur in="SourceAlpha" stdDeviation="${r(12 * s)}"/><feOffset dx="0" dy="${r(8 * s)}" result="o"/><feFlood flood-color="#000000" flood-opacity="0.4"/><feComposite in2="o" operator="in"/><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
     </filter>
     <clipPath id="card"><rect x="${r(cardX)}" y="${r(cardY)}" width="${r(cardW)}" height="${r(cardH)}" rx="${r(rx)}" /></clipPath>
   </defs>
