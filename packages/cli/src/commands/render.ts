@@ -253,6 +253,7 @@ export async function runRender(projectDir: string, options?: RenderCliOptions):
     ],
     measurements: renderOutput.measurements,
     logs: renderOutput.logs,
+    ...(renderOutput.warnings ? { warnings: renderOutput.warnings } : {}),
     ...(renderOutput.textManifestPath
       ? { text_manifest: { path: renderOutput.textManifestPath, hash: sha256File(renderOutput.textManifestPath) } }
       : {}),

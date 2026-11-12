@@ -46,6 +46,11 @@ export interface AdapterRenderOutput {
   logs: string[];
   /** Path of the text manifest (see TextManifestSchema), when the adapter records one. */
   textManifestPath?: string;
+  /**
+   * Problems the renderer saw that did not stop it (font fallback, console errors, failed
+   * loads). An adapter that checks sets it, empty when clean; `mgvideo validate` reports them.
+   */
+  warnings?: string[];
 }
 
 export interface VideoRendererAdapter {

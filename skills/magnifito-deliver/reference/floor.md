@@ -21,6 +21,7 @@ measures every rule marked [validate]; the rule id is what `validate.json` overr
 | Still picture | Nothing stands still for 3 s unless the stillness is the point | P2 from 3 s, P1 from 6 s or half the video | `freeze` [validate] |
 | Black | No black span of 0.5 s or more | P2 | `black` [validate] |
 | Flashing | No more than 3 flashes in any second over a large part of the frame (WCAG 2.3.1) | P1 | `flash` [validate] |
+| Renderer warnings | No font fallback, console error or failed load reported by the renderer | P1 | `render-warnings` [validate] |
 
 "Settled" means the text has finished its entrance (at least 95 % of its full opacity). Text that
 slides in from outside the frame is fine; text that rests outside it is not. Text size is the font

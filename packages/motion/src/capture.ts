@@ -85,13 +85,65 @@ export interface OpenedClip {
   height: number;
   alpha: boolean;
   errors: string[];
+  /** Problems that do not stop the render: console errors, failed loads, font fallback. */
+  warnings: string[];
 }
 
-/** Opens a built clip page in render mode and waits until fonts and the scene are ready. */
-export async function openClip(browser: Browser, htmlPath: string): Promise<OpenedClip> {
+/** Fixed wall clock the page sees at t = 0 (2024-01-01T00:00:00Z). */
+export const CLOCK_EPOCH_MS = 1_704_067_200_000;
+/** Default seed for the page's Math.random. */
+export const RANDOM_SEED = 0x6d677669; // "mgvi"
+
+/**
+ * Installed before any page script: the page's clock and random numbers depend only on the
+ * seek time, so the same seek always draws the same pixels. `window.__mgClock(t)` sets the time
+ * (Date.now, new Date(), performance.now) and reseeds Math.random from (seed, t in microseconds).
+ */
+function determinismScript(seed: number): string {
+  return `(() => {
+  const EPOCH = ${CLOCK_EPOCH_MS};
+  const SEED = ${seed >>> 0};
+  let nowMs = 0;
+  let state = SEED;
+  const rand = () => {
+    state = (state + 0x6D2B79F5) | 0;
+    let x = Math.imul(state ^ (state >>> 15), 1 | state);
+    x = (x + Math.imul(x ^ (x >>> 7), 61 | x)) ^ x;
+    return ((x ^ (x >>> 14)) >>> 0) / 4294967296;
+  };
+  const reseed = t => {
+    const us = Math.round(t * 1e6);
+    state = (SEED ^ Math.imul(us | 0, 0x9E3779B1) ^ Math.floor(us / 4294967296)) | 0;
+  };
+  Math.random = rand;
+  const RealDate = Date;
+  function FixedDate(...args) {
+    if (!new.target) return new RealDate(EPOCH + nowMs).toString();
+    return args.length === 0 ? new RealDate(EPOCH + nowMs) : new RealDate(...args);
+  }
+  FixedDate.prototype = RealDate.prototype;
+  FixedDate.now = () => EPOCH + nowMs;
+  FixedDate.parse = RealDate.parse;
+  FixedDate.UTC = RealDate.UTC;
+  globalThis.Date = FixedDate;
+  if (globalThis.performance) performance.now = () => nowMs;
+  window.__mgClock = t => { nowMs = t * 1000; reseed(t); };
+  window.__mgClock(0);
+})();`;
+}
+
+/**
+ * Opens a built clip page in render mode and waits until fonts and the scene are ready.
+ * The page's clock and Math.random are pinned to the seek time (see determinismScript).
+ */
+export async function openClip(browser: Browser, htmlPath: string, seed = RANDOM_SEED): Promise<OpenedClip> {
   const page = await browser.newPage({ viewport: { width: 1920, height: 1080 }, deviceScaleFactor: 1 });
   const errors: string[] = [];
+  const warnings: string[] = [];
   page.on('pageerror', e => errors.push(e.message));
+  page.on('console', m => { if (m.type() === 'error') warnings.push(`console error: ${m.text()}`); });
+  page.on('requestfailed', r => warnings.push(`failed to load ${r.url().slice(0, 200)}: ${r.failure()?.errorText ?? 'unknown error'}`));
+  await page.addInitScript(determinismScript(seed));
   await page.goto(pathToFileURL(path.resolve(htmlPath)).href + '?render');
   // Page-side code is passed as source strings: the toolkit compiles without the DOM lib.
   await page.waitForFunction("window.__motionReady === true || typeof window.__motionError === 'string'", undefined, { timeout: 30_000 });
@@ -114,12 +166,60 @@ export async function openClip(browser: Browser, htmlPath: string): Promise<Open
     throw new Error(`Motion clip has no stage size (${htmlPath}).`);
   }
   await page.setViewportSize({ width: info.W, height: info.H });
-  return { page, duration: info.T, width: info.W, height: info.H, alpha: info.alpha, errors };
+  // The first screenshot after the resize can show a frame painted before it (measured: about
+  // half of fresh pages); take one and discard it so frame 0 of every clip is the seeked frame.
+  await page.screenshot();
+  return { page, duration: info.T, width: info.W, height: info.H, alpha: info.alpha, errors, warnings };
 }
 
 async function seek(page: Page, t: number): Promise<void> {
   if (!Number.isFinite(t)) throw new Error(`seek: invalid time ${t}`);
-  await page.evaluate(`window.seek(${t})`);
+  await page.evaluate(`window.__mgClock(${t}); window.seek(${t})`);
+}
+
+/**
+ * Text drawn with a font the page did not embed: Chrome fell back to a system font, which
+ * differs between machines (and may lack Cyrillic). Checked at a quarter, half and three
+ * quarters of the clip, through the DevTools protocol (CSS.getPlatformFontsForNode).
+ */
+export async function fontFallbacks(clip: OpenedClip): Promise<string[]> {
+  const cdp = await clip.page.context().newCDPSession(clip.page);
+  const found = new Map<string, Set<string>>();
+  try {
+    await cdp.send('DOM.enable');
+    await cdp.send('CSS.enable');
+    for (const f of [0.25, 0.5, 0.75]) {
+      await seek(clip.page, clip.duration * f);
+      const { root } = await cdp.send('DOM.getDocument', { depth: -1 });
+      const nodes: { nodeId: number; text: string }[] = [];
+      const walk = (n: { nodeId: number; nodeType: number; nodeValue?: string; children?: unknown[]; nodeName?: string }) => {
+        if (n.nodeName === 'SCRIPT' || n.nodeName === 'STYLE') return;
+        for (const c of (n.children ?? []) as typeof n[]) {
+          if (c.nodeType === 3 && c.nodeValue?.trim()) nodes.push({ nodeId: n.nodeId, text: c.nodeValue.trim() });
+          else walk(c);
+        }
+      };
+      walk(root as Parameters<typeof walk>[0]);
+      for (const { nodeId, text } of nodes) {
+        let fonts: { familyName: string; isCustomFont: boolean; glyphCount: number }[] = [];
+        try {
+          ({ fonts } = await cdp.send('CSS.getPlatformFontsForNode', { nodeId }) as { fonts: typeof fonts });
+        } catch {
+          continue; // not laid out at this time
+        }
+        for (const font of fonts) {
+          if (font.isCustomFont || font.glyphCount === 0) continue;
+          const key = font.familyName;
+          if (!found.has(key)) found.set(key, new Set());
+          found.get(key)!.add(text.length > 30 ? `${text.slice(0, 29)}…` : text);
+        }
+      }
+    }
+  } finally {
+    await cdp.detach().catch(() => {});
+  }
+  return [...found].map(([family, texts]) =>
+    `font fallback: system font "${family}" drew ${[...texts].slice(0, 3).map(t => `"${t}"`).join(', ')}${texts.size > 3 ? ` and ${texts.size - 3} more` : ''} (embed a font that covers these glyphs)`);
 }
 
 export type MotionCodec = 'h264' | 'prores' | 'vp9';
@@ -133,6 +233,8 @@ export interface RenderClipOptions {
   browser?: Browser;
   /** Called after each output frame. */
   onFrame?: (frame: number, total: number) => void;
+  /** Seed for the page's Math.random (default RANDOM_SEED). */
+  seed?: number;
 }
 
 export interface RenderClipResult {
@@ -142,6 +244,8 @@ export interface RenderClipResult {
   height: number;
   alpha: boolean;
   codec: MotionCodec;
+  /** Console errors, failed loads and font fallbacks seen while rendering. */
+  warnings: string[];
 }
 
 function encoderArgs(codec: MotionCodec, alpha: boolean): string[] {
@@ -168,7 +272,7 @@ export async function renderClip(htmlPath: string, outputPath: string, options: 
   const fps = options.fps;
   if (!(fps > 0)) throw new Error('renderClip: fps must be positive');
   return withBrowser(options.browser, async browser => {
-    const clip = await openClip(browser, htmlPath);
+    const clip = await openClip(browser, htmlPath, options.seed);
     try {
       const T = options.duration ?? clip.duration;
       if (!(T > 0)) throw new Error(`renderClip: clip duration is not positive (${htmlPath})`);
@@ -222,7 +326,8 @@ export async function renderClip(htmlPath: string, outputPath: string, options: 
       if (st.spawnError) fail(`ffmpeg failed to start: ${st.spawnError.message}`);
       if (clip.errors.length) fail(`page errors while rendering ${htmlPath}:\n${clip.errors.join('\n')}`);
       if (st.code !== 0) fail(`ffmpeg failed (exit ${st.code}), ${outputPath} is incomplete: ${stderr.trim().slice(-2000)}`);
-      return { outputPath, frames: N, width: clip.width, height: clip.height, alpha: clip.alpha, codec };
+      const warnings = [...new Set([...clip.warnings, ...await fontFallbacks({ ...clip, duration: T })])];
+      return { outputPath, frames: N, width: clip.width, height: clip.height, alpha: clip.alpha, codec, warnings };
     } finally {
       await clip.page.close();
     }

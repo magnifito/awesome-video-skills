@@ -202,6 +202,7 @@ export async function runValidate(runPathOrId: string = LATEST_RUN, projectDir?:
     // 2b. Text the renderer recorded: clipped, safe zone, size, reading time, overlap, contrast.
     items.push(...await textManifestChecks(renderResult, renderRequest, primaryFile.path, config));
     items.push(...await speechChecks(runDir, projDir, renderResult, primaryFile.hash, config));
+    if (renderResult.warnings) items.push(...renderWarnings(renderResult.warnings));
   }
 
   // 3. Factual Claims Check against claims register
@@ -271,6 +272,20 @@ export async function runValidate(runPathOrId: string = LATEST_RUN, projectDir?:
 
   await fs.writeFile(path.join(runDir, 'validation-report.json'), JSON.stringify(report, null, 2), 'utf-8');
   return report;
+}
+
+/** Renderer warnings recorded at render time: each one is P1 (the picture is not what was designed). */
+function renderWarnings(warnings: string[]): ValidationItem[] {
+  if (warnings.length === 0) {
+    return [{ rule: 'render-warnings', severity: 'P1', check: 'Renderer warnings', passed: true, details: 'The renderer reported no font fallback, console error or failed load.' }];
+  }
+  return warnings.map(w => ({
+    rule: 'render-warnings', severity: 'P1' as const, check: 'Renderer warnings', passed: false,
+    fix: w.includes('font fallback')
+      ? 'Ship the font as a file in brand.json (file_path) or pick a family installed on the render machine, then render again.'
+      : 'Fix the page so it loads cleanly, then render again.',
+    details: w
+  }));
 }
 
 /** Text checks over the run's text manifest; a run without one gets a P3 note. */

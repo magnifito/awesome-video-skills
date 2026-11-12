@@ -564,6 +564,7 @@ export class HyperFramesAdapter implements VideoRendererAdapter {
         measured_true_peak_db: loudness.true_peak_db
       },
       logs,
+      warnings: await brandFontWarnings(context, renderFontEnv),
       textManifestPath
     };
   }
@@ -666,4 +667,41 @@ function escapeHtml(str: string): string {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#039;');
+}
+
+const GENERIC_FAMILIES = new Set(['serif', 'sans-serif', 'monospace', 'cursive', 'fantasy', 'system-ui', 'ui-sans-serif', 'ui-serif', 'ui-monospace', 'blinkmacsystemfont']);
+
+/**
+ * Brand fonts fontconfig cannot find, so rsvg-convert silently drew the text in another face.
+ * A font shipped as a file must resolve by its own family; a stack without a file passes when any
+ * named family in it resolves (the rest of the stack is a deliberate fallback). Without fc-match
+ * the check is skipped.
+ */
+export async function brandFontWarnings(context: ProjectContext, env: NodeJS.ProcessEnv | undefined): Promise<string[] | undefined> {
+  const resolves = async (family: string): Promise<string | null> => {
+    const { stdout } = await execFileAsync('fc-match', ['-f', '%{family}', family], { env: env ?? process.env });
+    return stdout.split(',').some(f => f.trim().toLowerCase() === family.toLowerCase()) ? null : stdout.split(',')[0].trim();
+  };
+  const warnings: string[] = [];
+  try {
+    for (const font of context.brand.fonts) {
+      const named = font.family.split(',').map(f => f.trim().replace(/^["']|["']$/g, ''))
+        .filter(f => f && !f.startsWith('-') && !GENERIC_FAMILIES.has(f.toLowerCase()));
+      if (named.length === 0) continue;
+      const candidates = font.file_path ? named.slice(0, 1) : named;
+      let drawnIn: string | null = null;
+      let found = false;
+      for (const fam of candidates) {
+        const miss = await resolves(fam);
+        if (miss === null) { found = true; break; }
+        drawnIn ??= miss;
+      }
+      if (!found) {
+        warnings.push(`font fallback: brand font "${candidates.join(', ')}"${font.file_path ? ` (${font.file_path})` : ''} is not available to rsvg-convert; text is drawn in "${drawnIn}" instead.`);
+      }
+    }
+  } catch {
+    return undefined; // fc-match missing: nothing measured
+  }
+  return warnings;
 }

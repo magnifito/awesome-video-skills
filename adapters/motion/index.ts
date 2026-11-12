@@ -162,6 +162,7 @@ export class MotionAdapter implements VideoRendererAdapter {
     const concatListPath = path.join(outputDir, 'concat_list.txt');
     const totalSeconds = context.scenePlan.scenes.reduce((a, s) => a + s.duration_seconds, 0);
 
+    const warnings: string[] = [];
     let browser: Browser | undefined;
     try {
       browser = await launchBrowser();
@@ -178,6 +179,7 @@ export class MotionAdapter implements VideoRendererAdapter {
             throw new Error(`Motion: scene ${scene.scene_id} rendered alpha=${res.alpha} but settings.transparent=${settings.transparent}.`);
           }
           logs.push(`[Motion] Scene ${i + 1}/${pages.length} ${scene.scene_id} (${scene.visual_recipe}): ${res.frames} frames in ${((Date.now() - t0) / 1000).toFixed(1)}s`);
+          for (const w of res.warnings) warnings.push(`${scene.scene_id}: ${w}`);
         }
       };
       await Promise.all(Array.from({ length: Math.min(PARALLEL_SCENES, pages.length) }, worker));
@@ -218,7 +220,8 @@ export class MotionAdapter implements VideoRendererAdapter {
         measured_loudness_lufs: loudness.lufs,
         measured_true_peak_db: loudness.true_peak_db
       },
-      logs
+      logs,
+      warnings
     };
   }
 
