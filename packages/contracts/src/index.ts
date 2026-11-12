@@ -472,6 +472,36 @@ export const ProjectLockSchema = z.object({
 
 export type ProjectLock = z.infer<typeof ProjectLockSchema>;
 
+/**
+ * 12. Validate Config Contract (optional `<project>/validate.json`)
+ * Per-project targets and deliberate overrides for `mgvideo validate`. Every rule override needs a
+ * reason, and the report shows it next to the check it changed.
+ */
+export const ValidateRuleOverrideSchema = z.object({
+  severity: z.enum(['P0', 'P1', 'P2', 'P3', 'off']),
+  reason: z.string().min(3)
+});
+
+export const ValidateConfigSchema = z.object({
+  schema_version: z.literal('1.0.0').default('1.0.0'),
+  /** Integrated loudness target in LUFS; default: the render request's target_loudness_lufs. */
+  loudness_lufs: z.number().min(-40).max(-5).optional(),
+  /** Allowed distance from the target, in LU. */
+  loudness_tolerance_lu: z.number().positive().max(6).default(1),
+  /** Highest allowed true peak in dBTP; default: the render request's true_peak_ceiling_db. */
+  true_peak_max_db: z.number().max(0).optional(),
+  /** Shortest still picture reported, in seconds. */
+  freeze_min_s: z.number().positive().default(3),
+  /** A still this long (or half the video) is P1 instead of P2, in seconds. */
+  freeze_blocking_s: z.number().positive().default(6),
+  /** Shortest black span reported, in seconds. */
+  black_min_s: z.number().positive().default(0.5),
+  /** Per-rule severity changes, keyed by rule id. */
+  rules: z.record(ValidateRuleOverrideSchema).default({})
+});
+
+export type ValidateConfig = z.infer<typeof ValidateConfigSchema>;
+
 export * from './migrate.js';
 
 export * from './broll.js';

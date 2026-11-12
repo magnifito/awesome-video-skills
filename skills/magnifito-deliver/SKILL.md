@@ -37,6 +37,11 @@ did, and 2 when it could not run (no run, missing manifest). `--json` gives
 `{ issues: [{ rule, severity, at_s?, says, fix }], counts, items, ... }`. `mgvideo package`
 refuses a run with any P0 or P1 issue.
 
+`validate` also measures the final file: loudness and true peak against the render request's
+targets, a silent track, a bed that cuts out with no fade, still picture (3 s, blocking from 6 s),
+black spans and flashing (WCAG 2.3.1). A deliberate exception goes in `<project>/validate.json`
+with a reason, which the report prints; see [`reference/render-qa.md`](reference/render-qa.md).
+
 The run id is optional: `mgvideo validate latest -p <project>` (or no run id) picks the newest
 `runs/run-*` of the project. `--out <file>` saves the printed report next to the delivery, and
 `--json --out <file>` saves the JSON report. `mgvideo chapters <project> --out chapters.txt`

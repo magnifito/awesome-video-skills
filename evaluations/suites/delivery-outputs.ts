@@ -57,8 +57,9 @@ export async function run(t: SuiteContext): Promise<void> {
       fs.copyFileSync(path.join(PROMO, f), path.join(project, f));
     }
     const clip = path.join(tmp, 'clip.mp4');
+    // A -16 LUFS tone that fades out, so the measured validate checks pass too.
     runFfmpeg(['-f', 'lavfi', '-i', 'testsrc=s=320x240:r=25:d=1', '-f', 'lavfi', '-i', 'sine=d=1',
-      '-shortest', '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-c:a', 'aac', clip]);
+      '-af', 'loudnorm=I=-16:TP=-2,afade=t=out:st=0.85:d=0.15', '-shortest', '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-c:a', 'aac', clip]);
     const older = 'run-1700000000000-aaaaaaaa';
     const newer = 'run-1800000000000-bbbbbbbb';
     writeFakeRun(project, newer, clip);
@@ -68,7 +69,7 @@ export async function run(t: SuiteContext): Promise<void> {
 
     const latest = await runValidate('latest', project);
     t.assert(latest.run_id === newer, 'validate "latest" resolves the newest run by its run-<epochMs> name', latest.run_id);
-    t.assert(latest.passed, 'validate passes on the synthetic run', latest.unresolved_review_items.join('; '));
+    t.assert(latest.passed, 'validate passes on the synthetic run', latest.issues.map(i => `${i.severity} ${i.rule}: ${i.says}`).join('; '));
     const byDefault = await runValidate(undefined, project);
     t.assert(byDefault.run_id === newer, 'validate with no run id defaults to the newest run');
     let emptyErr = '';
