@@ -39,6 +39,8 @@ Run `mgvideo brand check <project-dir|brand.json>` before the first render and a
 It exits 1 when any error-level check fails; warnings do not fail it. `--json` prints the report as
 JSON and `--out <file>` also writes what it prints to a file (keep it as review evidence).
 
+Notes about type on screen, or a brand kit read from finished work: `reference/moves.md` (typeset, extract).
+
 ## Cyrillic & Bulgarian Typography Rules
 
 When `brief.language` is Bulgarian (`bg`), verify:

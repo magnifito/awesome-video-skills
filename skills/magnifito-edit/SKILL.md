@@ -18,6 +18,8 @@ Editing alters presentation times. Word timestamps from the original transcript 
    - B-roll, captions, and graphics target the output timeline via `TimelineMapper`.
    - Never overwrite or mutate the original transcript timestamps.
 
+Notes about order, cuts or colour: `reference/moves.md` (recut, regrade).
+
 ## Pacing Rules
 
 - **Silence Removal**: Truncate pauses longer than 600ms down to 150-250ms for punchy pacing.

@@ -58,6 +58,18 @@ saves the YouTube chapters (`--format vtt|ffmetadata` for WebVTT or FFmetadata).
 
 For the full pre-delivery QA pass (determinism, frame sheets, text, contrast, dead air, captions, release checklist), follow [`reference/render-qa.md`](reference/render-qa.md).
 
+## Cutdowns and file names
+
+- A cutdown (6 s, 15 s, 30 s) is its own edit with its own hook and ending, planned and validated
+  like any render, never the long cut stopped early.
+- Files handed over per platform are named in lowercase letters, digits and hyphens, with shape and
+  length: `spring-launch-9x16-15s.mp4`. (The bundle master from `mgvideo package` keeps its
+  `[project_id]_[lang]_final` name.)
+- A new version renders beside the old file (`spring-launch-9x16-15s-v2.mp4`), never over it. No
+  `final-v2-FINAL.mp4`.
+
+Before calling it done, critique the render, then polish: [`reference/moves.md`](reference/moves.md).
+
 ## Signing Review Record
 
 The output `review-record.json` records:

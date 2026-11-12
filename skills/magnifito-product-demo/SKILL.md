@@ -19,6 +19,8 @@ The `magnifito-product-demo` skill produces product demonstrations and feature t
    - Zoom in on active interaction areas (120-150% crop) when displaying dense dashboards or mobile screens.
    - Hold on the final result for at least 1.5 seconds so the viewer can absorb the feature's payoff.
 
+Explain mode (one project through one loop, 25 to 45 words per scene) and its failure table: `reference/explain-mode.md`. Notes about wording or narration: `reference/moves.md` (clarify).
+
 ## Assets & Synthetic Data
 
 - Store raw high-resolution screen captures (2x Retina or 4K preferred) in the project workspace.

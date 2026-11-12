@@ -18,7 +18,7 @@ Never blindly crop a 16:9 composition to 9:16:
 - **1:1 (Square Feed)**:
   - Centered hero arrangement with condensed headline leading.
 
-Lower thirds per ratio (`mgvideo lower-third` placement, sizes, timing, alpha checks): `reference/lower-thirds.md`.
+Lower thirds per ratio (`mgvideo lower-third` placement, sizes, timing, alpha checks): `reference/lower-thirds.md`. Another size, length or platform, including cutdowns: `reference/moves.md` (adapt).
 
 ## 2. Bulgarian & Multilingual Localization
 
