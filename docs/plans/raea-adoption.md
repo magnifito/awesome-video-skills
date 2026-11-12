@@ -2,8 +2,8 @@
 title: "raea adoption: quality floor, checks and craft guides"
 summary: "What Magnifito takes from shinyobjectz/raea (FSL engine, ideas only) and raea-skills (Apache-2.0, vendored as data): a P0-P3 validate report, ffmpeg and DOM-measured checks, a reconciled quality floor, craft modes and verbs, a blind judge loop, HyperFrames determinism and skill lint"
 kind: plan
-status: draft
-updated: 2026-11-10
+status: active
+updated: 2026-11-12
 ---
 
 # raea adoption: quality floor, checks and craft guides
@@ -266,6 +266,22 @@ Lives in `magnifito-deliver` as a documented loop; an `evaluations/` suite holds
 | 10 Tooling | S–M | 0 |
 
 Start with 0, 1 and 2, then 3 and 4. They turn the manual render QA into measured checks.
+
+## Progress (2026-11-12)
+
+| Phase | Pull request | Notes |
+|---|---|---|
+| 0 Register and vendor | #8 | |
+| 1 Floor decisions | #12 | `skills/magnifito-deliver/reference/floor.md` |
+| 2 Ranked report | #9 | |
+| 3 ffmpeg checks | #11 | |
+| 4 Text manifest | #12 | |
+| 5 Quick check hook | #13 | `mgvideo check --quick`, plugin `hooks/hooks.json` |
+| 6 Words and cutting | #14 | faster-whisper in place of parakeet-mlx and whisper.cpp: one backend everywhere, Bulgarian included |
+| 7 Craft guides | #15 | Code still differs from the motion numbers; listed in the PR |
+| 8 Blind review | #17 | Advisory until 10 rounds are calibrated against a person |
+| 9 Determinism | #16 | Applied to the motion engine's browser capture: HyperFrames here draws SVG with rsvg-convert, which runs no page script. No font alias table: fallbacks are reported instead |
+| 10 Tooling | #18 | Local foley not done: the Stable Audio Open models are gated and this account has no access yet |
 
 ## Done when
 

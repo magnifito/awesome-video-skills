@@ -9,6 +9,7 @@ import { runPlan } from '../commands/plan.js';
 import { runRender } from '../commands/render.js';
 import { runValidate, formatValidationReport, LATEST_RUN } from '../commands/validate.js';
 import { runQuickCheck, formatQuickCheck } from '../commands/check.js';
+import { findGeneration, ledgerSpend, readLedger, recordGeneration, type GenerationRequest } from '../../../media/src/ledger.js';
 import { calibrationPath, calibrationStatus, judgeRounds, prepareReview, readCalibration, readRounds, CALIBRATION_AGREEMENT, CALIBRATION_MIN_ROUNDS } from '../commands/review.js';
 import { REVIEW_MODES, JudgeCalibrationSchema } from '../../../contracts/src/index.js';
 import { setupTranscribe, transcribe, DEFAULT_TRANSCRIBE_MODEL } from '../../../media/src/transcribe.js';
@@ -383,6 +384,66 @@ review
     console.log(`${st.rounds} round(s) compared, agreement ${(st.agreement * 100).toFixed(0)}%. Needs ${CALIBRATION_MIN_ROUNDS} rounds at ${CALIBRATION_AGREEMENT * 100}%: ${st.calibrated ? 'calibrated (judge defects can block)' : 'advisory (judge defects never block)'}.`);
   });
 
+// mgvideo ledger <find|add|list>: generated assets keyed by what produced them
+const ledger = program
+  .command('ledger')
+  .description('Generation ledger (<project>/generations.json): reuse a generated asset instead of paying for it twice');
+
+const ledgerRequest = (opts: { kind: string; model: string; prompt?: string; promptFile?: string; seed?: string; param?: string[] }): GenerationRequest => {
+  const prompt = opts.promptFile ? nodeFs.readFileSync(path.resolve(process.cwd(), opts.promptFile), 'utf8') : opts.prompt ?? '';
+  const params: Record<string, string | number | boolean> = {};
+  for (const kv of opts.param ?? []) {
+    const i = kv.indexOf('=');
+    if (i < 1) throw new Error(`--param must be key=value, got ${kv}`);
+    const v = kv.slice(i + 1);
+    params[kv.slice(0, i)] = v === 'true' ? true : v === 'false' ? false : v !== '' && Number.isFinite(Number(v)) ? Number(v) : v;
+  }
+  return { kind: opts.kind, model: opts.model, prompt, seed: opts.seed === undefined ? null : Number(opts.seed), params };
+};
+
+const withRequestOptions = (c: Command) => c
+  .requiredOption('--kind <kind>', 'voice, image, sfx, music, video, ...')
+  .requiredOption('--model <model>', 'Model and version that produced it')
+  .option('--prompt <text>', 'Prompt or script text')
+  .option('--prompt-file <file>', 'Read the prompt from a file')
+  .option('--seed <n>', 'Seed, when the generator takes one')
+  .option('--param <key=value>', 'Other generation parameter (repeatable)', (v: string, prev: string[] = []) => [...prev, v]);
+
+withRequestOptions(ledger.command('find <project>').description('Print the recorded file for this generation; exit 1 when there is none'))
+  .action((project, opts) => {
+    try {
+      const hit = findGeneration(path.resolve(process.cwd(), project), ledgerRequest(opts));
+      if (!hit) process.exit(1);
+      console.log(hit.path);
+    } catch (err) {
+      console.error(`Ledger find failed: ${err instanceof Error ? err.message : String(err)}`);
+      process.exit(2);
+    }
+  });
+
+withRequestOptions(ledger.command('add <project> <file>').description('Record a generated file with what produced it and what it cost'))
+  .requiredOption('--cost-cents <n>', 'What the generation cost, in US cents (0 for local models)')
+  .action((project, file, opts) => {
+    try {
+      const projectDir = path.resolve(process.cwd(), project);
+      const e = recordGeneration(projectDir, ledgerRequest(opts), path.resolve(process.cwd(), file), Number(opts.costCents));
+      console.log(`Recorded ${e.kind} ${e.file} (${e.model}, ${e.cost_cents} cents), key ${e.key.slice(0, 12)}`);
+    } catch (err) {
+      console.error(`Ledger add failed: ${err instanceof Error ? err.message : String(err)}`);
+      process.exit(2);
+    }
+  });
+
+ledger
+  .command('list <project>')
+  .description('List recorded generations and the total spent')
+  .action(project => {
+    const l = readLedger(path.resolve(process.cwd(), project));
+    for (const e of l.entries) console.log(` ${e.created_at.slice(0, 10)}  ${e.kind.padEnd(6)} ${(e.cost_cents / 100).toFixed(2).padStart(7)} $  ${e.model}  ${e.file}`);
+    const s = ledgerSpend(l);
+    console.log(`${s.count} generation(s), $${(s.total_cents / 100).toFixed(2)} total`);
+  });
+
 // mgvideo package <run>
 program
   .command('package <run>')
@@ -432,6 +493,11 @@ program
       console.log(` • Render Compute Engine        : $${cost.items.render_compute_usd.toFixed(3)} (Limit: $${cost.budget_limits.compute_budget_usd.toFixed(2)})`);
       console.log(` • External Media & TTS APIs    : $${cost.items.external_media_usd.toFixed(2)} (Limit: $${cost.budget_limits.media_budget_usd.toFixed(2)})`);
       console.log(` • Storage Delivery Buffer      : $${cost.items.storage_usd.toFixed(4)}`);
+      const spend = ledgerSpend(readLedger(projDir));
+      if (spend.count > 0) {
+        const kinds = Object.entries(spend.by_kind).map(([k, c]) => `${k} $${(c / 100).toFixed(2)}`).join(', ');
+        console.log(` • Generated Media (ledger)     : $${(spend.total_cents / 100).toFixed(2)} in ${spend.count} generation(s): ${kinds}`);
+      }
       console.log('--------------------------------------------------------------------------------');
       console.log(` TOTAL DELIVERABLE COST        : $${cost.total_cost_usd.toFixed(2)} USD`);
       console.log(` BUDGET STATUS                 : ${cost.within_budget ? 'WITHIN LIMITS ✅' : 'BUDGET EXCEEDED ⚠️'}\n`);
@@ -2057,7 +2123,19 @@ broll
     }
   });
 
-program.parse(process.argv);
+/**
+ * Every command's help, in a fixed width, for tools/packaging/cli-help.snapshot.txt: a CLI change
+ * shows up in review as a diff, and the skill lint checks every `mgvideo` verb a skill names.
+ */
+function helpSnapshot(cmd: Command, prefix: string[] = []): string {
+  const name = [...prefix, cmd.name()];
+  cmd.configureHelp({ ...cmd.configureHelp(), helpWidth: 110 });
+  const own = `## ${name.join(' ')}\n\n${cmd.helpInformation().trimEnd()}\n\n`;
+  return own + [...cmd.commands].sort((a, b) => a.name().localeCompare(b.name())).map(c => helpSnapshot(c, name)).join('');
+}
+
+if (process.env.MGVIDEO_HELP_SNAPSHOT === '1') process.stdout.write(helpSnapshot(program));
+else program.parse(process.argv);
 
 
 

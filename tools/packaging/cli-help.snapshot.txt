@@ -1,0 +1,1222 @@
+## mgvideo
+
+Usage: mgvideo [options] [command]
+
+Magnifito Super Video CLI - maintained video production toolkit
+
+Options:
+  -V, --version                             output the version number
+  -h, --help                                display help for command
+
+Commands:
+  doctor                                    Check the selected worker, pinned tools, fonts, and required
+                                            provider configuration
+  catalog                                   Show capabilities, source provenance, observed versions, and
+                                            approved versions
+  init [options] <project>                  Create a private job workspace with versioned brief, brand, asset,
+                                            and toolkit locks
+  plan <project>                            Produce the claims-linked scene plan and select its renderer and
+                                            timing authority
+  preview [options] <project>               Start interactive local HTTP preview server with live timeline
+                                            scrubber
+  render [options] <project>                Execute a frozen render request and write a separately identified
+                                            run result
+  validate [options] [run]                  Check files, facts, timing, layout evidence, and export
+                                            specifications; record unresolved review items
+  check [options] [project]                 Check on-screen text from the project files without rendering a
+                                            video (clipped, safe zone, size, reading time, overlap, contrast)
+  review                                    Blind review loop: frame sheets for a reviewer who sees no code,
+                                            and a pass decided in code from its rounds
+  ledger                                    Generation ledger (<project>/generations.json): reuse a generated
+                                            asset instead of paying for it twice
+  package [options] <run>                   Verify version-bound approvals and rights, then assemble the
+                                            permitted client delivery
+  cost [options] <run>                      Audit production compute, storage, and agent cost for a render run
+  batch [options] <catalog>                 Render a multi-SKU commerce batch with retry manifests and
+                                            per-product status
+  upstream                                  Track and propose upstream changes
+  report [options] <project>                Generate an executive delivery report and compliance audit in
+                                            Markdown and JSON
+  diff <targetA> <targetB>                  Compare two render outputs or frames for visual drift and quality
+                                            degradation
+  migrate <project>                         Upgrade project brief and brand specifications to current schema
+                                            version
+  inspect <file>                            Audit media file technical specifications, codecs, loudness, and
+                                            color space
+  recipe [id]                               Explore available shot recipes and motion parameters
+  storyboard [options] <project>            Generate visual storyboard cards and interactive review contact
+                                            sheet
+  clean [options] <project>                 Purge temporary render caches, interim files, and older runs
+  thumbnail [options] <target>              Extract a promotional poster frame or thumbnail from a video or
+                                            project
+  reframe [options] <video>                 Reframe master video to target aspect ratio (16:9, 9:16, 1:1, 4:5)
+  grade [options] <video>                   Apply curated cinematic color grade preset (cool-tech,
+                                            warm-vibrant, high-contrast, rec709-neutral, matte-film)
+  waveform [options] <media>                Generate high-resolution audio waveform visualizer PNG
+  notify [options] <project>                Print a webhook notification payload for CI/CD integrations (does
+                                            not send it)
+  bundle [options] <deliveryDir>            Bundle deliverables and checksums into immutable .tar.gz
+                                            production package
+  dashboard                                 Display an executive status dashboard of worker health, workflows,
+                                            and budgets
+  verify-bundle [options] <bundle>          Verify SHA256 checksums, the HMAC signature (MGVIDEO_SIGNING_KEY)
+                                            and the approved review record inside a production bundle
+  proxy [options] <video>                   Generate lightweight 540p / 720p editing proxy for fast playback
+  watermark [options] <video>               Burn semi-transparent security banner or embargo notice into
+                                            review video
+  speed [options] <video>                   Adjust playback speed of a video with pitch-preserved audio
+  safezone [options] <video>                Burn mobile platform safe area bounding guide onto video for QA
+                                            analysis
+  concat [options] <clips...>               Concatenate multiple video clips, normalizing resolution and audio
+                                            sample rates
+  lower-third [options] <video>             Burn broadcast lower-third title badge onto video clip
+  brand                                     Check brand profiles (brand.json)
+  chapters [options] <project>              Generate YouTube chapters, WebVTT cues, and QuickTime markers from
+                                            scene plan
+  loop [options] <video>                    Create seamless ping-pong loop (forward + reverse) for social
+                                            reels and backgrounds
+  freeze [options] <video>                  Hold start or final frame of a video using tpad cloning
+  blur-bg [options] <video>                 Place 9:16 vertical video onto 16:9 landscape canvas over an
+                                            aesthetic blurred background
+  gate <project>                            Run comprehensive automated pre-delivery quality gate and
+                                            compliance audit
+  framerate [options] <video>               Convert video to target broadcast or social framerate (24, 25, 30,
+                                            60 fps)
+  deinterlace [options] <video>             Normalize interlaced footage to clean progressive scan frames via
+                                            yadif
+  eq [options] <audio>                      Apply audio equalization and vocal frequency sweetening
+  montage [options] <images...>             Stitch storyboard styleframes into an animated review animatic
+                                            video
+  mask [options] <video>                    Redact sensitive on-screen client credentials, API keys, or PII
+  channel-map [options] <audio>             Remap audio channel layouts (mono-to-stereo, stereo-to-mono,
+                                            left-only-to-stereo)
+  optimize [options] <video>                Constrain video bitrate to meet file size limits (e.g. Discord
+                                            25MB, WhatsApp 16MB)
+  merkle <dir>                              Compute cryptographic Merkle tree root hash of deliverable
+                                            directory
+  resample [options] <audio>                Resample audio to broadcast standards (48000 Hz) or custom rate
+  reverse [options] <video>                 Reverse video and audio playback for rewind transitions or
+                                            boomerang loops
+  matte [options] <video>                   Overlay cinematic letterbox or pillarbox matte bars (2.39:1,
+                                            1.85:1, 4:3)
+  sfx [options] <target>                    Synthesize a procedural effect (sfx <whoosh|thud|pop|chime>), or
+                                            run the measured sound pass on a video (sfx <video> --cues
+                                            cues.json --out dir)
+  sanitize [options] <media>                Strip sensitive camera metadata, geolocation, author tags, and
+                                            local paths
+  chromakey [options] <video>               Key out green or blue screen background and composite over
+                                            background plate
+  title [options] <video>                   Burn high-resolution typographic title card into video frames
+  noise-gate [options] <audio>              Mute background noise floor and ambient hum during speech pauses
+  smart-crop [options] <video>              Reframe video into target aspect ratio with focal point bias
+                                            (9:16, 1:1, 4:5, 16:9)
+  pan [options] <audio>                     Adjust stereo pan position (-1.0 left to +1.0 right) and stereo
+                                            width
+  glitch [options] <video>                  Apply stylized chromatic aberration and digital glitch artifacts
+  multicam [options] <videos...>            Tile multiple synchronized camera angles into a split-screen
+                                            layout (side-by-side, top-bottom, quad-2x2)
+  compress-audio [options] <audio>          Apply dynamics compression with loudness-matched makeup gain
+                                            (keeps input loudness)
+  pip [options] <mainVideo> <overlayVideo>  Insert picture-in-picture overlay in screen corner (bottom_right,
+                                            top_right, bottom_left, top_left)
+  vignette [options] <video>                Apply subtle cinematic lens edge darkening
+  declick [options] <audio>                 Eliminate mouth clicks, lip-smacks, and electrical pops from
+                                            dialogue
+  setup                                     Install optional managed toolchains into the user cache (never
+                                            into the repo)
+  transcribe [options] <media>              Recognise speech locally (faster-whisper) and write a Transcript
+                                            with word times
+  edit                                      Footage edits that write an Edit Decision List (edl.json)
+  separate [options] <video>                Separate a subject from the background with SAM 2.1 from click
+                                            points; writes masks, a green preview and an alpha cut-out
+  broll                                     Motion B-roll on footage: caption words, plan check, clip render
+                                            (full = opaque MP4, panel = transparent ProRes 4444) and compose
+  help [command]                            display help for command
+
+## mgvideo batch
+
+Usage: mgvideo batch [options] <catalog>
+
+Render a multi-SKU commerce batch with retry manifests and per-product status
+
+Options:
+  -c, --concurrency <number>  Concurrent worker rendering limit (default: "2")
+  --force                     Force re-render of cached SKUs (default: false)
+  -h, --help                  display help for command
+
+## mgvideo blur-bg
+
+Usage: mgvideo blur-bg [options] <video>
+
+Place 9:16 vertical video onto 16:9 landscape canvas over an aesthetic blurred background
+
+Options:
+  -o, --out <path>  Custom output video path
+  -h, --help        display help for command
+
+## mgvideo brand
+
+Usage: mgvideo brand [options] [command]
+
+Check brand profiles (brand.json)
+
+Options:
+  -h, --help               display help for command
+
+Commands:
+  check [options] <brand>  Check a brand.json (or a project folder holding one): schema, WCAG contrast, font
+                           files, rights, licences, Cyrillic coverage and logos. Exits 1 on failures; warnings
+                           do not fail
+  help [command]           display help for command
+
+## mgvideo brand check
+
+Usage: mgvideo brand check [options] <brand>
+
+Check a brand.json (or a project folder holding one): schema, WCAG contrast, font files, rights, licences,
+Cyrillic coverage and logos. Exits 1 on failures; warnings do not fail
+
+Options:
+  -o, --out <file>  Also write the printed report to this file
+  --json            Print (and write) the report as JSON (default: false)
+  -h, --help        display help for command
+
+## mgvideo broll
+
+Usage: mgvideo broll [options] [command]
+
+Motion B-roll on footage: caption words, plan check, clip render (full = opaque MP4, panel = transparent
+ProRes 4444) and compose
+
+Options:
+  -h, --help                      display help for command
+
+Commands:
+  words [options] <captions>      Estimate word times from an SRT or VTT file (spread across each cue, about
+                                  ±0.2 s); no speech recognition
+  check <plan>                    Validate plan.json: in < out, inside the source, no overlaps, paths confined
+                                  to the plan directory
+  render [options] <plan>         Render every plan clip with the motion engine at the source resolution and
+                                  fps
+  compose [options] <plan> <out>  Lay the rendered clips over the source at in/out (holds last frame, alpha
+                                  for .mov, original audio as AAC, H.264 faststart)
+  help [command]                  display help for command
+
+## mgvideo broll check
+
+Usage: mgvideo broll check [options] <plan>
+
+Validate plan.json: in < out, inside the source, no overlaps, paths confined to the plan directory
+
+Options:
+  -h, --help  display help for command
+
+## mgvideo broll compose
+
+Usage: mgvideo broll compose [options] <plan> <out>
+
+Lay the rendered clips over the source at in/out (holds last frame, alpha for .mov, original audio as AAC,
+H.264 faststart)
+
+Options:
+  --sheet <png>  Also write a contact sheet of the composite around every clip window
+  -h, --help     display help for command
+
+## mgvideo broll render
+
+Usage: mgvideo broll render [options] <plan>
+
+Render every plan clip with the motion engine at the source resolution and fps
+
+Options:
+  --only <ids>   Comma-separated clip ids to render
+  --pages <dir>  Preview page folder, relative to the plan folder (default: dist)
+  -h, --help     display help for command
+
+## mgvideo broll words
+
+Usage: mgvideo broll words [options] <captions>
+
+Estimate word times from an SRT or VTT file (spread across each cue, about ±0.2 s); no speech recognition
+
+Options:
+  -o, --out <file>   Write a Transcript contract JSON
+  --txt <file>       Write upstream words.txt (one line per cue, start:word)
+  --video <file>     Source video to hash into source_audio_hash (default: hash of the captions)
+  --language <code>  Transcript language (default: "en")
+  -h, --help         display help for command
+
+## mgvideo bundle
+
+Usage: mgvideo bundle [options] <deliveryDir>
+
+Bundle deliverables and checksums into immutable .tar.gz production package
+
+Options:
+  -o, --out <path>  Output bundle .tar.gz path
+  -h, --help        display help for command
+
+## mgvideo catalog
+
+Usage: mgvideo catalog [options]
+
+Show capabilities, source provenance, observed versions, and approved versions
+
+Options:
+  -h, --help  display help for command
+
+## mgvideo channel-map
+
+Usage: mgvideo channel-map [options] <audio>
+
+Remap audio channel layouts (mono-to-stereo, stereo-to-mono, left-only-to-stereo)
+
+Options:
+  -m, --mode <mode>  Remap mode: mono-to-stereo, stereo-to-mono, left-only-to-stereo (default:
+                     "mono-to-stereo")
+  -o, --out <path>   Custom output audio path
+  -h, --help         display help for command
+
+## mgvideo chapters
+
+Usage: mgvideo chapters [options] <project>
+
+Generate YouTube chapters, WebVTT cues, and QuickTime markers from scene plan
+
+Options:
+  -f, --format <format>  Chapter format to print (choices: "youtube", "vtt", "ffmetadata", default: "youtube")
+  -o, --out <file>       Also write the chapters (the selected format, without the banner) to this file
+  -h, --help             display help for command
+
+## mgvideo check
+
+Usage: mgvideo check [options] [project]
+
+Check on-screen text from the project files without rendering a video (clipped, safe zone, size, reading time,
+overlap, contrast)
+
+Options:
+  --quick                Text rules only, from the scene plan; the only mode so far (default: false)
+  -f, --format <format>  Delivery format (default: the brief's first format) (choices: "16:9", "9:16", "1:1")
+  --platform <platform>  Platform UI zones (default: validate.json, else generic) (choices: "generic",
+                         "tiktok", "reels", "shorts")
+  --json                 Print the result as JSON (default: false)
+  -h, --help             display help for command
+
+## mgvideo chromakey
+
+Usage: mgvideo chromakey [options] <video>
+
+Key out green or blue screen background and composite over background plate
+
+Options:
+  -k, --key <color>         Chroma key color (default: 0x00FF00) (default: "0x00FF00")
+  -s, --similarity <value>  Share of the key-to-neutral chroma distance keyed fully transparent (0.01 to 1.0)
+                            (default: "0.65")
+  --blend <value>           Soft-edge width above the similarity, same scale (0 to 1) (default: "0.15")
+  --no-despill              Keep green/blue spill on the foreground instead of neutralising it
+  -b, --bg <path>           Optional background image or video path
+  -o, --out <path>          Custom output video path
+  -h, --help                display help for command
+
+## mgvideo clean
+
+Usage: mgvideo clean [options] <project>
+
+Purge temporary render caches, interim files, and older runs
+
+Options:
+  --all          Delete all runs and caches (default: false)
+  --cache-only   Delete only runs/cache without touching run folders (default: false)
+  --keep-latest  Delete every run except the newest one (default: false)
+  -h, --help     display help for command
+
+## mgvideo compress-audio
+
+Usage: mgvideo compress-audio [options] <audio>
+
+Apply dynamics compression with loudness-matched makeup gain (keeps input loudness)
+
+Options:
+  -p, --preset <preset>  Compressor preset: broadcast-master, vocal-leveler, punchy-bass (default:
+                         "broadcast-master")
+  -t, --threshold <db>   Threshold in dB
+  -o, --out <path>       Custom output audio path
+  -h, --help             display help for command
+
+## mgvideo concat
+
+Usage: mgvideo concat [options] <clips...>
+
+Concatenate multiple video clips, normalizing resolution and audio sample rates
+
+Options:
+  -w, --width <pixels>   Target width (default: "1920")
+  -H, --height <pixels>  Target height (default: "1080")
+  -o, --out <path>       Custom output path
+  -h, --help             display help for command
+
+## mgvideo cost
+
+Usage: mgvideo cost [options] <run>
+
+Audit production compute, storage, and agent cost for a render run
+
+Options:
+  -p, --project <project>  Project directory
+  -h, --help               display help for command
+
+## mgvideo dashboard
+
+Usage: mgvideo dashboard [options]
+
+Display an executive status dashboard of worker health, workflows, and budgets
+
+Options:
+  -h, --help  display help for command
+
+## mgvideo declick
+
+Usage: mgvideo declick [options] <audio>
+
+Eliminate mouth clicks, lip-smacks, and electrical pops from dialogue
+
+Options:
+  -o, --out <path>  Custom output audio path
+  -h, --help        display help for command
+
+## mgvideo deinterlace
+
+Usage: mgvideo deinterlace [options] <video>
+
+Normalize interlaced footage to clean progressive scan frames via yadif
+
+Options:
+  -o, --out <path>  Custom output video path
+  -h, --help        display help for command
+
+## mgvideo diff
+
+Usage: mgvideo diff [options] <targetA> <targetB>
+
+Compare two render outputs or frames for visual drift and quality degradation
+
+Options:
+  -h, --help  display help for command
+
+## mgvideo doctor
+
+Usage: mgvideo doctor [options]
+
+Check the selected worker, pinned tools, fonts, and required provider configuration
+
+Options:
+  -h, --help  display help for command
+
+## mgvideo edit
+
+Usage: mgvideo edit [options] [command]
+
+Footage edits that write an Edit Decision List (edl.json)
+
+Options:
+  -h, --help              display help for command
+
+Commands:
+  cut [options] <source>  Keep the transcript lines listed in a text file, in that order; writes edl.json
+                          (source microseconds, output frames)
+  help [command]          display help for command
+
+## mgvideo edit cut
+
+Usage: mgvideo edit cut [options] <source>
+
+Keep the transcript lines listed in a text file, in that order; writes edl.json (source microseconds, output
+frames)
+
+Options:
+  -t, --transcript <file>  Transcript of the source (mgvideo transcribe), source timeline
+  -k, --keep <file>        Text file: one kept line per row, in output order; blank lines and # comments are
+                           skipped
+  -o, --out <file>         EDL JSON to write
+  --fps <n>                Output frame rate (integer) (default: "30")
+  --no-shots               Do not move cuts off shot changes (skips scene detection)
+  -h, --help               display help for command
+
+## mgvideo eq
+
+Usage: mgvideo eq [options] <audio>
+
+Apply audio equalization and vocal frequency sweetening
+
+Options:
+  -p, --preset <name>  EQ Preset (voice-presence, rumble-reduction, warm-broadcast, de-ess) (default:
+                       "voice-presence")
+  -o, --out <path>     Custom output audio path
+  -h, --help           display help for command
+
+## mgvideo framerate
+
+Usage: mgvideo framerate [options] <video>
+
+Convert video to target broadcast or social framerate (24, 25, 30, 60 fps)
+
+Options:
+  -r, --fps <number>  Target framerate in frames per second (default: "30")
+  -o, --out <path>    Custom output video path
+  -h, --help          display help for command
+
+## mgvideo freeze
+
+Usage: mgvideo freeze [options] <video>
+
+Hold start or final frame of a video using tpad cloning
+
+Options:
+  -p, --position <pos>      Hold position: start or end (default: "end")
+  -d, --duration <seconds>  Hold duration in seconds (default: "2.0")
+  -o, --out <path>          Custom output video path
+  -h, --help                display help for command
+
+## mgvideo gate
+
+Usage: mgvideo gate [options] <project>
+
+Run comprehensive automated pre-delivery quality gate and compliance audit
+
+Options:
+  -h, --help  display help for command
+
+## mgvideo glitch
+
+Usage: mgvideo glitch [options] <video>
+
+Apply stylized chromatic aberration and digital glitch artifacts
+
+Options:
+  -i, --intensity <factor>  Glitch intensity (0.1 to 1.0) (default: "0.5")
+  -s, --shift <pixels>      Chromatic shift in pixels
+  -o, --out <path>          Custom output video path
+  -h, --help                display help for command
+
+## mgvideo grade
+
+Usage: mgvideo grade [options] <video>
+
+Apply curated cinematic color grade preset (cool-tech, warm-vibrant, high-contrast, rec709-neutral,
+matte-film)
+
+Options:
+  -p, --preset <preset>  Preset name
+  -o, --out <path>       Output video path
+  -h, --help             display help for command
+
+## mgvideo init
+
+Usage: mgvideo init [options] <project>
+
+Create a private job workspace with versioned brief, brand, asset, and toolkit locks
+
+Options:
+  -w, --workflow <type>     Workflow type (default: "branded-promo")
+  -l, --language <lang>     Primary language (default: "bg")
+  -d, --duration <seconds>  Target duration in seconds (default: "15")
+  --force                   Overwrite existing brief, brand, claims, assets and lock files (default: false)
+  -h, --help                display help for command
+
+## mgvideo inspect
+
+Usage: mgvideo inspect [options] <file>
+
+Audit media file technical specifications, codecs, loudness, and color space
+
+Options:
+  -h, --help  display help for command
+
+## mgvideo ledger
+
+Usage: mgvideo ledger [options] [command]
+
+Generation ledger (<project>/generations.json): reuse a generated asset instead of paying for it twice
+
+Options:
+  -h, --help                      display help for command
+
+Commands:
+  find [options] <project>        Print the recorded file for this generation; exit 1 when there is none
+  add [options] <project> <file>  Record a generated file with what produced it and what it cost
+  list <project>                  List recorded generations and the total spent
+  help [command]                  display help for command
+
+## mgvideo ledger add
+
+Usage: mgvideo ledger add [options] <project> <file>
+
+Record a generated file with what produced it and what it cost
+
+Options:
+  --kind <kind>         voice, image, sfx, music, video, ...
+  --model <model>       Model and version that produced it
+  --prompt <text>       Prompt or script text
+  --prompt-file <file>  Read the prompt from a file
+  --seed <n>            Seed, when the generator takes one
+  --param <key=value>   Other generation parameter (repeatable)
+  --cost-cents <n>      What the generation cost, in US cents (0 for local models)
+  -h, --help            display help for command
+
+## mgvideo ledger find
+
+Usage: mgvideo ledger find [options] <project>
+
+Print the recorded file for this generation; exit 1 when there is none
+
+Options:
+  --kind <kind>         voice, image, sfx, music, video, ...
+  --model <model>       Model and version that produced it
+  --prompt <text>       Prompt or script text
+  --prompt-file <file>  Read the prompt from a file
+  --seed <n>            Seed, when the generator takes one
+  --param <key=value>   Other generation parameter (repeatable)
+  -h, --help            display help for command
+
+## mgvideo ledger list
+
+Usage: mgvideo ledger list [options] <project>
+
+List recorded generations and the total spent
+
+Options:
+  -h, --help  display help for command
+
+## mgvideo loop
+
+Usage: mgvideo loop [options] <video>
+
+Create seamless ping-pong loop (forward + reverse) for social reels and backgrounds
+
+Options:
+  -o, --out <path>  Custom output video path
+  -h, --help        display help for command
+
+## mgvideo lower-third
+
+Usage: mgvideo lower-third [options] <video>
+
+Burn broadcast lower-third title badge onto video clip
+
+Options:
+  -n, --name <name>         Speaker name
+  -t, --title <title>       Speaker job title or role
+  -s, --start <seconds>     Start timestamp in seconds (default: "1.5")
+  -d, --duration <seconds>  Display duration in seconds (default: "5.0")
+  -c, --color <hex>         Accent color: side bar and role line (default: "#3B82F6")
+  -b, --bg <hex>            Badge background color (default: "#0F172A")
+  --bottom <pixels>         Gap between the bottom edge of the frame and the badge (raise it above burned-in
+                            captions); default 120 at 1080p, scaled with the frame
+  -o, --out <path>          Custom output video path
+  -h, --help                display help for command
+
+## mgvideo mask
+
+Usage: mgvideo mask [options] <video>
+
+Redact sensitive on-screen client credentials, API keys, or PII
+
+Options:
+  -b, --box <coords>  Box "x,y,width,height" or "x,y,width,height,start,end" (seconds); repeat for several
+                      boxes or to follow a moving field
+  -m, --mode <mode>   Redaction mode: blur or solid (default: "blur")
+  -o, --out <path>    Custom output video path
+  -h, --help          display help for command
+
+## mgvideo matte
+
+Usage: mgvideo matte [options] <video>
+
+Overlay cinematic letterbox or pillarbox matte bars (2.39:1, 1.85:1, 4:3)
+
+Options:
+  -p, --preset <preset>  Matte preset (2.39:1, 1.85:1, 4:3, custom) (default: "2.39:1")
+  -b, --bars <pixels>    Custom bar height in pixels
+  -c, --color <color>    Bar color (default: "black")
+  -o, --out <path>       Custom output video path
+  -h, --help             display help for command
+
+## mgvideo merkle
+
+Usage: mgvideo merkle [options] <dir>
+
+Compute cryptographic Merkle tree root hash of deliverable directory
+
+Options:
+  -h, --help  display help for command
+
+## mgvideo migrate
+
+Usage: mgvideo migrate [options] <project>
+
+Upgrade project brief and brand specifications to current schema version
+
+Options:
+  -h, --help  display help for command
+
+## mgvideo montage
+
+Usage: mgvideo montage [options] <images...>
+
+Stitch storyboard styleframes into an animated review animatic video
+
+Options:
+  -s, --seconds <seconds>  Seconds per slide (default: "2.0")
+  -w, --width <pixels>     Video width (default: "1920")
+  -H, --height <pixels>    Video height (default: "1080")
+  -o, --out <path>         Custom output video path
+  -h, --help               display help for command
+
+## mgvideo multicam
+
+Usage: mgvideo multicam [options] <videos...>
+
+Tile multiple synchronized camera angles into a split-screen layout (side-by-side, top-bottom, quad-2x2)
+
+Options:
+  -l, --layout <layout>  Split layout: side-by-side, top-bottom, quad-2x2 (default: "side-by-side")
+  -o, --out <path>       Custom output video path
+  -h, --help             display help for command
+
+## mgvideo noise-gate
+
+Usage: mgvideo noise-gate [options] <audio>
+
+Mute background noise floor and ambient hum during speech pauses
+
+Options:
+  -t, --threshold <db>  Gate threshold in dBFS, about 5 dB above the noise floor (default: "-35")
+  -r, --ratio <ratio>   Expansion ratio below the threshold (default: "8")
+  -o, --out <path>      Custom output audio path
+  -h, --help            display help for command
+
+## mgvideo notify
+
+Usage: mgvideo notify [options] <project>
+
+Print a webhook notification payload for CI/CD integrations (does not send it)
+
+Options:
+  -e, --event <event>  Event type (choices: "render.started", "render.completed", "validation.passed",
+                       "validation.failed", "package.approved")
+  -h, --help           display help for command
+
+## mgvideo optimize
+
+Usage: mgvideo optimize [options] <video>
+
+Constrain video bitrate to meet file size limits (e.g. Discord 25MB, WhatsApp 16MB)
+
+Options:
+  -s, --size <mb>   Target maximum size in Megabytes (default: "10.0")
+  -o, --out <path>  Custom output video path
+  -h, --help        display help for command
+
+## mgvideo package
+
+Usage: mgvideo package [options] <run>
+
+Verify version-bound approvals and rights, then assemble the permitted client delivery
+
+Options:
+  -p, --project <project>  Project directory
+  -r, --review <path>      Human review record to verify (default: <project>/review-record.json)
+  -h, --help               display help for command
+
+## mgvideo pan
+
+Usage: mgvideo pan [options] <audio>
+
+Adjust stereo pan position (-1.0 left to +1.0 right) and stereo width
+
+Options:
+  -p, --pan <value>     Pan position (-1.0 to 1.0) (default: "0.0")
+  -w, --width <factor>  Stereo width factor (0.0 mono to 2.0 wide) (default: "1.0")
+  -o, --out <path>      Custom output audio path
+  -h, --help            display help for command
+
+## mgvideo pip
+
+Usage: mgvideo pip [options] <mainVideo> <overlayVideo>
+
+Insert picture-in-picture overlay in screen corner (bottom_right, top_right, bottom_left, top_left)
+
+Options:
+  -c, --corner <corner>  PiP corner position (default: "bottom_right")
+  -w, --width <pixels>   PiP window width in pixels (default: "480")
+  -o, --out <path>       Custom output video path
+  -h, --help             display help for command
+
+## mgvideo plan
+
+Usage: mgvideo plan [options] <project>
+
+Produce the claims-linked scene plan and select its renderer and timing authority
+
+Options:
+  -h, --help  display help for command
+
+## mgvideo preview
+
+Usage: mgvideo preview [options] <project>
+
+Start interactive local HTTP preview server with live timeline scrubber
+
+Options:
+  -p, --port <number>  HTTP server port (default: "3456")
+  -h, --help           display help for command
+
+## mgvideo proxy
+
+Usage: mgvideo proxy [options] <video>
+
+Generate lightweight 540p / 720p editing proxy for fast playback
+
+Options:
+  -r, --res <resolution>  Proxy resolution (540p, 720p, 360p) (default: "540p")
+  -o, --out <path>        Custom proxy output path
+  -h, --help              display help for command
+
+## mgvideo recipe
+
+Usage: mgvideo recipe [options] [id]
+
+Explore available shot recipes and motion parameters
+
+Options:
+  -h, --help  display help for command
+
+## mgvideo reframe
+
+Usage: mgvideo reframe [options] <video>
+
+Reframe master video to target aspect ratio (16:9, 9:16, 1:1, 4:5)
+
+Options:
+  -r, --ratio <ratio>        Target aspect ratio (16:9, 9:16, 1:1, 4:5)
+  -s, --strategy <strategy>  Reframe strategy: fit (letterbox/pad) or crop (center crop) (default: "fit")
+  -c, --color <color>        Pad color for fit strategy (default: "black")
+  -o, --out <path>           Output video path
+  -h, --help                 display help for command
+
+## mgvideo render
+
+Usage: mgvideo render [options] <project>
+
+Execute a frozen render request and write a separately identified run result
+
+Options:
+  -f, --format <format>  Aspect ratio format (defaults to the first format in brief.json) (choices: "16:9",
+                         "9:16", "1:1")
+  -c, --codec <codec>    Output container codec (choices: "mp4", "webm", "mov_prores")
+  --transparent          Render with transparent background and alpha channel (default: false)
+  --force                Bypass cache and force re-rendering (default: false)
+  -h, --help             display help for command
+
+## mgvideo report
+
+Usage: mgvideo report [options] <project>
+
+Generate an executive delivery report and compliance audit in Markdown and JSON
+
+Options:
+  -r, --run <runId>  Target run ID (defaults to latest run)
+  -h, --help         display help for command
+
+## mgvideo resample
+
+Usage: mgvideo resample [options] <audio>
+
+Resample audio to broadcast standards (48000 Hz) or custom rate
+
+Options:
+  -r, --rate <hz>   Target sample rate in Hz (default: "48000")
+  -o, --out <path>  Custom output audio path
+  -h, --help        display help for command
+
+## mgvideo reverse
+
+Usage: mgvideo reverse [options] <video>
+
+Reverse video and audio playback for rewind transitions or boomerang loops
+
+Options:
+  -o, --out <path>  Custom output video path
+  -h, --help        display help for command
+
+## mgvideo review
+
+Usage: mgvideo review [options] [command]
+
+Blind review loop: frame sheets for a reviewer who sees no code, and a pass decided in code from its rounds
+
+Options:
+  -h, --help               display help for command
+
+Commands:
+  prepare [options] [run]  Write <run>/review/: numbered frame sheets, tiles.json and the blind brief
+  judge [options] [run]    Decide the loop from <run>/review/round-*.json: pass, continue or stop
+  record [options] [run]   Record a person's verdict next to the judge's for calibration
+  calibration              Show how often the judge agreed with a person
+  help [command]           display help for command
+
+## mgvideo review calibration
+
+Usage: mgvideo review calibration [options]
+
+Show how often the judge agreed with a person
+
+Options:
+  -h, --help  display help for command
+
+## mgvideo review judge
+
+Usage: mgvideo review judge [options] [run]
+
+Decide the loop from <run>/review/round-*.json: pass, continue or stop
+
+Options:
+  -p, --project <project>  Project directory
+  --json                   Print the decision as JSON (default: false)
+  -h, --help               display help for command
+
+## mgvideo review prepare
+
+Usage: mgvideo review prepare [options] [run]
+
+Write <run>/review/: numbered frame sheets, tiles.json and the blind brief
+
+Options:
+  -p, --project <project>  Project directory (default: two levels above the run)
+  --mode <mode>            Review mode (default from the brief workflow) (choices: "pitch", "explain",
+                           "story")
+  --interval <s>           Seconds between tiles (default: "0.5")
+  -h, --help               display help for command
+
+## mgvideo review record
+
+Usage: mgvideo review record [options] [run]
+
+Record a person's verdict next to the judge's for calibration
+
+Options:
+  --person <verdict>       pass or fail
+  -p, --project <project>  Project directory
+  --note <text>            Why the person decided so (default: "")
+  -h, --help               display help for command
+
+## mgvideo safezone
+
+Usage: mgvideo safezone [options] <video>
+
+Burn mobile platform safe area bounding guide onto video for QA analysis
+
+Options:
+  --platform <name>  Margin preset: tiktok, reels, shorts, generic (default: "tiktok")
+  --color <color>    Safe-area outline colour, #hex or CSS name (default #EF4444)
+  -o, --out <path>   Custom output video path
+  -h, --help         display help for command
+
+## mgvideo sanitize
+
+Usage: mgvideo sanitize [options] <media>
+
+Strip sensitive camera metadata, geolocation, author tags, and local paths
+
+Options:
+  -o, --out <path>  Custom output media path
+  -h, --help        display help for command
+
+## mgvideo separate
+
+Usage: mgvideo separate [options] <video>
+
+Separate a subject from the background with SAM 2.1 from click points; writes masks, a green preview and an
+alpha cut-out
+
+Options:
+  -p, --point <x,y[,label]>  Click point in source pixels on the start frame; label 1 = subject (default), 0 =
+                             exclude. Repeatable
+  --start <frame>            First frame (0-based, default 0); points are picked on this frame
+  --end <frame>              Last frame, inclusive (default: last frame)
+  --model <size>             Override the hardware-based model choice (choices: "tiny", "base-plus", "large")
+  --format <fmt>             Alpha cut-out container (choices: "mov", "webm", "both", default: "mov")
+  --keep-frames              Keep the extracted input frames in <out>/frames
+  -o, --out <dir>            Output directory
+  -h, --help                 display help for command
+
+## mgvideo setup
+
+Usage: mgvideo setup [options] [command]
+
+Install optional managed toolchains into the user cache (never into the repo)
+
+Options:
+  -h, --help            display help for command
+
+Commands:
+  separate [options]    Create the Python venv for object separation (SAM 2.1: torch, transformers, opencv) in
+                        the user cache
+  sfx [options]         Create the pinned Python venv for the sound pass (librosa, soundfile, numpy, scipy) in
+                        the user cache
+  transcribe [options]  Create the Python venv for local speech recognition (faster-whisper) in the user cache
+  help [command]        display help for command
+
+## mgvideo setup separate
+
+Usage: mgvideo setup separate [options]
+
+Create the Python venv for object separation (SAM 2.1: torch, transformers, opencv) in the user cache
+
+Options:
+  --force     Delete and recreate the venv
+  -h, --help  display help for command
+
+## mgvideo setup sfx
+
+Usage: mgvideo setup sfx [options]
+
+Create the pinned Python venv for the sound pass (librosa, soundfile, numpy, scipy) in the user cache
+
+Options:
+  --python <bin>  Base interpreter to build the venv from (Python 3.10-3.13)
+  --force         Delete and recreate the venv
+  -h, --help      display help for command
+
+## mgvideo setup transcribe
+
+Usage: mgvideo setup transcribe [options]
+
+Create the Python venv for local speech recognition (faster-whisper) in the user cache
+
+Options:
+  --force     Delete and recreate the venv
+  -h, --help  display help for command
+
+## mgvideo sfx
+
+Usage: mgvideo sfx [options] <target>
+
+Synthesize a procedural effect (sfx <whoosh|thud|pop|chime>), or run the measured sound pass on a video (sfx
+<video> --cues cues.json --out dir)
+
+Arguments:
+  target                    Effect type (whoosh, thud, pop, chime) or, with --cues, the input video
+
+Options:
+  -d, --duration <seconds>  Procedural effect: sound duration in seconds
+  -o, --out <path>          Procedural effect: output audio path. Sound pass: output directory
+  --cues <file>             Sound pass: cues JSON ([{"t": 2.0, "type": "scene_cut", "desc": "..."}])
+  --music <track>           Sound pass: music bed (beat grid analysed with librosa; needs `mgvideo setup sfx`)
+  --music-db <db>           Sound pass: music gain relative to the track (default: "-12")
+  --music-source <text>     Sound pass: track, artist and link, written to CREDITS.txt
+  --music-license <text>    Sound pass: the music licence the user confirmed
+  --use-case <text>         Sound pass: where the video will be published (checked against known licence
+                            limits)
+  --seed <n>                Sound pass: seed for picking takes from the library (default: "7")
+  --swaps <file>            Sound pass: swaps.json downloaded from report.html
+  --snap-window <seconds>   Sound pass: max distance a cue with "snap": true moves to the beat (default:
+                            "0.12")
+  --no-proof                Sound pass: skip per-cue proof frames and waveforms
+  -h, --help                display help for command
+
+## mgvideo smart-crop
+
+Usage: mgvideo smart-crop [options] <video>
+
+Reframe video into target aspect ratio with focal point bias (9:16, 1:1, 4:5, 16:9)
+
+Options:
+  -r, --ratio <ratio>  Target aspect ratio (9:16, 1:1, 4:5, 16:9) (default: "9:16")
+  -f, --focus <focus>  Focal point bias (center, top, bottom, left, right) (default: "center")
+  -o, --out <path>     Custom output video path
+  -h, --help           display help for command
+
+## mgvideo speed
+
+Usage: mgvideo speed [options] <video>
+
+Adjust playback speed of a video with pitch-preserved audio
+
+Options:
+  -f, --factor <factor>  Speed factor multiplier (e.g. 1.25, 1.5, 2.0, 0.75)
+  -o, --out <path>       Custom output video path
+  -h, --help             display help for command
+
+## mgvideo storyboard
+
+Usage: mgvideo storyboard [options] <project>
+
+Generate visual storyboard cards and interactive review contact sheet
+
+Options:
+  -f, --format <format>  Aspect ratio format (16:9, 9:16, 1:1) (default: "16:9")
+  -h, --help             display help for command
+
+## mgvideo thumbnail
+
+Usage: mgvideo thumbnail [options] <target>
+
+Extract a promotional poster frame or thumbnail from a video or project
+
+Options:
+  -t, --time <seconds>   Time offset in seconds (default: "1.0")
+  -f, --format <format>  Image format (png, jpg, jpeg) (default: "png")
+  -w, --width <pixels>   Target width in pixels
+  -H, --height <pixels>  Target height in pixels
+  -o, --out <path>       Custom output image path
+  -h, --help             display help for command
+
+## mgvideo title
+
+Usage: mgvideo title [options] <video>
+
+Burn high-resolution typographic title card into video frames
+
+Options:
+  -t, --title <text>        Main title text
+  -s, --subtitle <text>     Optional subtitle text
+  -p, --position <pos>      Position: top, center, bottom (default: "center")
+  --bg <color>              Card background: #hex, rgb()/rgba() or CSS name (default rgba(15, 23, 42, 0.85))
+  --color <color>           Title text colour (default #FFFFFF)
+  --subtitle-color <color>  Subtitle text colour (default #94A3B8)
+  --accent <color>          Accent stripe along the top of the card (default: none)
+  --font <family>           CSS font family (default "Inter, sans-serif")
+  --font-file <path>        TTF/OTF file to render with; its family is used unless --font is given
+  --title-size <px>         Title size in px on a 1080p frame, scaled with the frame (default 36)
+  --subtitle-size <px>      Subtitle size in px on a 1080p frame, scaled with the frame (default 20)
+  -o, --out <path>          Custom output video path
+  -h, --help                display help for command
+
+## mgvideo transcribe
+
+Usage: mgvideo transcribe [options] <media>
+
+Recognise speech locally (faster-whisper) and write a Transcript with word times
+
+Options:
+  -o, --out <file>       Transcript JSON to write (e.g. runs/<run>/transcript.json)
+  -l, --language <code>  Spoken language, e.g. bg or en (detected when omitted)
+  -m, --model <name>     faster-whisper model (large-v3-turbo, medium, small, ...) (default: "large-v3-turbo")
+  -h, --help             display help for command
+
+## mgvideo upstream
+
+Usage: mgvideo upstream [options] [command]
+
+Track and propose upstream changes
+
+Options:
+  -h, --help                  display help for command
+
+Commands:
+  check                       Detect source changes and produce a report without executing or promoting
+                              candidate code
+  propose <source>            Print a review proposal for the observed upstream commit (advisory only: no
+                              branch is created)
+  rollback <source> [commit]  Roll back an approved baseline in approved.lock.json to a previously approved
+                              commit (default: the most recent one)
+  help [command]              display help for command
+
+## mgvideo upstream check
+
+Usage: mgvideo upstream check [options]
+
+Detect source changes and produce a report without executing or promoting candidate code
+
+Options:
+  -h, --help  display help for command
+
+## mgvideo upstream propose
+
+Usage: mgvideo upstream propose [options] <source>
+
+Print a review proposal for the observed upstream commit (advisory only: no branch is created)
+
+Options:
+  -h, --help  display help for command
+
+## mgvideo upstream rollback
+
+Usage: mgvideo upstream rollback [options] <source> [commit]
+
+Roll back an approved baseline in approved.lock.json to a previously approved commit (default: the most recent
+one)
+
+Options:
+  -h, --help  display help for command
+
+## mgvideo validate
+
+Usage: mgvideo validate [options] [run]
+
+Check files, facts, timing, layout evidence, and export specifications; record unresolved review items
+
+Options:
+  -p, --project <project>  Project directory (optional if run is relative or absolute; for "latest" defaults
+                           to cwd)
+  -o, --out <file>         Also write the printed report to this file
+  --json                   Print (and write) the validation report as JSON (default: false)
+  -h, --help               display help for command
+
+## mgvideo verify-bundle
+
+Usage: mgvideo verify-bundle [options] <bundle>
+
+Verify SHA256 checksums, the HMAC signature (MGVIDEO_SIGNING_KEY) and the approved review record inside a
+production bundle
+
+Options:
+  --allow-unsigned  Accept the bundle when no signing key is configured to check its signature (default:
+                    false)
+  -h, --help        display help for command
+
+## mgvideo vignette
+
+Usage: mgvideo vignette [options] <video>
+
+Apply subtle cinematic lens edge darkening
+
+Options:
+  -a, --angle <radians>  Vignette angle in radians (default: "0.5")
+  -o, --out <path>       Custom output video path
+  -h, --help             display help for command
+
+## mgvideo watermark
+
+Usage: mgvideo watermark [options] <video>
+
+Burn semi-transparent security banner or embargo notice into review video
+
+Options:
+  -t, --text <text>      Watermark text (default: "CONFIDENTIAL - REVIEW ONLY")
+  -r, --reviewer <name>  Reviewer name or identifier
+  -p, --position <pos>   Watermark position: top_right, center, bottom_right (default: "top_right")
+  --font-size <px>       Text size in px on a 1080p frame, scaled with the frame (default 20)
+  --color <color>        Text colour, #hex or CSS name (default #F87171)
+  --opacity <0-1>        Opacity of the dark banner behind the text (default 0.45)
+  -o, --out <path>       Custom output video path
+  -h, --help             display help for command
+
+## mgvideo waveform
+
+Usage: mgvideo waveform [options] <media>
+
+Generate high-resolution audio waveform visualizer PNG
+
+Options:
+  -w, --width <pixels>   Waveform width (default: "1200")
+  -H, --height <pixels>  Waveform height (default: "240")
+  -c, --color <hex>      Waveform stroke color (default: "#2563EB")
+  --scale <scale>        Amplitude scale (choices: "lin", "sqrt", "cbrt", "log", default: "lin")
+  --no-normalize         Draw at the recorded level instead of peak-normalising to the full height
+  --split-channels       Draw each channel in its own band instead of a mono downmix
+  -o, --out <path>       Output image path
+  -h, --help             display help for command
+

@@ -1,6 +1,8 @@
 ---
 name: magnifito-product-demo
 description: "Demonstrate real software features and UI workflows with accurate cursor movement, interface highlights, and feature claims."
+metadata:
+  tested-against: "0.1.0"
 ---
 
 # Magnifito Software & Product Demonstrations

@@ -1,5 +1,6 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import { lintSkills } from './skill_lint.js';
 
 export const CANONICAL_SKILL_ALLOWLIST = [
   'magnifito-video',
@@ -18,6 +19,8 @@ export interface PackageResult {
   packagedSkills: string[];
   verifiedAllowlist: boolean;
   errors: string[];
+  /** Skill lint warnings (opinion guard); they do not fail packaging. */
+  warnings: string[];
 }
 
 /** Recursively copies a skill directory, refusing symlinks so nothing outside the skill is pulled in. */
@@ -80,6 +83,29 @@ export async function packageSkills(
     if (!discoveredSkills.includes(required)) errors.push(`Missing canonical skill: ${required}`);
   }
 
+  // Skill lint: frontmatter, tested-against version, mgvideo verbs, opinion guard.
+  const warnings: string[] = [];
+  try {
+    const snapshot = await fs.readFile(path.join(workspaceRoot, 'tools', 'packaging', 'cli-help.snapshot.txt'), 'utf-8');
+    const version = JSON.parse(await fs.readFile(path.join(workspaceRoot, 'package.json'), 'utf-8')).version as string;
+    const lint = lintSkills(sourceSkillsDir, snapshot, version);
+    errors.push(...lint.errors);
+    warnings.push(...lint.warnings);
+  } catch (err) {
+    errors.push(`Skill lint could not run: ${(err as Error).message}`);
+  }
+
+  // Coverage ladder (registry/capabilities.json): every canonical skill rates itself D0-D4 with evidence.
+  try {
+    const caps = JSON.parse(await fs.readFile(path.join(workspaceRoot, 'registry', 'capabilities.json'), 'utf-8'));
+    for (const id of CANONICAL_SKILL_ALLOWLIST) {
+      const c = caps.canonical_skills?.find((s: { id: string }) => s.id === id)?.coverage;
+      if (!c || !/^D[0-4]$/.test(c.level ?? '') || !c.evidence) errors.push(`${id}: registry/capabilities.json needs coverage { level: D0-D4, evidence }`);
+    }
+  } catch (err) {
+    errors.push(`Coverage ladder could not be read: ${(err as Error).message}`);
+  }
+
   const verified = errors.length === 0 &&
     discoveredSkills.length === CANONICAL_SKILL_ALLOWLIST.length;
 
@@ -101,7 +127,8 @@ export async function packageSkills(
   return {
     packagedSkills: discoveredSkills,
     verifiedAllowlist: verified,
-    errors
+    errors,
+    warnings
   };
 }
 
@@ -114,6 +141,7 @@ if (process.argv[1]?.endsWith('packager.ts') || process.argv[1]?.endsWith('packa
       const res = await packageSkills(p, './dist/packaged-skills');
       console.log(`  • Platform [${p}]: Packaged ${res.packagedSkills.length} skills (Allowlist verified: ${res.verifiedAllowlist})`);
       for (const e of res.errors) console.error(`    ✗ ${e}`);
+      if (p === 'claude') for (const w of res.warnings) console.warn(`    ! ${w}`);
       if (!res.verifiedAllowlist) failed = true;
     }
     if (failed) {

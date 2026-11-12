@@ -1,6 +1,8 @@
 ---
 name: magnifito-video
 description: "Canonical router for Magnifito video production. Classifies project requests, checks prerequisites, routes to specialist skills, and coordinates lifecycle stages."
+metadata:
+  tested-against: "0.1.0"
 ---
 
 # Magnifito Video Router & Coordinator

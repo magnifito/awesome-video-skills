@@ -1,6 +1,8 @@
 ---
 name: magnifito-storyboard
 description: "Convert client brief and claims register into a timed, claims-linked scene plan with visual recipes."
+metadata:
+  tested-against: "0.1.0"
 ---
 
 # Magnifito Storyboard & Scene Planner

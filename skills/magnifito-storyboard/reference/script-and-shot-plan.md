@@ -64,8 +64,9 @@ speculation, the client's own analysis. Only established facts with an `evidence
 - Keep the client's position; do not hide a counterpoint the viewer needs to judge the claim.
 - Script length is an estimate until the voice is recorded. With `timing_authority: "speech"`,
   scene lengths follow the transcript's word times (`start_ms` / `end_ms`).
-  `mgvideo words <captions>` estimates word times from SRT or VTT (about ±0.2 s, no speech
-  recognition).
+  `mgvideo transcribe <voice.wav> -o transcript.json` recognises the recorded voice with word
+  times; without a recording, `mgvideo broll words <captions>` estimates them from SRT or VTT
+  (about ±0.2 s).
 
 ## 4. Turn sentences into scenes
 

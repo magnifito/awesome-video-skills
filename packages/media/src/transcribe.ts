@@ -4,6 +4,7 @@
  * the user cache (`mgvideo setup transcribe`), on CPU (int8) or CUDA. No network call except the
  * one-time model download into the Hugging Face cache, so it costs nothing per run.
  */
+import { assertOnline, helperNetworkEnv } from './offline.js';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
@@ -82,6 +83,7 @@ export function setupTranscribe(opts: { force?: boolean; log?: (msg: string) => 
     runTool(py.bin, ['-m', 'venv', venvDir]);
   }
   log(`Installing ${TRANSCRIBE_PINS.join(' ')}`);
+  assertOnline('pip install for mgvideo setup transcribe');
   const pip = spawnSync(vpy, ['-m', 'pip', 'install', '--disable-pip-version-check', '--progress-bar', 'off', ...TRANSCRIBE_PINS], { stdio: 'inherit' });
   if (pip.error) throw new Error(`pip failed to start: ${pip.error.message}`);
   if (pip.status !== 0) throw new Error(`pip install failed with exit code ${pip.status}`);
@@ -131,7 +133,7 @@ export function transcribe(media: string, opts: TranscribeOptions = {}): Transcr
     const args = [helperPath(), '--audio', wav, '--model', opts.model ?? DEFAULT_TRANSCRIBE_MODEL];
     if (opts.language) args.push('--language', opts.language);
     const res = spawnSync(venvPython(transcribeVenvDir()), args, {
-      encoding: 'utf8', stdio: ['ignore', 'pipe', opts.log ? 'pipe' : 'inherit'], maxBuffer: 256 * 1024 * 1024,
+      env: helperNetworkEnv(), encoding: 'utf8', stdio: ['ignore', 'pipe', opts.log ? 'pipe' : 'inherit'], maxBuffer: 256 * 1024 * 1024,
     });
     if (res.error) throw new Error(`transcribe helper failed to start: ${res.error.message}`);
     if (res.status !== 0) throw new Error(`transcribe helper failed (exit ${res.status})${res.stderr ? `: ${res.stderr.trim().split('\n').slice(-3).join(' ')}` : ''}`);

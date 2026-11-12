@@ -26,7 +26,9 @@
     "docs:impact": "docs-notary impact",
     "test:suites": "tsx evaluations/run-suites.ts",
     "showcase": "npm run build && tsx showcase/render.ts",
-    "site": "tsx site/build.ts"
+    "site": "tsx site/build.ts",
+    "cli:snapshot": "tsx tools/packaging/cli_snapshot.ts",
+    "cli:snapshot:check": "tsx tools/packaging/cli_snapshot.ts --check"
   },
   "engines": {
     "node": ">=22.0.0"

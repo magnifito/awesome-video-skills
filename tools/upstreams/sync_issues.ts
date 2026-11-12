@@ -5,6 +5,7 @@ import {
   ISSUE_LABEL, decideAction, findTrackingIssue, issueTitle, parseIssueState, renderCloseComment,
   renderIssueBody, renderUpdateComment, type ChangedFile, type FileStatus, type UpstreamCommit, type UpstreamDelta,
 } from './sync_report.js';
+import { assertOnline } from '../../packages/media/src/offline.js';
 
 /**
  * Nightly upstream sync. For every upstream in registry/upstreams.json whose remote HEAD on the
@@ -38,6 +39,7 @@ class GitHub {
   constructor(private readonly token: string | undefined) {}
 
   async request<T>(method: string, route: string, body?: unknown): Promise<T> {
+    assertOnline(`GitHub API ${method} ${route}`);
     const res = await fetch(`${API}${route}`, {
       method,
       headers: {

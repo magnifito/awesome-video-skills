@@ -1,6 +1,8 @@
 ---
 name: magnifito-variants
 description: "Generate multi-aspect ratios, Cyrillic/Bulgarian localized variations, and multi-SKU commerce batches."
+metadata:
+  tested-against: "0.1.0"
 ---
 
 # Magnifito Localization, Ratios & Commerce Batches
