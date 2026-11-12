@@ -34,7 +34,7 @@ export const RENDER_CODECS = ['mp4', 'webm', 'mov_prores'] as const;
  * Explicit adapter registry. Engines without a renderable adapter throw instead of
  * silently falling back to another renderer, so provenance always names the real engine.
  */
-function selectAdapter(engine: ProjectBrief['engine']): VideoRendererAdapter {
+export function selectAdapter(engine: ProjectBrief['engine']): VideoRendererAdapter {
   switch (engine) {
     case 'hyperframes':
       return new HyperFramesAdapter();
@@ -72,31 +72,57 @@ export interface RenderCliOptions {
   force?: boolean;
 }
 
+export interface ProjectInputs {
+  brief: ProjectBrief;
+  brand: BrandProfile;
+  claims: ClaimsRegister;
+  assets: AssetManifest;
+  scenePlan: ScenePlan;
+  /** File contents as read, for input hashes. */
+  raw: { brief: string; brand: string; claims: string; assets: string; scenes: string };
+}
+
+/** Reads and parses the five project files. Fails when one is missing or invalid. */
+export async function readProjectInputs(projectDir: string): Promise<ProjectInputs> {
+  const read = (name: string) => fs.readFile(path.join(projectDir, name), 'utf-8');
+  const [brief, brand, claims, assets, scenes] = await Promise.all(
+    ['brief.json', 'brand.json', 'claims.json', 'assets.json', 'scene-plan.json'].map(read)
+  );
+  return {
+    brief: ProjectBriefSchema.parse(JSON.parse(brief)),
+    brand: BrandProfileSchema.parse(JSON.parse(brand)),
+    claims: ClaimsRegisterSchema.parse(JSON.parse(claims)),
+    assets: AssetManifestSchema.parse(JSON.parse(assets)),
+    scenePlan: ScenePlanSchema.parse(JSON.parse(scenes)),
+    raw: { brief, brand, claims, assets, scenes },
+  };
+}
+
+/** Render settings for a delivery format (16:9 1920x1080, 9:16 1080x1920, 1:1 1080x1080). */
+export function renderSettingsFor(format: string, options?: RenderCliOptions): RenderSettings {
+  const [width, height] = format === '9:16' ? [1080, 1920] : format === '1:1' ? [1080, 1080] : [1920, 1080];
+  return {
+    width,
+    height,
+    fps: 30,
+    format: options?.codec || (options?.transparent ? 'mov_prores' : 'mp4'),
+    transparent: Boolean(options?.transparent || options?.codec === 'mov_prores'),
+    audio_sample_rate: 48000,
+    audio_channels: 2,
+    target_loudness_lufs: -16.0,
+    true_peak_ceiling_db: -1.0
+  };
+}
+
 export async function runRender(projectDir: string, options?: RenderCliOptions): Promise<RenderResult> {
 
-  const briefPath = path.join(projectDir, 'brief.json');
-  const brandPath = path.join(projectDir, 'brand.json');
-  const claimsPath = path.join(projectDir, 'claims.json');
-  const assetsPath = path.join(projectDir, 'assets.json');
-  let scenePlanPath = path.join(projectDir, 'scene-plan.json');
-
   try {
-    await fs.access(scenePlanPath);
+    await fs.access(path.join(projectDir, 'scene-plan.json'));
   } catch {
     await runPlan(projectDir);
   }
 
-  const briefStr = await fs.readFile(briefPath, 'utf-8');
-  const brandStr = await fs.readFile(brandPath, 'utf-8');
-  const claimsStr = await fs.readFile(claimsPath, 'utf-8');
-  const assetsStr = await fs.readFile(assetsPath, 'utf-8');
-  const scenesStr = await fs.readFile(scenePlanPath, 'utf-8');
-
-  const brief: ProjectBrief = ProjectBriefSchema.parse(JSON.parse(briefStr));
-  const brand: BrandProfile = BrandProfileSchema.parse(JSON.parse(brandStr));
-  const claims: ClaimsRegister = ClaimsRegisterSchema.parse(JSON.parse(claimsStr));
-  const assets: AssetManifest = AssetManifestSchema.parse(JSON.parse(assetsStr));
-  const scenePlan: ScenePlan = ScenePlanSchema.parse(JSON.parse(scenesStr));
+  const { brief, brand, claims, assets, scenePlan, raw } = await readProjectInputs(projectDir);
 
   // Policy Checks: Assets & Claims
   const assetViolations = PolicyChecker.checkAssets(assets, brief.client_id);
@@ -135,35 +161,14 @@ export async function runRender(projectDir: string, options?: RenderCliOptions):
   // Resolve the adapter before doing any work so unsupported engines fail fast
   const adapter = selectAdapter(brief.engine);
 
-  // Determine dimensions
-  let width = 1920;
-  let height = 1080;
-  if (format === '9:16') {
-    width = 1080;
-    height = 1920;
-  } else if (format === '1:1') {
-    width = 1080;
-    height = 1080;
-  }
-
-  const renderSettings: RenderSettings = {
-    width,
-    height,
-    fps: 30,
-    format: options?.codec || (options?.transparent ? 'mov_prores' : 'mp4'),
-    transparent: Boolean(options?.transparent || options?.codec === 'mov_prores'),
-    audio_sample_rate: 48000,
-    audio_channels: 2,
-    target_loudness_lufs: -16.0,
-    true_peak_ceiling_db: -1.0
-  };
+  const renderSettings = renderSettingsFor(format, options);
 
   const inputHashes = {
-    brief_hash: crypto.createHash('sha256').update(briefStr).digest('hex'),
-    brand_hash: crypto.createHash('sha256').update(brandStr).digest('hex'),
-    claims_hash: crypto.createHash('sha256').update(claimsStr).digest('hex'),
-    assets_hash: crypto.createHash('sha256').update(assetsStr).digest('hex'),
-    scenes_hash: crypto.createHash('sha256').update(scenesStr).digest('hex')
+    brief_hash: crypto.createHash('sha256').update(raw.brief).digest('hex'),
+    brand_hash: crypto.createHash('sha256').update(raw.brand).digest('hex'),
+    claims_hash: crypto.createHash('sha256').update(raw.claims).digest('hex'),
+    assets_hash: crypto.createHash('sha256').update(raw.assets).digest('hex'),
+    scenes_hash: crypto.createHash('sha256').update(raw.scenes).digest('hex')
   };
 
   const toolkitVersion = '0.1.0';

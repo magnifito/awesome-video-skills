@@ -6,6 +6,7 @@ import crypto from 'node:crypto';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { scenePlanFps } from '../../packages/contracts/src/index.js';
+import type { RenderSettings, TextManifest } from '../../packages/contracts/src/index.js';
 import { rasterizeSvg, rasterizeSvgAsync, concatListLine, safeCssColor, safeJoin } from '../../packages/media/src/proc.js';
 import type {
   VideoRendererAdapter,
@@ -414,6 +415,22 @@ export class HyperFramesAdapter implements VideoRendererAdapter {
     return stillPath;
   }
 
+  async textManifest(context: ProjectContext, settings: RenderSettings, workDir: string): Promise<TextManifest> {
+    await fs.mkdir(workDir, { recursive: true });
+    return this.buildManifest(context, settings, path.join(workDir, 'text_probe'), await this.fontEnv(context, workDir));
+  }
+
+  private buildManifest(context: ProjectContext, settings: RenderSettings, probeDir: string, env: NodeJS.ProcessEnv | undefined): Promise<TextManifest> {
+    return buildTextManifest(
+      context,
+      i => this.generateSceneSvg(context.scenePlan.scenes[i], context.brand, settings.width, settings.height, settings.transparent, context),
+      settings.width,
+      settings.height,
+      probeDir,
+      env
+    );
+  }
+
   async renderVideo(context: ProjectContext, options: RenderOptions): Promise<AdapterRenderOutput> {
     const { settings, outputDir, runId, requestHash } = options;
     const logs: string[] = [];
@@ -520,14 +537,7 @@ export class HyperFramesAdapter implements VideoRendererAdapter {
       logs.push(`[HyperFrames] Successfully assembled final video: ${finalOutputPath}`);
 
       // 4. Record where every text element is on screen, for `mgvideo validate`.
-      const manifest = await buildTextManifest(
-        context,
-        i => this.generateSceneSvg(context.scenePlan.scenes[i], context.brand, settings.width, settings.height, isTransparent, context),
-        settings.width,
-        settings.height,
-        path.join(outputDir, 'text_probe'),
-        renderFontEnv
-      );
+      const manifest = await this.buildManifest(context, settings, path.join(outputDir, 'text_probe'), renderFontEnv);
       await fs.writeFile(textManifestPath, JSON.stringify(manifest, null, 1), 'utf-8');
       logs.push(`[HyperFrames] Text manifest: ${manifest.texts.length} text elements`);
     } finally {

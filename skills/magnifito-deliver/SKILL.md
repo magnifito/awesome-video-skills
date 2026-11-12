@@ -45,6 +45,12 @@ against the pixels behind it, too short to read, or overlapping. The numbers are
 [`reference/floor.md`](reference/floor.md). A deliberate exception goes in `<project>/validate.json`
 with a reason, which the report prints; see [`reference/render-qa.md`](reference/render-qa.md).
 
+The text rules also run before any render: `mgvideo check <project> --quick` measures the text
+straight from the scene plan (no video encode, a few seconds) and prints nothing when it is clean.
+The plugin runs it after every edit of a project file (`hooks/hooks.json`): P0 and P1 come back as
+a block to fix, P2 and P3 as notes. Run it after changing copy, recipes or brand fonts, and still
+run `validate` on the render.
+
 The run id is optional: `mgvideo validate latest -p <project>` (or no run id) picks the newest
 `runs/run-*` of the project. `--out <file>` saves the printed report next to the delivery, and
 `--json --out <file>` saves the JSON report. `mgvideo chapters <project> --out chapters.txt`

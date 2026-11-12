@@ -23,7 +23,8 @@ check is ranked P0 to P3 with a fix; the run fails (exit 1) only on P0 or P1:
 - **[validate]** Every `claims_refs` id exists, and its `approved_wording` appears in the scene's
   `copy_text`. This checks the plan text, not the pixels: still read the frames.
 - **[validate]** On-screen text, from the `text-manifest.json` the HyperFrames and html engines write
-  (other engines: a P3 note, check text by hand). Every text element is placed with its animation;
+  (other engines: a P3 note, check text by hand). `mgvideo check <project> --quick` runs the same
+  rules from the scene plan before rendering, and the plugin runs it after each project-file edit. Every text element is placed with its animation;
   the numbers are in [`floor.md`](floor.md):
   - text resting more than 1 px outside the frame, P0;
   - text inside the platform UI zones (`"platform"` in `validate.json`, default `generic`), P1;

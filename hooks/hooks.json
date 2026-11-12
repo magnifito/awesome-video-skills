@@ -1,0 +1,17 @@
+{
+  "description": "Magnifito: check on-screen text with `mgvideo check --quick` after a project file is edited",
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/quick-check.mjs\"",
+            "timeout": 120
+          }
+        ]
+      }
+    ]
+  }
+}

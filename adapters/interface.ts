@@ -5,7 +5,8 @@ import type {
   ClaimsRegister,
   AssetManifest,
   ScenePlan,
-  RenderSettings
+  RenderSettings,
+  TextManifest
 } from '../packages/contracts/src/index.js';
 
 export interface AdapterCapabilities {
@@ -56,5 +57,10 @@ export interface VideoRendererAdapter {
   renderStill(context: ProjectContext, frameNumber: number, options: RenderOptions): Promise<string>;
   renderVideo(context: ProjectContext, options: RenderOptions): Promise<AdapterRenderOutput>;
   inspectOutput(outputPath: string): Promise<MediaProbeResult>;
+  /**
+   * Text manifest straight from the project, without encoding video (used by
+   * `mgvideo check --quick`). Adapters that cannot measure text leave it out.
+   */
+  textManifest?(context: ProjectContext, settings: RenderSettings, workDir: string): Promise<TextManifest>;
 }
 

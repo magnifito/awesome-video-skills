@@ -8,6 +8,7 @@ import { runInit } from '../commands/init.js';
 import { runPlan } from '../commands/plan.js';
 import { runRender } from '../commands/render.js';
 import { runValidate, formatValidationReport, LATEST_RUN } from '../commands/validate.js';
+import { runQuickCheck, formatQuickCheck } from '../commands/check.js';
 import { runBrandCheck, formatBrandCheck } from '../commands/brand.js';
 import { runPackage } from '../commands/package.js';
 import { runBatchCommerce } from '../commands/batch.js';
@@ -262,6 +263,32 @@ program
       if (!report.passed) process.exit(1);
     } catch (err) {
       console.error('Validate command failed:', err);
+      process.exit(2);
+    }
+  });
+
+// mgvideo check <project> --quick
+program
+  .command('check [project]')
+  .description('Check on-screen text from the project files without rendering a video (clipped, safe zone, size, reading time, overlap, contrast)')
+  .option('--quick', 'Text rules only, from the scene plan; the only mode so far', false)
+  .addOption(new Option('-f, --format <format>', 'Delivery format (default: the brief\'s first format)').choices([...RENDER_FORMATS]))
+  .addOption(new Option('--platform <platform>', 'Platform UI zones (default: validate.json, else generic)').choices(['generic', 'tiktok', 'reels', 'shorts']))
+  .option('--json', 'Print the result as JSON', false)
+  .addHelpText('after', '\nPrints nothing when no text rule fails. Exit 0: no P0 or P1; 1: a P0 or P1 failed; 2: the check could not run.\nThe plugin runs this after every edit of a project file (hooks/hooks.json).')
+  .action(async (projectArg, opts) => {
+    try {
+      if (!opts.quick) throw new Error('Only `mgvideo check --quick` exists so far; use `mgvideo validate` for a rendered run.');
+      const projectDir = path.resolve(projectArg ?? '.');
+      const result = await runQuickCheck(projectDir, { format: opts.format, platform: opts.platform });
+      if (opts.json) console.log(JSON.stringify(result, null, 2));
+      else {
+        const text = formatQuickCheck(result, projectArg ?? '.');
+        if (text) console.log(text);
+      }
+      if (!result.passed) process.exit(1);
+    } catch (err) {
+      console.error(`Check failed: ${(err as Error).message}`);
       process.exit(2);
     }
   });
