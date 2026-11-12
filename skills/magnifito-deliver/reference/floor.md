@@ -62,10 +62,25 @@ engines get a P3 note, and their text is checked by hand against this table.
 | Dead stop | No steady bed that cuts out without a fade | P1 | `dead-stop` [validate] |
 | Silence | A delivery with sound has sound | P2 | `audio-silent` [validate] |
 
+## Speech
+
+These need the words actually spoken: `mgvideo transcribe <video> -o <run>/transcript.json` (local
+faster-whisper, set up once with `mgvideo setup transcribe`). A run without a transcript gets no
+speech items.
+
+| Rule | Floor | Severity | Rule id |
+|---|---|---|---|
+| Caption timing | A cue appears no more than 0.15 s after, or 0.25 s before, its first spoken word | P1 | `caption-drift` [validate] |
+| Names on screen | A name the narration says (brand.json `name`, `validate.json` `names`) is on screen while it is said | P2 | `name-on-screen` [validate] |
+| Transcript | `transcript.json` was made from this run's output file | P1 | `speech-transcript` [validate] |
+
+Captions built from a transcript (`mgvideo package` does when the run has one) take at most 3
+words per cue, break at punctuation and at pauses over 8 frames, and stay 8 frames past their last
+word.
+
 ## Not measured yet
 
 - Face cover: text over more than 8 % of a face box (needs face detection).
-- Cues on words and names on screen when the voice says them (needs word times; plan Phase 6).
 - Red flashes.
 
 ## Changing a rule for one project

@@ -2,6 +2,7 @@ import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { CHROME_CANDIDATES, findChrome } from '../../../media/src/proc.js';
 import { readSeparateMarker, SEPARATE_PINS, separateVenvDir } from '../../../media/src/separate.js';
+import { readTranscribeMarker, TRANSCRIBE_PINS, transcribeVenvDir } from '../../../media/src/transcribe.js';
 import { sfxEnvStatus } from '../../../media/src/sfx_env.js';
 import { motionAvailability } from '../../../motion/src/capture.js';
 
@@ -206,6 +207,24 @@ export async function runDoctor(): Promise<{ passed: boolean; items: HealthCheck
       status: stale ? 'warning' : 'ok',
       version: `Python ${separateMarker.pythonVersion}${s.torch ? `, torch ${s.torch}` : ''}`,
       details: `Device ${s.device}${s.gpu ? ` (${s.gpu})` : ''}, default model ${s.model}.${stale ? ' Pins changed since setup; re-run `mgvideo setup separate`.' : ''}`
+    });
+  }
+
+  // Speech recognition venv (optional), from the marker written by `mgvideo setup transcribe`.
+  const transcribeMarker = readTranscribeMarker();
+  if (!transcribeMarker) {
+    items.push({
+      component: 'Speech Recognition (faster-whisper)',
+      status: 'warning',
+      details: `Optional; not set up (${transcribeVenvDir()}). Run \`mgvideo setup transcribe\` to enable \`mgvideo transcribe\`, caption timing and name checks.`
+    });
+  } else {
+    const stale = JSON.stringify(transcribeMarker.pins) !== JSON.stringify(TRANSCRIBE_PINS);
+    items.push({
+      component: 'Speech Recognition (faster-whisper)',
+      status: stale ? 'warning' : 'ok',
+      version: `Python ${transcribeMarker.pythonVersion}`,
+      details: `${transcribeMarker.pins.join(', ')}.${stale ? ' Pins changed since setup; re-run `mgvideo setup transcribe`.' : ''}`
     });
   }
 

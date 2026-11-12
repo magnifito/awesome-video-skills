@@ -9,6 +9,9 @@ import { runPlan } from '../commands/plan.js';
 import { runRender } from '../commands/render.js';
 import { runValidate, formatValidationReport, LATEST_RUN } from '../commands/validate.js';
 import { runQuickCheck, formatQuickCheck } from '../commands/check.js';
+import { setupTranscribe, transcribe, DEFAULT_TRANSCRIBE_MODEL } from '../../../media/src/transcribe.js';
+import { detectShotChanges, planCutByLines } from '../../../media/src/cut_lines.js';
+import { TranscriptSchema } from '../../../contracts/src/index.js';
 import { runBrandCheck, formatBrandCheck } from '../commands/brand.js';
 import { runPackage } from '../commands/package.js';
 import { runBatchCommerce } from '../commands/batch.js';
@@ -34,7 +37,8 @@ import { runVerifyBundle } from '../commands/verify_bundle.js';
 import { resolveRunDir, resolveProjectDir, findWorkspaceRoot, writeOutputFile } from '../commands/_shared.js';
 import { RENDER_FORMATS, RENDER_CODECS } from '../commands/render.js';
 import { PIPELINE_EVENTS } from '../../../media/src/notifications.js';
-import { safeColor } from '../../../media/src/proc.js';
+import { safeColor, probe } from '../../../media/src/proc.js';
+import crypto from 'node:crypto';
 import { ProxyGenerator } from '../../../media/src/proxy.js';
 import { SecurityWatermarker } from '../../../media/src/watermark.js';
 import { VideoSpeedEngine } from '../../../media/src/speed.js';
@@ -1764,6 +1768,82 @@ setupCommand
       runSetupSfx({ python: opts.python, force: !!opts.force });
     } catch (err) {
       console.error(`Setup sfx failed: ${err instanceof Error ? err.message : String(err)}`);
+      process.exit(1);
+    }
+  });
+
+// mgvideo setup transcribe
+setupCommand
+  .command('transcribe')
+  .description('Create the Python venv for local speech recognition (faster-whisper) in the user cache')
+  .option('--force', 'Delete and recreate the venv')
+  .action(opts => {
+    try {
+      const res = setupTranscribe({ force: !!opts.force, log: msg => console.log(`  ${msg}`) });
+      console.log(`\n🗣️  Transcription ${res.status === 'exists' ? 'already set up' : 'ready'}`);
+      console.log(`Venv: ${res.venvDir} (Python ${res.marker.pythonVersion})`);
+      console.log(`The ${DEFAULT_TRANSCRIBE_MODEL} model (about 1.6 GB) downloads into the Hugging Face cache on the first run.\n`);
+    } catch (err) {
+      console.error(`Setup transcribe failed: ${err instanceof Error ? err.message : String(err)}`);
+      process.exit(1);
+    }
+  });
+
+// mgvideo transcribe <media>
+program
+  .command('transcribe <media>')
+  .description('Recognise speech locally (faster-whisper) and write a Transcript with word times')
+  .requiredOption('-o, --out <file>', 'Transcript JSON to write (e.g. runs/<run>/transcript.json)')
+  .option('-l, --language <code>', 'Spoken language, e.g. bg or en (detected when omitted)')
+  .option('-m, --model <name>', 'faster-whisper model (large-v3-turbo, medium, small, ...)', DEFAULT_TRANSCRIBE_MODEL)
+  .addHelpText('after', '\nSet up once with `mgvideo setup transcribe`. Transcribe a final render into its run directory\n(`-o runs/<run>/transcript.json`) and `mgvideo validate` also checks caption timing and spoken names.')
+  .action((media, opts) => {
+    try {
+      const t = transcribe(path.resolve(process.cwd(), media), { language: opts.language, model: opts.model, log: msg => console.error(`  ${msg}`) });
+      writeOutputFile(opts.out, JSON.stringify(t, null, 2));
+      const last = t.words.at(-1);
+      console.log(`🗣️  ${t.words.length} words (${t.language}${last ? `, speech to ${(last.end_ms / 1000).toFixed(1)} s` : ''}) written to ${opts.out}`);
+    } catch (err) {
+      console.error(`Transcribe failed: ${err instanceof Error ? err.message : String(err)}`);
+      process.exit(1);
+    }
+  });
+
+// mgvideo edit cut <source>
+const editCommand = program.command('edit').description('Footage edits that write an Edit Decision List (edl.json)');
+editCommand
+  .command('cut <source>')
+  .description('Keep the transcript lines listed in a text file, in that order; writes edl.json (source microseconds, output frames)')
+  .requiredOption('-t, --transcript <file>', 'Transcript of the source (mgvideo transcribe), source timeline')
+  .requiredOption('-k, --keep <file>', 'Text file: one kept line per row, in output order; blank lines and # comments are skipped')
+  .requiredOption('-o, --out <file>', 'EDL JSON to write')
+  .option('--fps <n>', 'Output frame rate (integer)', '30')
+  .option('--no-shots', 'Do not move cuts off shot changes (skips scene detection)')
+  .addHelpText('after', '\nLines match word for word (case and punctuation ignored); otherwise the closest passage with at least\n70% of the words is used and noted. Pads min(0.6 x pause, 0.12 s) before, min(0.7 x pause, 0.22 s) after,\n0.35 s after the last clip. Exit 1 when a line is not found.')
+  .action((source, opts) => {
+    try {
+      const src = path.resolve(process.cwd(), source);
+      const transcript = TranscriptSchema.parse(JSON.parse(nodeFs.readFileSync(path.resolve(process.cwd(), opts.transcript), 'utf8')));
+      const lines = nodeFs.readFileSync(path.resolve(process.cwd(), opts.keep), 'utf8').split(/\r?\n/);
+      const fps = Number(opts.fps);
+      if (!Number.isInteger(fps) || fps <= 0) throw new Error(`--fps must be a positive integer, got ${opts.fps}`);
+      const info = probe(src);
+      const plan = planCutByLines({
+        words: transcript.words,
+        lines,
+        sourceHash: crypto.createHash('sha256').update(nodeFs.readFileSync(src)).digest('hex'),
+        sourceDurationS: info.durationSeconds,
+        shotChanges: opts.shots ? detectShotChanges(src) : [],
+        fps: { numerator: fps, denominator: 1 },
+      });
+      for (const n of plan.notes) console.log(`  note: ${n}`);
+      for (const m of plan.missing) console.error(`  not found: line ${m.line} "${m.text}" (best passage shares ${Math.round(m.best * 100)}% of its words)`);
+      writeOutputFile(opts.out, JSON.stringify(plan.edl, null, 2));
+      const frames = plan.edl.cuts.at(-1)?.output_end_frame ?? 0;
+      console.log(`✂️  ${plan.matches.length} line(s) in ${plan.edl.cuts.length} cut(s), ${(frames / fps).toFixed(2)} s, written to ${opts.out}`);
+      if (plan.missing.length > 0) process.exit(1);
+    } catch (err) {
+      console.error(`Edit cut failed: ${err instanceof Error ? err.message : String(err)}`);
       process.exit(1);
     }
   });

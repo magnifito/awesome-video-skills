@@ -24,6 +24,30 @@ Editing alters presentation times. Word timestamps from the original transcript 
 - **Word Boundaries**: Never cut closer than 50ms to the start or end of a spoken phoneme.
 - **Meaning Preservation**: Ensure cuts do not invert the speaker's intent or omit critical qualifiers.
 
+## Transcribe and Cut by Lines (`mgvideo transcribe`, `mgvideo edit cut`)
+
+1. **One-time setup**: `mgvideo setup transcribe` installs faster-whisper into a venv in the user
+   cache. The `large-v3-turbo` model (multilingual, Bulgarian included, about 1.6 GB) downloads into
+   the Hugging Face cache on the first run. Everything runs locally; there is no per-run cost.
+2. **Transcribe the raw take**: `mgvideo transcribe raw.mp4 -l bg -o transcript.json` writes the
+   Transcript contract with recognised word times (source timeline). `-m small` is faster and less
+   accurate. Read it before cutting: names and numbers are where recognition goes wrong.
+3. **Choose lines**: write `keep.txt` with one kept line per row, in the order the edit should play.
+   Copy the wording from the transcript; `#` comments and blank lines are skipped.
+4. **Cut**: `mgvideo edit cut raw.mp4 -t transcript.json -k keep.txt -o edl.json`.
+   - Lines match word for word, ignoring case and punctuation. Otherwise the closest passage with at
+     least 70 % of the words is used, and the cut reason says so. A line below that is reported and
+     the command exits 1.
+   - Padding: min(0.6 × pause, 0.12 s) before each clip, min(0.7 × pause, 0.22 s) after, 0.35 s
+     after the last clip, so breaths and word tails survive.
+   - A clip edge within 0.25 s of a shot change moves one frame inside the new shot (or one frame
+     before the change), so no clip opens or closes on a few frames of another shot. `--no-shots`
+     skips scene detection.
+   - Lines that touch in the source become one clip.
+5. Apply `edl.json` (the talking-head showcase `apply-edl.mjs` shows how: trims with 10 ms audio
+   fades and maps transcript words onto the output timeline). Then transcribe the final cut into its
+   run directory so `mgvideo validate` checks caption timing and spoken names.
+
 ## Object Separation (`mgvideo separate`)
 
 Use it when a shot needs the subject (a person, product or hand) on its own layer: text or graphics

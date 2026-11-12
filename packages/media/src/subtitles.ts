@@ -1,6 +1,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import type { ScenePlan, Transcript } from '../../contracts/src/index.js';
+import { groupCaptionWords } from './captions.js';
 
 export interface SubtitleCue {
   index: number;
@@ -56,29 +57,11 @@ export class SubtitleGenerator {
   }
 
   /**
-   * Generate cues from Transcript words, grouping into readable phrases.
+   * Generate cues from recognised Transcript words: up to 3 words, broken at punctuation and
+   * pauses, held 8 frames past the last word (see captions.ts).
    */
-  static cuesFromTranscript(transcript: Transcript, wordsPerCue = 6): SubtitleCue[] {
-    const cues: SubtitleCue[] = [];
-    let cueIndex = 1;
-
-    for (let i = 0; i < transcript.words.length; i += wordsPerCue) {
-      const chunk = transcript.words.slice(i, i + wordsPerCue);
-      if (chunk.length === 0) continue;
-
-      const startMs = chunk[0].start_ms;
-      const endMs = chunk[chunk.length - 1].end_ms;
-      const text = chunk.map(w => w.word).join(' ');
-
-      cues.push({
-        index: cueIndex++,
-        start_ms: startMs,
-        end_ms: endMs,
-        text
-      });
-    }
-
-    return cues;
+  static cuesFromTranscript(transcript: Transcript, fps = 30): SubtitleCue[] {
+    return groupCaptionWords(transcript.words, fps);
   }
 
   /** Prevents cue text from forging a timing line or ending the cue early. */

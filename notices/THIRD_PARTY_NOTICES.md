@@ -90,6 +90,15 @@ As established in the Magnifito Super Video Blueprint (2 November 2026), all ups
 - **Use**: watchlist only. No code or text is copied or vendored; check designs are reimplemented
   from description in Magnifito's own code.
 
+## Optional local tools (installed on demand into the user cache, not redistributed)
+
+### Speech recognition (`mgvideo setup transcribe`)
+- **faster-whisper** `1.2.1` (`SYSTRAN/faster-whisper`), **License**: MIT.
+- **CTranslate2** `4.9.0` (`OpenNMT/CTranslate2`), **License**: MIT.
+- **Model**: `large-v3-turbo`, fetched by faster-whisper from the Hugging Face repository
+  `mobiuslabsgmbh/faster-whisper-large-v3-turbo` (a CTranslate2 conversion of OpenAI Whisper
+  large-v3-turbo). **License**: MIT. Weights live in the Hugging Face cache, never in this repository.
+
 ## Generated media (model outputs, no model files committed)
 
 ### Mira's voice in the showcase

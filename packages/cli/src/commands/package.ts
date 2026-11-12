@@ -11,7 +11,7 @@ import type {
 } from '../../../contracts/src/index.js';
 import { ReviewRecordSchema } from '../../../contracts/src/index.js';
 import { resolveRunDir, resolveProjectDir, sha256String, signContent } from './_shared.js';
-import { runValidate } from './validate.js';
+import { runValidate, readRunTranscript } from './validate.js';
 import { CostTracker, CostBreakdown } from '../../../media/src/cost.js';
 import { SubtitleGenerator } from '../../../media/src/subtitles.js';
 import { DeliverableArchiver } from '../../../media/src/archiver.js';
@@ -151,8 +151,12 @@ export async function runPackage(
 
   // Export subtitles (.srt and .vtt)
   try {
-    const scenePlanData = JSON.parse(scenesStr);
-    const cues = SubtitleGenerator.cuesFromScenePlan(scenePlanData);
+    // Captions follow the recognised speech when the run has a transcript of this exact output
+    // (`mgvideo transcribe <video> -o <run>/transcript.json`); otherwise one cue per scene.
+    const transcript = await readRunTranscript(runDir, primaryOutput.hash);
+    const cues = transcript && transcript.words.length > 0
+      ? SubtitleGenerator.cuesFromTranscript(transcript, renderRequest.settings.fps)
+      : SubtitleGenerator.cuesFromScenePlan(JSON.parse(scenesStr));
     const subBaseName = `${brief.project_id}_${brief.language}_captions`;
     const { srtPath, vttPath } = await SubtitleGenerator.exportSubtitles(deliveryDir, subBaseName, cues);
     deliveredFiles.push(path.basename(srtPath), path.basename(vttPath));

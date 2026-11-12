@@ -51,7 +51,8 @@ each with a reason that the report prints next to the check:
 ```
 A severity of `"off"` drops the rule. An invalid file stops validate (exit 2).
 
-Not in validate: text over faces, red flashes, captions. Asset rights are enforced earlier, by
+Not in validate: text over faces and red flashes. Captions and spoken names are checked only when the
+run has a transcript (section 7). Asset rights are enforced earlier, by
 `mgvideo render` (assets must be `approved` and not expired). `mgvideo gate <project>` adds brief
 JSON, zero media budget, Cyrillic glyph coverage of the brand font for `bg` projects, and a master
 with audio and non-zero duration.
@@ -153,6 +154,12 @@ Detectors only flag candidates. Look at each flagged range: a hold may be intend
 Full rules are in `skills/magnifito-audio/reference/beat-and-sound-sync.md`. At delivery:
 - **[cmd]** Measured duration: `ffprobe -v error -show_entries format=duration -of csv=p=0 final.mp4`.
   No caption may end after it.
+- **[validate]** With `<run>/transcript.json` (`mgvideo transcribe <video> -o <run>/transcript.json`),
+  every cue of `captions.srt` or `.vtt` (run directory first, then project) starts within 0.15 s
+  after or 0.25 s before its first spoken word (`caption-drift`, P1), and names the voice says are on
+  screen while said (`name-on-screen`, P2). See [`floor.md`](floor.md).
+- **[cmd]** `mgvideo package` builds the delivered captions from the run transcript when there is
+  one (3 words per cue at most, broken at punctuation and pauses), else one cue per scene.
 - **[cmd]** `mgvideo broll words captions.srt -o words.json` fails on malformed timestamps. Word
   times it writes are estimates (about 0.2 s), not speech recognition.
 - **[manual]** Every cue: start >= 0, end > start, no overlaps (unless two speakers), at least 0.65 s
