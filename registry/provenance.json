@@ -66,6 +66,22 @@
       "license": "MIT",
       "modifications": "Vendored unchanged at vendor/vxi-motion-tools/2fae287134109449676d9afbfd38318985d75121 (nine skills plus LICENSE, README.md, SOURCES.md, docs/techniques.md). Rules are restated in our own words in skills/magnifito-*/reference/ files; no upstream code is copied into the toolkit.",
       "attribution": "Copyright (c) 2026 Ahmed Albadri (collection); per-skill copyright holders in each vendored LICENSE: LottieFiles, whaleyxbt, Sunwood AI Labs, iart.ai, Yuri Queiroz Lobo, kaventro, Video Production Skills contributors, tuzhechen2005"
+    },
+    {
+      "source_id": "raea-skills",
+      "origin_url": "https://github.com/shinyobjectz/raea-skills",
+      "commit": "c507860150995eb7c22ef9db23dee636c832428a",
+      "license": "Apache-2.0",
+      "modifications": "Vendored unchanged at vendor/raea-skills/c507860150995eb7c22ef9db23dee636c832428a (craft guides, nine motion guides, platforms reference, 3d/prompts.md, docs/RULES.md and docs/TREE.md, plus LICENSE and README.md). Rules are restated in our own words in skills/magnifito-*/reference/ files; no upstream code is copied into the toolkit.",
+      "attribution": "Copyright Shane Murphy (raea); craft method after Impeccable, Copyright Paul Bakaus and contributors, Apache-2.0"
+    },
+    {
+      "source_id": "raea",
+      "origin_url": "https://github.com/shinyobjectz/raea",
+      "commit": "d6f41c605ab71275162050cd08632cb56bd00e8a",
+      "license": "FSL-1.1-ALv2",
+      "modifications": "Nothing copied or vendored. Check rules and thresholds are reimplemented from description in Magnifito's own TypeScript (docs/plans/raea-adoption.md).",
+      "attribution": "Copyright 2026 Shane Murphy"
     }
   ]
 }

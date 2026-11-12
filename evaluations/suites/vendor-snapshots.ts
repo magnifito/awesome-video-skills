@@ -4,7 +4,7 @@ import path from 'node:path';
 import type { SuiteContext } from '../run-suites.js';
 
 /** Upstreams that must be vendored as pristine snapshots. */
-const VENDORED = ['barty-motion-graphics', 'vxi-motion-tools'];
+const VENDORED = ['barty-motion-graphics', 'vxi-motion-tools', 'raea-skills'];
 
 /** Every vendored upstream file must match the SHA-256 recorded in approved.lock.json. */
 export async function run(t: SuiteContext): Promise<void> {
