@@ -2,6 +2,13 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "version": "1.0.0",
   "description": "Source-to-capability mapping and canonical Magnifito skill identifiers",
+  "coverage_levels": {
+    "D0": "named: the skill says it exists",
+    "D1": "recipe: an agent can do it once, correctly",
+    "D2": "craft: the decisions, the defaults to question, how it fails",
+    "D3": "checked: a check or the floor catches it going wrong",
+    "D4": "evaluated: an evaluation shows a fresh agent doing it from the skill alone"
+  },
   "canonical_skills": [
     {
       "id": "magnifito-video",
@@ -9,7 +16,13 @@
       "entry_file": "skills/magnifito-video/SKILL.md",
       "responsibility": "Classify the job and coordinate the stages",
       "role": "router",
-      "sources": ["Original Magnifito orchestration"]
+      "sources": [
+        "Original Magnifito orchestration"
+      ],
+      "coverage": {
+        "level": "D2",
+        "evidence": "Routing table with modes and moves (reference/modes.md, moves.md); no check catches a wrong route"
+      }
     },
     {
       "id": "magnifito-brand",
@@ -20,7 +33,11 @@
       "sources": [
         "charlie-motion-graphics-skills/skills/brand-intake",
         "hyperframes/design-guidance"
-      ]
+      ],
+      "coverage": {
+        "level": "D3",
+        "evidence": "mgvideo brand check and mgvideo gate (Cyrillic coverage of the brand font); render-warnings for brand fonts fontconfig cannot find"
+      }
     },
     {
       "id": "magnifito-storyboard",
@@ -33,7 +50,11 @@
         "noam-saas-product-demo/intake",
         "herk-edit-kit/storytelling",
         "video-shotcraft/shot-planning"
-      ]
+      ],
+      "coverage": {
+        "level": "D3",
+        "evidence": "mgvideo check --quick runs the text rules on the scene plan; refuse list and motion timing are craft only"
+      }
     },
     {
       "id": "magnifito-promo",
@@ -46,7 +67,11 @@
         "charlie-motion-graphics-skills/skills/motion-effects",
         "video-shotcraft/recipes",
         "iart-ecommerce-video/retail-cards"
-      ]
+      ],
+      "coverage": {
+        "level": "D3",
+        "evidence": "Pitch mode with failure table; validate text, loudness, freeze and flash rules catch the floor"
+      }
     },
     {
       "id": "magnifito-product-demo",
@@ -58,7 +83,11 @@
         "video-shotcraft/product-workflow",
         "noam-saas-product-demo/saas-demo",
         "iart-ecommerce-video/screenshots-recipe"
-      ]
+      ],
+      "coverage": {
+        "level": "D3",
+        "evidence": "Explain mode with failure table; validate text rules and the SaaS demo evaluation"
+      }
     },
     {
       "id": "magnifito-edit",
@@ -69,7 +98,11 @@
       "sources": [
         "herk-edit-kit/skills/cut-helper",
         "herk-edit-kit/skills/transcript-sync"
-      ]
+      ],
+      "coverage": {
+        "level": "D3",
+        "evidence": "mgvideo edit cut and the EDL contract are tested (words-and-cuts suite); caption-drift checks the result"
+      }
     },
     {
       "id": "magnifito-broll",
@@ -80,7 +113,11 @@
       "sources": [
         "barty-motion-graphics/skills/b-roll",
         "iart-b-roll/skills/talking-head-b-roll"
-      ]
+      ],
+      "coverage": {
+        "level": "D3",
+        "evidence": "mgvideo broll check validates the plan; broll-compose suite"
+      }
     },
     {
       "id": "magnifito-audio",
@@ -91,7 +128,11 @@
       "sources": [
         "barty-motion-graphics/tools/sound",
         "herk-edit-kit/tools/timeline"
-      ]
+      ],
+      "coverage": {
+        "level": "D3",
+        "evidence": "validate measures loudness, true peak, dead stops and silence; mix levels are craft only"
+      }
     },
     {
       "id": "magnifito-variants",
@@ -102,7 +143,11 @@
       "sources": [
         "iart-ecommerce-video/skills/batch-commerce",
         "Original batch and Cyrillic/Bulgarian localization logic"
-      ]
+      ],
+      "coverage": {
+        "level": "D3",
+        "evidence": "validate checks dimensions and UI zones per format (safe-zone table in contracts)"
+      }
     },
     {
       "id": "magnifito-deliver",
@@ -113,7 +158,11 @@
       "sources": [
         "hyperframes/packages/renderer",
         "Original ffprobe and package validation tools"
-      ]
+      ],
+      "coverage": {
+        "level": "D3",
+        "evidence": "validate (P0-P3), mgvideo package refuses P0/P1; blind review is advisory until calibrated"
+      }
     }
   ],
   "adapters": [
@@ -122,19 +171,25 @@
       "name": "HyperFrames Engine Adapter",
       "tier": "primary",
       "status": "active",
-      "supported_formats": ["mp4", "webm", "prores_mov"],
+      "supported_formats": [
+        "mp4",
+        "webm",
+        "prores_mov"
+      ],
       "transparency_supported": true,
       "audio_muxing": true,
       "preview_supported": true,
       "execution_model": "static-svg-card-slideshow-ffmpeg",
-"execution_notes": "Each scene is rasterized once from SVG and held for its duration. composition.html is emitted as a contract artifact but is not frame-captured; motion preferences are not animated."
+      "execution_notes": "Each scene is rasterized once from SVG and held for its duration. composition.html is emitted as a contract artifact but is not frame-captured; motion preferences are not animated."
     },
     {
       "id": "html",
       "name": "Seekable HTML Adapter (static card renderer)",
       "tier": "experimental",
       "status": "active",
-      "supported_formats": ["mp4"],
+      "supported_formats": [
+        "mp4"
+      ],
       "transparency_supported": false,
       "audio_muxing": true,
       "preview_supported": true,
@@ -145,7 +200,10 @@
       "name": "Isolated Remotion Adapter Profile",
       "tier": "alternative",
       "status": "profile_only",
-      "supported_formats": ["mp4", "webm"],
+      "supported_formats": [
+        "mp4",
+        "webm"
+      ],
       "transparency_supported": true,
       "audio_muxing": true,
       "preview_supported": false,

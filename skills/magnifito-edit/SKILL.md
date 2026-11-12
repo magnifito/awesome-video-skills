@@ -1,6 +1,8 @@
 ---
 name: magnifito-edit
 description: "Cut and retime existing footage, remove silence, and maintain strict dual-timeline mappings between raw and edited timelines."
+metadata:
+  tested-against: "0.1.0"
 ---
 
 # Magnifito Footage Editing & Dual-Timeline Cuts

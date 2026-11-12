@@ -1,6 +1,8 @@
 ---
 name: magnifito-broll
 description: "Add speech-timed motion B-roll to talking-head footage: transparent panels beside the speaker and full-frame cutaways, planned in plan.json, rendered with the motion engine and composited over the source with its original audio."
+metadata:
+  tested-against: "0.1.0"
 ---
 
 # Magnifito B-Roll: motion graphics on footage

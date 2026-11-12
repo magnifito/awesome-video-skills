@@ -1,3 +1,5 @@
+import { assertOnline } from './offline.js';
+
 export type PipelineEventType =
   | 'render.started'
   | 'render.completed'
@@ -107,6 +109,7 @@ export class NotificationDispatcher {
     if (url.protocol !== 'https:') {
       throw new Error(`Webhook URL must use https: ${url.origin}`);
     }
+    assertOnline(`webhook to ${url.origin}`);
     const res = await fetch(url, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },

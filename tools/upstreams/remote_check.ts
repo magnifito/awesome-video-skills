@@ -1,6 +1,7 @@
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
+import { assertOnline } from '../../packages/media/src/offline.js';
 
 /**
  * Compares the live HEAD of each tracked upstream branch (via `git ls-remote`) against the
@@ -33,6 +34,7 @@ export function lsRemoteHead(owner: string, repo: string, branch: string): strin
   if (!SAFE_NAME.test(owner) || !SAFE_NAME.test(repo) || !/^[A-Za-z0-9._/-]+$/.test(branch)) {
     throw new Error(`Unsafe repository coordinates: ${owner}/${repo}@${branch}`);
   }
+  assertOnline(`git ls-remote ${owner}/${repo}`);
   const out = execFileSync('git', ['ls-remote', `https://github.com/${owner}/${repo}.git`, `refs/heads/${branch}`], {
     stdio: ['ignore', 'pipe', 'pipe'],
     timeout: 30_000,

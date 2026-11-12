@@ -1,6 +1,8 @@
 ---
 name: magnifito-audio
 description: "Manage narration alignment, sound effects, licensed music mixing, and EBU R128 loudness normalization."
+metadata:
+  tested-against: "0.1.0"
 ---
 
 # Magnifito Audio Alignment & Loudness Mixing

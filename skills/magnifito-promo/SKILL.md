@@ -1,6 +1,8 @@
 ---
 name: magnifito-promo
 description: "Produce short launch films, kinetic typography, promotional offers, and brand explainers using HyperFrames or the spring-driven motion engine."
+metadata:
+  tested-against: "0.1.0"
 ---
 
 # Magnifito Promotional & Explainer Videos

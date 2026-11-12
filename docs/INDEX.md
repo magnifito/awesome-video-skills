@@ -15,7 +15,7 @@
 | Document | Status | Updated | Summary |
 |---|---|---|---|
 | [Motion engine (Barty-Bart motion-graphics integration)](plans/motion-engine.md) | `draft` | 2026-11-04 | Vendor Barty-Bart/motion-graphics at 3d83d98 and add a motion renderer, recipes, transparent B-roll, sound effects and object separation |
-| [raea adoption: quality floor, checks and craft guides](plans/raea-adoption.md) | `draft` | 2026-11-10 | What Magnifito takes from shinyobjectz/raea (FSL engine, ideas only) and raea-skills (Apache-2.0, vendored as data): a P0-P3 validate report, ffmpeg and DOM-measured checks, a reconciled quality floor, craft modes and verbs, a blind judge loop, HyperFrames determinism and skill lint |
+| [raea adoption: quality floor, checks and craft guides](plans/raea-adoption.md) | `active` | 2026-11-12 | What Magnifito takes from shinyobjectz/raea (FSL engine, ideas only) and raea-skills (Apache-2.0, vendored as data): a P0-P3 validate report, ffmpeg and DOM-measured checks, a reconciled quality floor, craft modes and verbs, a blind judge loop, HyperFrames determinism and skill lint |
 | [Showcase videos and GitHub Pages site](plans/showcase-videos.md) | `draft` | 2026-11-04 | Definition of the Magnifito showcase: every video type, visual recipe, format, finishing command and variation the toolkit makes, as reproducible example videos checked by a test suite and shown on a GitHub Pages site |
 
 ## reference (9)

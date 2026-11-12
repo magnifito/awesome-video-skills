@@ -1,4 +1,5 @@
 import { spawnSync } from 'node:child_process';
+import { assertOnline, helperNetworkEnv } from './offline.js';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -145,7 +146,7 @@ export function separateHelperPath(): string {
 
 function helperEnv(): NodeJS.ProcessEnv {
   // Let ops that MPS does not implement fall back to the CPU instead of failing.
-  return { ...process.env, PYTORCH_ENABLE_MPS_FALLBACK: '1', TOKENIZERS_PARALLELISM: 'false', TRANSFORMERS_VERBOSITY: 'error' };
+  return { ...helperNetworkEnv(), PYTORCH_ENABLE_MPS_FALLBACK: '1', TOKENIZERS_PARALLELISM: 'false', TRANSFORMERS_VERBOSITY: 'error' };
 }
 
 export interface SetupResult {
@@ -181,6 +182,7 @@ export function setupSeparate(opts: { force?: boolean; log?: (msg: string) => vo
     runTool(py.bin, ['-m', 'venv', venvDir]);
   }
   log(`Installing ${SEPARATE_PINS.join(' ')} (torch is large; this can take several minutes)`);
+  assertOnline('pip install for mgvideo setup separate');
   const pip = spawnSync(vpy, ['-m', 'pip', 'install', '--disable-pip-version-check', '--progress-bar', 'off', ...SEPARATE_PINS], { stdio: 'inherit' });
   if (pip.error) throw new Error(`pip failed to start: ${pip.error.message}`);
   if (pip.status !== 0) throw new Error(`pip install failed with exit code ${pip.status}`);

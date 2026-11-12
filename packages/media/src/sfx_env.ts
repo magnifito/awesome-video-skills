@@ -1,4 +1,5 @@
 import { spawnSync } from 'node:child_process';
+import { assertOnline } from './offline.js';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
@@ -169,6 +170,7 @@ export function setupSfxEnv(opts: SetupSfxOptions = {}): SetupSfxResult {
   log(`Using ${base.bin} (Python ${base.version}).`);
   run(base.bin, ['-m', 'venv', venvDir], log);
   const py = venvPython(venvDir);
+  assertOnline('pip install for mgvideo setup sfx');
   run(py, ['-m', 'pip', 'install', '--disable-pip-version-check', '--upgrade', 'pip'], log);
   run(py, ['-m', 'pip', 'install', '--disable-pip-version-check', '--only-binary=:all:', ...SFX_REQUIREMENTS], log);
   run(py, ['-c', 'import librosa, soundfile, numpy, scipy'], log);

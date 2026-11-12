@@ -1,6 +1,8 @@
 ---
 name: magnifito-brand
 description: "Intake and validate brand identity, motion tokens, color contrast, and font licenses for Magnifito video projects."
+metadata:
+  tested-against: "0.1.0"
 ---
 
 # Magnifito Brand & Motion Intake

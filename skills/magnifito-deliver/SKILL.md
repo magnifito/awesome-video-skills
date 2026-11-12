@@ -1,6 +1,8 @@
 ---
 name: magnifito-deliver
 description: "Verify version-bound approvals, asset rights, ffprobe specifications, and assemble client delivery package."
+metadata:
+  tested-against: "0.1.0"
 ---
 
 # Magnifito Validation, Packaging & Approval Record

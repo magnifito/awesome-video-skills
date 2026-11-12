@@ -186,6 +186,27 @@ mgvideo upstream rollback hyperframes <commit-sha>
 
 ---
 
+## Toolkit Hygiene
+
+- **Skill lint** runs inside `npm run package:skills`. It checks the following:
+  - frontmatter `name` matches the folder;
+  - `description` is at most 1024 characters;
+  - `metadata.tested-against` matches the toolkit version;
+  - every `mgvideo` command a skill names exists.
+
+  It also warns about hard-coded hex colours and "always use" or "the best" in skill text.
+  A line marked `opinion-ok: <reason>` is exempt.
+- **CLI help snapshot**: `npm run cli:snapshot` writes `tools/packaging/cli-help.snapshot.txt`.
+  Commit it with every CLI change; the `tooling` suite fails when it is stale.
+- **Coverage ladder**: `registry/capabilities.json` rates each skill from D0 (named) to D4
+  (an evaluation shows a fresh agent doing it from the skill alone), with evidence.
+- **Offline switch**: with `MGVIDEO_OFFLINE=1`, every network use is refused by name: pip
+  installs, upstream checks, webhooks and model downloads. Models already in the Hugging Face
+  cache still load.
+- **Generation ledger**: `mgvideo ledger add|find|list <project>` records each generated asset in
+  `<project>/generations.json`. The key is made from kind, model, prompt, seed and parameters, so
+  the same generation is reused instead of paid for again. `mgvideo cost` adds up the spend.
+
 ## Running Evaluations
 
 Run the automated test suite verifying end-to-end rendering, Bulgarian Cyrillic support, factual copy revision gates, and cache reproducibility:
