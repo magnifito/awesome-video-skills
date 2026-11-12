@@ -9,6 +9,8 @@ import { runPlan } from '../commands/plan.js';
 import { runRender } from '../commands/render.js';
 import { runValidate, formatValidationReport, LATEST_RUN } from '../commands/validate.js';
 import { runQuickCheck, formatQuickCheck } from '../commands/check.js';
+import { calibrationPath, calibrationStatus, judgeRounds, prepareReview, readCalibration, readRounds, CALIBRATION_AGREEMENT, CALIBRATION_MIN_ROUNDS } from '../commands/review.js';
+import { REVIEW_MODES, JudgeCalibrationSchema } from '../../../contracts/src/index.js';
 import { setupTranscribe, transcribe, DEFAULT_TRANSCRIBE_MODEL } from '../../../media/src/transcribe.js';
 import { detectShotChanges, planCutByLines } from '../../../media/src/cut_lines.js';
 import { TranscriptSchema } from '../../../contracts/src/index.js';
@@ -34,7 +36,7 @@ import { runNotify } from '../commands/notify.js';
 import { ProductionBundleExporter } from '../../../media/src/bundle.js';
 import { runDashboard } from '../commands/dashboard.js';
 import { runVerifyBundle } from '../commands/verify_bundle.js';
-import { resolveRunDir, resolveProjectDir, findWorkspaceRoot, writeOutputFile } from '../commands/_shared.js';
+import { resolveRunDir, resolveProjectDir, findWorkspaceRoot, writeOutputFile, findLatestRunDir } from '../commands/_shared.js';
 import { RENDER_FORMATS, RENDER_CODECS } from '../commands/render.js';
 import { PIPELINE_EVENTS } from '../../../media/src/notifications.js';
 import { safeColor, probe } from '../../../media/src/proc.js';
@@ -295,6 +297,90 @@ program
       console.error(`Check failed: ${(err as Error).message}`);
       process.exit(2);
     }
+  });
+
+// mgvideo review <prepare|judge|record|calibration>: blind review loop
+const review = program
+  .command('review')
+  .description('Blind review loop: frame sheets for a reviewer who sees no code, and a pass decided in code from its rounds');
+
+review
+  .command('prepare [run]')
+  .description('Write <run>/review/: numbered frame sheets, tiles.json and the blind brief')
+  .option('-p, --project <project>', 'Project directory (default: two levels above the run)')
+  .addOption(new Option('--mode <mode>', 'Review mode (default from the brief workflow)').choices([...REVIEW_MODES]))
+  .option('--interval <s>', 'Seconds between tiles', '0.5')
+  .action((runArg, opts) => {
+    try {
+      const runDir = runArg && runArg !== LATEST_RUN ? resolveRunDir(runArg, opts.project) : findLatestRunDir(opts.project ?? process.cwd());
+      const projectDir = resolveProjectDir(runDir, opts.project);
+      const result = JSON.parse(nodeFs.readFileSync(path.join(runDir, 'render-result.json'), 'utf8'));
+      const res = prepareReview(result.output_files[0].path, projectDir, path.join(runDir, 'review'), { interval: Number(opts.interval), mode: opts.mode });
+      console.log(`🧾 ${res.sheets.length} sheet(s), ${res.tiles.length} tiles, brief: ${res.briefPath}`);
+      console.log('Give the reviewer only the sheets and brief.md; save its answer as round-NN.json in the same folder.');
+    } catch (err) {
+      console.error(`Review prepare failed: ${err instanceof Error ? err.message : String(err)}`);
+      process.exit(2);
+    }
+  });
+
+review
+  .command('judge [run]')
+  .description('Decide the loop from <run>/review/round-*.json: pass, continue or stop')
+  .option('-p, --project <project>', 'Project directory')
+  .option('--json', 'Print the decision as JSON', false)
+  .addHelpText('after', `\nPass: no P0/P1 defect, lowest score >= 6, mean >= 7, two rounds in a row. Stop: 8 rounds, under 1 point gained twice, or one defect three rounds running.\nExit 0: pass; 1: continue; 3: stopped without a pass; 2: error.`)
+  .action((runArg, opts) => {
+    try {
+      const runDir = runArg && runArg !== LATEST_RUN ? resolveRunDir(runArg, opts.project) : findLatestRunDir(opts.project ?? process.cwd());
+      const dir = path.join(runDir, 'review');
+      const decision = judgeRounds(readRounds(dir));
+      nodeFs.writeFileSync(path.join(dir, 'decision.json'), JSON.stringify(decision, null, 2));
+      if (opts.json) console.log(JSON.stringify(decision, null, 2));
+      else {
+        for (const r of decision.rounds) console.log(` round ${r.round}: mean ${r.mean}, lowest ${r.min}, ${r.passes ? 'passes' : r.problems.join('; ')}`);
+        console.log(`\n${decision.status.toUpperCase()}: ${decision.reason}`);
+      }
+      process.exit(decision.status === 'pass' ? 0 : decision.status === 'continue' ? 1 : 3);
+    } catch (err) {
+      console.error(`Review judge failed: ${err instanceof Error ? err.message : String(err)}`);
+      process.exit(2);
+    }
+  });
+
+review
+  .command('record [run]')
+  .description("Record a person's verdict next to the judge's for calibration")
+  .requiredOption('--person <verdict>', 'pass or fail')
+  .option('-p, --project <project>', 'Project directory')
+  .option('--note <text>', 'Why the person decided so', '')
+  .action((runArg, opts) => {
+    try {
+      if (!['pass', 'fail'].includes(opts.person)) throw new Error('--person must be pass or fail');
+      const runDir = runArg && runArg !== LATEST_RUN ? resolveRunDir(runArg, opts.project) : findLatestRunDir(opts.project ?? process.cwd());
+      const decision = judgeRounds(readRounds(path.join(runDir, 'review')));
+      if (!decision.latest) throw new Error('no review rounds in this run');
+      const file = calibrationPath();
+      const cal = readCalibration(file);
+      cal.entries.push({
+        run: path.basename(runDir), round: decision.latest.round, judge_pass: decision.rounds[decision.rounds.length - 1].passes,
+        person_pass: opts.person === 'pass', recorded_at: new Date().toISOString(), note: opts.note,
+      });
+      nodeFs.writeFileSync(file, JSON.stringify(JudgeCalibrationSchema.parse(cal), null, 2) + '\n');
+      const st = calibrationStatus(cal);
+      console.log(`Recorded. ${st.rounds} round(s), agreement ${(st.agreement * 100).toFixed(0)}%: ${st.calibrated ? 'calibrated, the judge can block delivery' : 'advisory'}.`);
+    } catch (err) {
+      console.error(`Review record failed: ${err instanceof Error ? err.message : String(err)}`);
+      process.exit(2);
+    }
+  });
+
+review
+  .command('calibration')
+  .description('Show how often the judge agreed with a person')
+  .action(() => {
+    const st = calibrationStatus(readCalibration(calibrationPath()));
+    console.log(`${st.rounds} round(s) compared, agreement ${(st.agreement * 100).toFixed(0)}%. Needs ${CALIBRATION_MIN_ROUNDS} rounds at ${CALIBRATION_AGREEMENT * 100}%: ${st.calibrated ? 'calibrated (judge defects can block)' : 'advisory (judge defects never block)'}.`);
   });
 
 // mgvideo package <run>

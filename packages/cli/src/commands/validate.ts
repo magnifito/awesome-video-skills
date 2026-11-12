@@ -16,6 +16,7 @@ import {
 import { inspectMedia, measureAudioLoudness, type MediaProbeResult } from '../../../media/src/inspector.js';
 import { detectBlack, detectFlashes, detectFreezes, findDeadStops, rmsWindows } from '../../../media/src/quality_checks.js';
 import { textChecks } from './text_checks.js';
+import { judgeItems } from './review.js';
 import { parseCaptionWords } from '../../../media/src/caption_words.js';
 import { captionDrift, spokenNames, DRIFT_EARLY_S, DRIFT_LATE_S, type CaptionCue } from '../../../media/src/captions.js';
 import { resolveRunDir, resolveProjectDir, sha256String, findLatestRunDir } from './_shared.js';
@@ -203,6 +204,7 @@ export async function runValidate(runPathOrId: string = LATEST_RUN, projectDir?:
     items.push(...await textManifestChecks(renderResult, renderRequest, primaryFile.path, config));
     items.push(...await speechChecks(runDir, projDir, renderResult, primaryFile.hash, config));
     if (renderResult.warnings) items.push(...renderWarnings(renderResult.warnings));
+    items.push(...judgeItems(runDir));
   }
 
   // 3. Factual Claims Check against claims register
