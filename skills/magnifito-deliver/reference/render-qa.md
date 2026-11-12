@@ -73,9 +73,17 @@ A frame must be a pure function of time. Same inputs, same pixels.
   container metadata can differ while frames match. The framemd5 diff is the real test.
 - **[cmd]** `mgvideo diff runA.mp4 runB.mp4` passes at SSIM >= 0.95. That catches gross drift only;
   it does not prove determinism.
-- **[cmd]** Scan a generated motion page for clock or state sources; every hit needs a reason (use a
-  seeded PRNG, compute motion from `t`):
-  `grep -nE "Math\.random|Date\.now|performance\.now|new Date\(|setTimeout|setInterval|requestAnimationFrame|transition:|animation:" page.html`
+- **[auto]** The motion engine's browser capture pins the page clock (`Date.now`, `new Date()` and
+  `performance.now` read the seek time from a fixed epoch) and reseeds `Math.random` from the seek
+  time, so a page that uses them still draws the same frame for the same time. Timers, CSS
+  transitions and `requestAnimationFrame` are not driven by seek; compute motion from `t` and scan
+  custom page code for them:
+  `grep -nE "setTimeout|setInterval|requestAnimationFrame|transition:|animation:" page.html`
+- **[validate]** `render-warnings` (P1): what the renderer drew differently from the design. Motion
+  engine: text drawn in a system font instead of an embedded one (machine-dependent, may lack
+  Cyrillic, and loads late enough to change the first frame), console errors, files that failed to
+  load. HyperFrames and html: a brand font fontconfig cannot find (`fc-match`), so rsvg-convert drew
+  another face.
 - **[manual]** Seek-order test: grab the same time after seeking from different places (for
   example `mgvideo thumbnail final.mp4 -t 8.0` versus a still from a fresh render of that clip
   alone). Any difference means state leaks between frames: counters, caches, an image still

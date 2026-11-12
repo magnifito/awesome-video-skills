@@ -402,6 +402,8 @@ export const RenderResultSchema = z.object({
   logs: z.array(z.string()).default([]),
   /** Text manifest written by the renderer, when it records one. */
   text_manifest: z.object({ path: z.string(), hash: z.string() }).optional(),
+  /** Renderer warnings (font fallback, console errors, failed loads); absent when the engine does not check. */
+  warnings: z.array(z.string()).optional(),
   validation_results: z.object({
     passed: z.boolean(),
     failures: z.array(z.string()).default([])
