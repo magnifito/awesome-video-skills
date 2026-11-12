@@ -96,11 +96,11 @@ What the renderers do today (recipe code, not tunable from the plan):
 
 | Move | HyperFrames (`adapters/hyperframes/animate.ts`) | Motion engine (`packages/motion/src/recipes/`) |
 |---|---|---|
-| rise | Every element rises 2–5 % of frame height (38–96 px on a 1920-high frame) over 0.38–0.8 s (11–24 frames), by `tempo` | Words rise about 0.42 × font size on a spring |
+| rise | Every element rises 30 px at a 1080 short side (24 px for `calm`), scaled with the frame, over 6 frames (`energetic`, `punchy`), 8 (`smooth`) or 12 (`calm`); opacity in over the first 5 of 6 | Words rise about 0.42 × font size on a spring |
 | pop, slam, slide | Not drawn | Not drawn as named moves |
-| push-in | Camera drift over the whole scene, linear: `product-reveal` 1 to 1.03, `interview-speaker-card` 1 to 1.04, `cinematic-title` 0.97 to 1.03 | `motion-kinetic-type` camera 1 to 1.05 over the scene, eased both ends |
-| settle | ease-out-cubic when overshoot is off | Springs |
-| bounce | `punchy` tempo overshoots 5 %; `kinetic-typography` 5 % and `broll-stat-callout` 8 % at any tempo | Word springs overshoot slightly by design |
+| push-in | Camera drift over the whole scene, linear: `product-reveal` and `interview-speaker-card` 1 to 1.04, `cinematic-title` 0.97 to 1.03 | `motion-kinetic-type` camera 1 to 1.05 over the scene, eased both ends |
+| settle | ease-out-cubic | Springs |
+| bounce | None by default. `broll-stat-callout` pops its number (8 % overshoot), the one named emphasis | Word springs overshoot slightly by design |
 
 So a HyperFrames render moves slower and further than the named moves, and a `punchy` brand gets
 overshoot on every card. When that is wrong for the piece, use a calmer `tempo` in `brand.json`,

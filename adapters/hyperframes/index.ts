@@ -404,7 +404,7 @@ export class HyperFramesAdapter implements VideoRendererAdapter {
     const baseSvg = this.generateSceneSvg(targetScene, context.brand, settings.width, settings.height, false, context);
     const parts = splitSvg(baseSvg, settings.width, settings.height);
     const profile = motionProfile(targetScene, context.brand, index === scenes.length - 1);
-    const svgContent = composeFrame(parts, frameState(parts, profile, local, targetScene.duration_seconds, settings.height), settings.width, settings.height);
+    const svgContent = composeFrame(parts, frameState(parts, profile, local, targetScene.duration_seconds, settings.height, settings.width), settings.width, settings.height);
     const svgPath = path.join(outputDir, `temp_still_${frameNumber}.svg`);
     await fs.writeFile(svgPath, svgContent, 'utf-8');
     try {
@@ -594,7 +594,7 @@ export class HyperFramesAdapter implements VideoRendererAdapter {
     const jobs: { svg: string; png: string }[] = [];
     const frameSource: string[] = [];
     for (let f = 0; f < total; f++) {
-      const state = frameState(parts, profile, f / fps, scene.duration_seconds, height);
+      const state = frameState(parts, profile, f / fps, scene.duration_seconds, height, width);
       const key = JSON.stringify(state);
       let png = byState.get(key);
       if (!png) {
