@@ -256,8 +256,10 @@ function productReveal(x: Ctx): string {
   const badge = (x.seg[1] ?? '').toUpperCase();
   const tagline = x.seg[2] ?? '';
   const nameMaxW = textWidth(x);
-  const nameSize = Math.max(copyFloor(x) * 1.05, fitSize(name, 62 * s, nameMaxW, 0.6, 3));
-  const nameLines = wrapWords(name, Math.max(6, Math.floor(nameMaxW / (nameSize * 0.6))));
+  // Bold glyphs: Arial Bold averages about 0.64 em per character (Cyrillic included), so wrap
+  // at 0.66 em; 0.6 fits San Francisco but runs into the UI zone with Arial or Liberation Sans.
+  const nameSize = Math.max(copyFloor(x) * 1.05, fitSize(name, 62 * s, nameMaxW, BOLD_EM, 3));
+  const nameLines = wrapWords(name, Math.max(6, Math.floor(nameMaxW / (nameSize * BOLD_EM))));
   const tagSize = Math.round(32 * s);
   const nameY = cy + ph / 2 + 100 * s;
   const badgeSize = Math.round(22 * s);
@@ -332,7 +334,7 @@ function saasInterfaceTour(x: Ctx): string {
   return `<defs>
   <linearGradient id="stBg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${c.bg}"/><stop offset="1" stop-color="${c.soft}"/></linearGradient>
   <clipPath id="stView"><rect x="${vx}" y="${vy}" width="${vw}" height="${vh}"/></clipPath>
-  <filter id="stShadow" x="-10%" y="-10%" width="120%" height="130%"><feDropShadow dx="0" dy="${18 * s}" stdDeviation="${26 * s}" flood-color="${c.ink}" flood-opacity="0.22"/></filter>
+  <filter id="stShadow" x="-10%" y="-10%" width="120%" height="130%"><feGaussianBlur in="SourceAlpha" stdDeviation="${26 * s}"/><feOffset dx="0" dy="${18 * s}" result="o"/><feFlood flood-color="${c.ink}" flood-opacity="0.22"/><feComposite in2="o" operator="in"/><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter>
   <filter id="stGlow" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="${10 * s}"/></filter>
 </defs>
 ${x.transparent ? '' : `<rect width="${w}" height="${h}" fill="url(#stBg)"/>`}
@@ -394,7 +396,7 @@ function retailCard(x: Ctx): string {
   <linearGradient id="rcBg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${c.primary}"/><stop offset="1" stop-color="${c.deep}"/></linearGradient>
   <linearGradient id="rcShimmer" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#ffffff" stop-opacity="0"/><stop offset="0.5" stop-color="#ffffff" stop-opacity="0.55"/><stop offset="1" stop-color="#ffffff" stop-opacity="0"/></linearGradient>
   <clipPath id="rcCard"><rect x="${cx}" y="${cy}" width="${cardW}" height="${cardH}" rx="${r}"/></clipPath>
-  <filter id="rcShadow" x="-10%" y="-10%" width="120%" height="140%"><feDropShadow dx="0" dy="${24 * s}" stdDeviation="${34 * s}" flood-color="#000000" flood-opacity="0.3"/></filter>
+  <filter id="rcShadow" x="-10%" y="-10%" width="120%" height="140%"><feGaussianBlur in="SourceAlpha" stdDeviation="${34 * s}"/><feOffset dx="0" dy="${24 * s}" result="o"/><feFlood flood-color="#000000" flood-opacity="0.3"/><feComposite in2="o" operator="in"/><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter>
 </defs>
 ${x.transparent ? '' : `<rect width="${w}" height="${h}" fill="url(#rcBg)"/>`}
 <rect x="${cx}" y="${cy}" width="${cardW}" height="${cardH}" rx="${r}" fill="${c.paper}" filter="url(#rcShadow)"/>
@@ -470,7 +472,7 @@ function newsletterPromo(x: Ctx): string {
   return `<defs>
   <linearGradient id="npBg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${c.soft}"/><stop offset="1" stop-color="${c.secondary}"/></linearGradient>
   <clipPath id="npAvatar"><circle cx="${avX + av / 2}" cy="${avY + av / 2}" r="${av / 2}"/></clipPath>
-  <filter id="npShadow" x="-10%" y="-10%" width="120%" height="130%"><feDropShadow dx="0" dy="${22 * s}" stdDeviation="${30 * s}" flood-color="${c.ink}" flood-opacity="0.25"/></filter>
+  <filter id="npShadow" x="-10%" y="-10%" width="120%" height="130%"><feGaussianBlur in="SourceAlpha" stdDeviation="${30 * s}"/><feOffset dx="0" dy="${22 * s}" result="o"/><feFlood flood-color="${c.ink}" flood-opacity="0.25"/><feComposite in2="o" operator="in"/><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter>
 </defs>
 ${x.transparent ? '' : `<rect width="${w}" height="${h}" fill="url(#npBg)"/>`}
 <rect x="${cx}" y="${cy}" width="${cardW}" height="${cardH}" rx="${22 * s}" fill="${c.paper}" filter="url(#npShadow)"/>
@@ -512,6 +514,9 @@ function estWidth(content: string, size: number, em: number): number {
 }
 
 /** Largest font size up to `max` that fits `content` in `maxLines` lines of `maxW`. */
+/** Average advance of a bold sans glyph, in em, used to wrap text before it is drawn. */
+const BOLD_EM = 0.66;
+
 function fitSize(content: string, max: number, maxW: number, em: number, maxLines: number): number {
   let size = max;
   while (size > 12 && wrapWords(content, Math.floor(maxW / (size * em))).length > maxLines) size -= 2;
